@@ -1,6 +1,6 @@
 # Save / Load System Patterns
 
-Redot 26.1 LTS provides built-in resource serialization via `ResourceSaver`/`ResourceLoader`. For plain-text or cross-platform portable saves, fall back to JSON with manual deserialization.
+Redot 26.2 LTS provides built-in resource serialization via `ResourceSaver`/`ResourceLoader`. For plain-text or cross-platform portable saves, fall back to JSON with manual deserialization.
 
 ## Approach A: Resource-Based (Recommended for Game Saves)
 

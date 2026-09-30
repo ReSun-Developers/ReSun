@@ -1,6 +1,6 @@
 ## 1. Test Runner
 
-- [x] 1.1 Discover GUT incompatible with Redot 26.1 LTS (class_name registration fails)
+- [x] 1.1 Discover GUT incompatible with Redot 26.2 LTS (class_name registration fails)
 - [x] 1.2 Create minimal test runner at `test/run_tests.gd` (extends SceneTree, no framework)
 - [x] 1.3 Runner discovers test files, calls `test_*` methods, reads pass/fail counts
 
@@ -31,7 +31,7 @@
 - [x] 5.1 Create `.github/workflows/` directory
 - [x] 5.2 Create `.github/workflows/test.yml` workflow file
 - [x] 5.3 Workflow triggers on push and pull_request
-- [x] 5.4 Workflow installs Redot 26.1 LTS headless binary
+- [x] 5.4 Workflow installs Redot 26.2 LTS headless binary
 - [x] 5.5 Workflow runs `redot --headless --import` to cache assets
 - [x] 5.6 Workflow runs `redot --headless -s test/run_tests.gd`
 - [x] 5.7 Workflow fails if test exit code is non-zero

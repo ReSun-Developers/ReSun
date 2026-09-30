@@ -1,7 +1,7 @@
 # Tiberian Sun — Gameplay Systems & Content Rosters (Web-Research Reference)
 
 Exhaustive, web-sourced reference for the whole Tiberian Sun (TS) + Firestorm (FS) gameplay model,
-intended as a data model for the unified Redotian Sun engine. **Web-only research**; the primary
+intended as a data model for the unified ReSun engine. **Web-only research**; the primary
 authority is the shipped `RULES.INI` (recovered via the Vinifera INI archive) cross-checked against
 ModEnc, the Command & Conquer Wiki (cnc.fandom), Project Perfect Mod, CnCNet forums, and released
 engine sources (EA `CNC_TS_and_RA2_Mission_Editor`, OpenTS).

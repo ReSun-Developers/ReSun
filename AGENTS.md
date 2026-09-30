@@ -2,11 +2,11 @@
 applyTo: '**'
 ---
 
-# Agent Configuration for Redotian Sun
+# Agent Configuration for ReSun
 
 ## Project Overview
 
-Redotian Sun is a fan remake of *Command & Conquer: Tiberian Sun*, built in **Redot Engine 26.2 LTS** (Forward Plus). Fully 3D, preserving core RTS mechanics — base building, unit production, combat, fog of war, economy. Pure GDScript, no C#. The longer-term target is a unified, data-driven engine supporting Tiberian Sun, Firestorm, Red Alert 2, and Yuri's Revenge — see `docs/`.
+ReSun is a fan remake of *Command & Conquer: Tiberian Sun*, built in **Redot Engine 26.2 LTS** (Forward Plus). Fully 3D, preserving core RTS mechanics — base building, unit production, combat, fog of war, economy. Pure GDScript, no C#. The longer-term target is a unified, data-driven engine supporting Tiberian Sun, Firestorm, Red Alert 2, and Yuri's Revenge — see `docs/`.
 
 Canonical terms live in [`GLOSSARY.md`](GLOSSARY.md) — read it before writing specs/designs or using domain vocabulary; `openspec/specs/` stays authoritative. Propose glossary updates whenever a new term surfaces during planning or clarifying (including prompt-only terms); check **Undecided** there before coining names like `archetype`/`template`.
 
@@ -234,21 +234,21 @@ This project's source code lives in `scripts/` (Redot/Godot convention). The ind
 
 #### Project name
 
-The canonical project name is **`Redotian-Sun`** (PascalCase). Always pass `name="Redotian-Sun"` when calling `index_repository` to keep the identifier consistent:
+The canonical project name is **`ReSun`** (PascalCase). Always pass `name="ReSun"` when calling `index_repository` to keep the identifier consistent:
 
 ```
-codebase-memory-mcp index_repository repo_path="<repo-root>" mode="full" name="Redotian-Sun"
+codebase-memory-mcp index_repository repo_path="<repo-root>" mode="full" name="ReSun"
 ```
 
 Use the current repo root as `repo_path` — do not hardcode a developer-specific path. If CWD is the repo root, you can omit `repo_path`.
 
 The `auto_watch` feature (enabled by default) uses this name for git-event-triggered re-indexing. If the name doesn't match, a duplicate entry with a different casing will appear in `list_projects`.
 
-To verify the active project: `codebase-memory-mcp list_projects` — look for `Redotian-Sun` with 5000+ nodes.
+To verify the active project: `codebase-memory-mcp list_projects` — look for `ReSun` with 5000+ nodes.
 
 To re-index this repo (e.g. after adding new scripts):
 ```
-codebase-memory-mcp index_repository mode="full" name="Redotian-Sun"
+codebase-memory-mcp index_repository mode="full" name="ReSun"
 ```
 
 ### Redot Engine Docs (Context7 MCP)
@@ -272,10 +272,10 @@ Use `searxng_searxng_web_search` for general web searches, tutorials, third-part
 
 | Resource | URL |
 |----------|-----|
-| Engine docs (26.1 LTS) | https://docs.redotengine.org/lts-26.1/ |
-| Shader Language | https://docs.redotengine.org/tutorials/shaders/ |
-| 3D Systems | https://docs.redotengine.org/lts-26.1/tutorials/3d/index.html |
-| GDScript Basics | https://docs.redotengine.org/tutorials/scripting/gdscript/ |
+| Engine docs (26.2 LTS) | https://docs.redotengine.org/ |
+| Shader Language | https://docs.redotengine.org/en/26.2/Tutorials/Shaders/index |
+| 3D Systems | https://docs.redotengine.org/en/26.2/Tutorials/3d/index |
+| GDScript Basics | https://docs.redotengine.org/en/26.2/Tutorials/scripting/gdscript/gdscript_basics |
 
 ## Full Skill Reference
 

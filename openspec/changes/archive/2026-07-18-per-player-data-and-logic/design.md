@@ -1,6 +1,6 @@
 ## Context
 
-Redotian Sun has 11 autoloads. EconomyManager owns PlayerData instances in a lazy `_players` dict. BuildingManager, Sidebar, and ProductionManager hardcode `player_id = 0`. No concept of "local player", no team relationships, no faction identity. This blocks component implementation that needs owner tracking (HealthComponent, CombatComponent, FactoryComponent, PowerComponent).
+ReSun has 11 autoloads. EconomyManager owns PlayerData instances in a lazy `_players` dict. BuildingManager, Sidebar, and ProductionManager hardcode `player_id = 0`. No concept of "local player", no team relationships, no faction identity. This blocks component implementation that needs owner tracking (HealthComponent, CombatComponent, FactoryComponent, PowerComponent).
 
 Current state:
 - `PlayerData.gd`: 4 lines — `player_id` + `credits`

@@ -1,6 +1,6 @@
 # Type System Deep Dive
 
-Redot 26.1 LTS GDScript supports full static typing with compile-time checking enabled by default for explicit type annotations. This document covers patterns that maximize the benefit of typed code in game development contexts.
+Redot 26.2 LTS GDScript supports full static typing with compile-time checking enabled by default for explicit type annotations. This document covers patterns that maximize the benefit of typed code in game development contexts.
 
 ## Variable Declarations — Always Include Types
 

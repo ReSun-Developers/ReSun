@@ -356,7 +356,7 @@ Conventional firepower is low; mobility is mixed; air is deliberately weak.
 - **Mission script runtime** — triggers, taskforces, teamtypes, ownership/objective actions, cinematic control.
 - **Game-mode registry** — skirmish modes, team setups, optional co-op flag, map `GameModes` metadata.
 
-**Migration notes for Redotian Sun**
+**Migration notes for ReSun**
 - Existing `FactionCatalog`/`GameContext` must grow from "one house" to "side → countries → bonuses".
 - Existing Transport/Dock components are the seed for the garrison subsystem (Battle Fortress, Bunkers, Bio Reactor).
 - `ProductionManager`/`PrerequisiteSystem`/`PowerGrid`/`RadarSystem`/`ShroudSystem` are the hosts for the superweapon framework, power gating, Psychic Radar, and reveal powers.

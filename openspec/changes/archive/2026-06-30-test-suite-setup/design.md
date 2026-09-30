@@ -1,11 +1,11 @@
 ## Context
 
-Redotian Sun is an RTS remake with GDScript-only codebase on Redot 26.1 LTS. No test infrastructure exists. Core systems (Pathfinder, TerrainSystem, SpatialHash, SelectionManager) are growing without regression coverage. GUT is the established GDScript testing framework with CI/CD support.
+ReSun is an RTS remake with GDScript-only codebase on Redot 26.2 LTS. No test infrastructure exists. Core systems (Pathfinder, TerrainSystem, SpatialHash, SelectionManager) are growing without regression coverage. GUT is the established GDScript testing framework with CI/CD support.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Install GUT v9.x and verify it loads on Redot 26.1 LTS
+- Install GUT v9.x and verify it loads on Redot 26.2 LTS
 - Create minimal test infrastructure (directory structure, config)
 - Write smoke tests for Pathfinder pure functions to prove the framework works
 - Enable CI/CD test execution via GitHub Actions
@@ -22,7 +22,7 @@ Redotian Sun is an RTS remake with GDScript-only codebase on Redot 26.1 LTS. No 
 
 **Choice**: Minimal test runner (`test/run_tests.gd` extends SceneTree)
 
-**Rationale**: GUT v9.x and `cyotee/Rut` fork both fail on Redot 26.1 — `class_name` registration breaks during import. Custom runner is 40 lines, zero dependencies, works on Redot.
+**Rationale**: GUT v9.x and `cyotee/Rut` fork both fail on Redot 26.2 — `class_name` registration breaks during import. Custom runner is 40 lines, zero dependencies, works on Redot.
 
 ### Decision: Pure functions first
 

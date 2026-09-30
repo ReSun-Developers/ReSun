@@ -1,6 +1,6 @@
 ## Context
 
-The Redotian Sun project currently has a minimal entity system:
+The ReSun project currently has a minimal entity system:
 - `BuildingType.gd` — 9-field resource for buildings only
 - 4 component scenes (Health, Hitbox, Select, MovementController) — manually wired per entity
 - `NodBuggy.tscn` — hand-built scene with all 4 components
@@ -10,7 +10,7 @@ The Redotian Sun project currently has a minimal entity system:
 The original Tiberian Sun defines all entities via `rules.ini` (gameplay stats) and `art.ini` (visual properties). These flat key-value sections naturally map to a component-based architecture where properties trigger component addition.
 
 **Constraints:**
-- Redot 26.1 LTS (Forward Plus renderer)
+- Redot 26.2 LTS (Forward Plus renderer)
 - GDScript only — no C#
 - Must support mod/DLC data sets in the future
 - Must not break existing gameplay (NodBuggyDev.tscn kept as test entity)

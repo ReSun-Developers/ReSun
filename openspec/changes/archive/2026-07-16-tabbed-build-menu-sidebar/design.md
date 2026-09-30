@@ -2,7 +2,7 @@
 
 The current sidebar (`Sidebar.gd`, 131 lines) is a flat GridContainer showing only buildings from `BuildingManager.building_types`. There is no tab system, no unit production queue, and no prerequisite checking. The `EntityData.prerequisite` and `prerequisite_necessary` fields exist but are unused. `FactoryComponent` is a thin data stub with no queue logic.
 
-The game uses Redot 26.1 LTS with standard `_process(delta)` timing. `Engine.time_scale` scales delta automatically, so game speed settings will work without special handling. `Camera01.gd` handles zoom via scroll wheel (`zoom_in`/`zoom_out` actions), which must not fire when hovering over the sidebar.
+The game uses Redot 26.2 LTS with standard `_process(delta)` timing. `Engine.time_scale` scales delta automatically, so game speed settings will work without special handling. `Camera01.gd` handles zoom via scroll wheel (`zoom_in`/`zoom_out` actions), which must not fire when hovering over the sidebar.
 
 ## Goals / Non-Goals
 

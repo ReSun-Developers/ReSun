@@ -1,4 +1,4 @@
-# Unit Testing for Core Systems - Redotian Sun
+# Unit Testing for Core Systems - ReSun
 
 ## Overview
 Unit testing via custom minimal runner (`test/run_tests.gd`). GUT fails on Redot 26.x — class_name registration breaks. Tests run from CLI and GitHub Actions CI.
@@ -16,13 +16,13 @@ Unit testing via custom minimal runner (`test/run_tests.gd`). GUT fails on Redot
 
 **Not covered (because not built):** fog/vision, multiplayer, save/load, combat AI, modding.
 
-**CI:** `.github/workflows/test.yml` — lint + format (gdtoolkit), openspec-archive gate, headless test run. **Version skew:** CI pins Redot 26.1-stable; repo + local binary are 26.2.
+**CI:** `.github/workflows/test.yml` — lint + format (gdtoolkit), openspec-archive gate, headless test run. **Version:** CI pins Redot 26.2-stable — matches repo and local binary.
 
 ## Setup
 
 ### Test Runner
 - `test/run_tests.gd` — extends SceneTree, discovers `test_*.gd` files, calls `test_*` methods
-- No framework dependencies, works on Redot 26.1 LTS
+- No framework dependencies, works on Redot 26.2 LTS
 
 ### Directory Structure
 ```
@@ -73,7 +73,7 @@ redot --headless -s test/run_tests.gd
 ### Workflow: `.github/workflows/test.yml`
 - **lint**: gdtoolkit `gdlint` + `gdformat --check`
 - **check-openspec**: Enforces no open changes in `openspec/changes/`
-- **test**: Installs Redot **26.1** (skew vs repo's 26.2 — see Implementation Status), imports assets, runs `redot --headless -s test/run_tests.gd`
+- **test**: Installs Redot **26.2** (matches repo), imports assets, runs `redot --headless -s test/run_tests.gd`
 
 ## Conventions
 - Test files: `test_<module_name>.gd`

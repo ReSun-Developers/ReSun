@@ -1,4 +1,4 @@
-# Economy & Resources System - Redotian Sun
+# Economy & Resources System - ReSun
 
 ## Overview
 The economy system manages resource harvesting, credit tracking, and spending — the core RTS resource loop. Unlike SimCity, there is **no passive income**. Every credit comes from the harvest cycle: harvester → resource pod → fill → refinery → dock → dump → credits.
@@ -217,7 +217,7 @@ signal dock_undocked(docker: Node)
 - Validate cargo types (that's `accepted_resource_categories` on `DockUnloadComponent`)
 - Handle unload logic (that's `DockUnloadComponent`)
 
-**Mapping to Redotian Sun:**
+**Mapping to ReSun:**
 ```gdscript
 # EntityData.gd
 @export var refinery: bool = false  # classification flag for AI
@@ -366,7 +366,7 @@ if harvesters_count / refineries_count > RATIO_THRESHOLD:
     build refinery
 ```
 
-**Mapping to Redotian Sun** (future GameAI system):
+**Mapping to ReSun** (future GameAI system):
 ```gdscript
 # In some AI build controller
 @export var refinery_ratio: float = 2.0  # harvesters per refinery

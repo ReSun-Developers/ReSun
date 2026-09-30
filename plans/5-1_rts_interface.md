@@ -1,4 +1,4 @@
-# RTS Interface Elements - Redotian Sun
+# RTS Interface Elements - ReSun
 
 ## Overview
 The UI interface system provides players with essential information and control panels for managing their base, units, and resources during gameplay. This is critical for responsive RTS gameplay.

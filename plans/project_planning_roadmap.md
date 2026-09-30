@@ -1,7 +1,7 @@
 # Project Planning / Roadmap - RTS Edition
 
 ## Overview
-This document outlines the project planning and roadmap for the Redotian Sun Tiberian Sun remake using the Redot Engine, specifically tailored for real-time strategy game mechanics.
+This document outlines the project planning and roadmap for the ReSun Tiberian Sun remake using the Redot Engine, specifically tailored for real-time strategy game mechanics.
 
 ## Current Status
 - **Engine Version**: Redot 26.2 LTS
@@ -251,7 +251,7 @@ and `docs/`.
 
 - **Engine**: Redot Engine 26.2 LTS
 - **Programming Language**: GDScript only (no C# bindings)
-- **Documentation**: [Redot Engine Docs](https://docs.redotengine.org/en/stable/)
+- **Documentation**: [Redot Engine Docs](https://docs.redotengine.org/)
 - **Version Control**: Git with GitHub Issues for task tracking
 - **Build System**: Redot editor workflow (no external build system)
 

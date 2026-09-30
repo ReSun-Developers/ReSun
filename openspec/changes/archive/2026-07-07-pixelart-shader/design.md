@@ -19,7 +19,7 @@ The current game renders 3D at full 1920×1080 with standard PBR materials — n
 
 ## Decisions
 
-1. **QuadMesh fullscreen approach vs CompositorEffect**: QuadMesh with vertex shader (`POSITION = vec4(VERTEX.xy, 1.0, 1.0)`) is simpler, requires no RenderingDevice boilerplate, and works identically in Redot 26.1 Forward+. CompositorEffect is more powerful but overkill for a single-pass screen-read + mask blend.
+1. **QuadMesh fullscreen approach vs CompositorEffect**: QuadMesh with vertex shader (`POSITION = vec4(VERTEX.xy, 1.0, 1.0)`) is simpler, requires no RenderingDevice boilerplate, and works identically in Redot 26.2 Forward+. CompositorEffect is more powerful but overkill for a single-pass screen-read + mask blend.
 
 2. **SubViewport mask at 1280×720**: Chosen as a middle ground between accuracy and performance. Native res (1920×1080) would be more precise but doubles the fill cost. The mask only renders unshaded white geometry on a single layer — no lights, no materials — so it's extremely cheap even at this resolution. The `filter_nearest` sampler on the mask texture aligns naturally with pixel blocks.
 

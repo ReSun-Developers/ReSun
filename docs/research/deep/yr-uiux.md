@@ -1,7 +1,7 @@
 # Yuri's Revenge — UI/UX, Presentation & Campaign/Meta Deltas vs Red Alert 2
 
 > **Subject:** *Command & Conquer: Red Alert 2 — Yuri's Revenge* (Westwood Pacific / EA, NA 2001-10-09; latest patch 1.001).
-> **Purpose:** Exhaustive, web-researched reference of every UI/UX, presentation, campaign and meta **addition or change** that YR introduces over base Red Alert 2 — for the unified Redotian Sun engine (TS / Firestorm / RA2 / YR).
+> **Purpose:** Exhaustive, web-researched reference of every UI/UX, presentation, campaign and meta **addition or change** that YR introduces over base Red Alert 2 — for the unified ReSun engine (TS / Firestorm / RA2 / YR).
 > **Method:** Web only. Authoritative + open-engine sources: ModEnc, cnc.fandom / cnc-central.fandom, CNCNZ, Project Perfect Mod, CnCNet forums, StrategyWiki, Ares docs, Wikipedia. Every claim cross-checked against ≥2 sources where possible; conflicts flagged.
 > **Not read:** No local game files or prior local research docs were read for this document. All content is derived from the cited web sources.
 > **Confidence legend:** **High** = ≥2 independent authoritative/modding sources agree; **Med** = single strong source, or agreement with a caveat; **Low** = inference or single circumstantial source.

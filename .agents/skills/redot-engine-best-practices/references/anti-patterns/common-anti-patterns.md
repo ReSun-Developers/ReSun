@@ -179,7 +179,7 @@ func _on_player_died() -> void:
 
 ## 11. Hardcoded Scene Paths Instead of UID-Based References
 
-Redot 26.1 LTS includes a built-in UID-based scene reference system (PR #1144: "Add panel to view and search UIDs"). Use `load("uid://<UID>")` for robust scene references that survive directory renames, unlike string paths which break on file moves.
+Redot 26.2 LTS includes a built-in UID-based scene reference system (PR #1144: "Add panel to view and search UIDs"). Use `load("uid://<UID>")` for robust scene references that survive directory renames, unlike string paths which break on file moves.
 
 ```gdscript
 // BAD — path typo fails at runtime; refactoring scene dirs breaks every reference
@@ -202,7 +202,7 @@ func load_level() -> void:
 
 ## 12. Allocating Vectors/Arrays Inside Tight Loops Without Considering Engine Optimizations
 
-Redot 26.1 LTS includes engine-level preallocation optimizations for vectors with known sizes (PR #1030). While this reduces the performance penalty of local allocations compared to upstream Godot, **the anti-pattern still applies** — repeated allocation inside `_process()` or `_physics_process()` can cause GC stutter spikes under high entity counts. The Redot optimization helps but does not eliminate the cost; preallocation remains best practice for hot paths.
+Redot 26.2 LTS includes engine-level preallocation optimizations for vectors with known sizes (PR #1030). While this reduces the performance penalty of local allocations compared to upstream Godot, **the anti-pattern still applies** — repeated allocation inside `_process()` or `_physics_process()` can cause GC stutter spikes under high entity counts. The Redot optimization helps but does not eliminate the cost; preallocation remains best practice for hot paths.
 
 ```gdscript
 // BAD — allocates a new Array every frame → GC pressure even with engine-level optimizations

@@ -1,6 +1,6 @@
 ## Why
 
-Full codebase review (issue #16) identified 16 findings — 4 bugs, 5 dead code items, 5 over-engineering issues, 2 style violations. After verification against Redot 26.1 LTS docs and codebase analysis:
+Full codebase review (issue #16) identified 16 findings — 4 bugs, 5 dead code items, 5 over-engineering issues, 2 style violations. After verification against Redot 26.2 LTS docs and codebase analysis:
 
 - **11 completed** across bug fixes, dead code removal, refactoring, style, CI, and docs
 - **1 valid remaining** (#3 grid_cells setter) — applied in this commit

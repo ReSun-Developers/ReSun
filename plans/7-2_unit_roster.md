@@ -1,4 +1,4 @@
-# Unit Roster - Redotian Sun
+# Unit Roster - ReSun
 
 ## Overview
 The unit roster defines all playable units across factions, including their stats, abilities, and counter relationships. This creates strategic depth through rock-paper-scissors balance.

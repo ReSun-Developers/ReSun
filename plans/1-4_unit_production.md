@@ -1,4 +1,4 @@
-# Unit Production Pipeline - Redotian Sun
+# Unit Production Pipeline - ReSun
 
 ## Overview
 The unit production pipeline manages the creation of new units through factories, barracks, and other production structures. This system handles queue management, tech prerequisites, and spawn logic.

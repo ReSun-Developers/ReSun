@@ -1,4 +1,4 @@
-# Final Polish & Visual Effects - Redotian Sun
+# Final Polish & Visual Effects - ReSun
 
 ## Overview
 Polish and visual effects transform functional gameplay into an immersive experience. This phase focuses on animations, particle effects, sound design, and UI refinement.

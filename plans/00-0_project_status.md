@@ -1,4 +1,4 @@
-# Project Status Report — Redotian Sun
+# Project Status Report — ReSun
 
 **Last verified:** 2026-09-14
 **Engine:** Redot 26.2 LTS (Forward Plus renderer) — CI pins 26.2
@@ -8,7 +8,7 @@
 
 ## Overview
 
-Redotian Sun has shipped most of the Tiberian Sun gameplay foundation: a data-driven entity
+ReSun has shipped most of the Tiberian Sun gameplay foundation: a data-driven entity
 system (~408 `.tres`), base building, a complete economy/harvest loop, unit production with
 prerequisites, custom grid A* pathfinding with 9 locomotors, hitscan + runtime projectiles,
 warhead×armor combat, turrets, a terrain system with heightfield + land types + movement costs,

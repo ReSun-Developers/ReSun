@@ -1,21 +1,21 @@
 ---
 name: redot-engine-best-practices
-description: "Unified Redot Engine 26.1 LTS best practices for GDScript code generation, scene architecture, signals, components, state machines, and performance optimization."
+description: "Unified Redot Engine 26.2 LTS best practices for GDScript code generation, scene architecture, signals, components, state machines, and performance optimization."
 license: MIT
-compatibility: Requires Redot 26.1 LTS (Forward Plus renderer). GDScript only — no C# bindings or GDExtension support in this version.
+compatibility: Requires Redot 26.2 LTS (Forward Plus renderer). GDScript only — no C# bindings or GDExtension support in this version.
 metadata:
-  author: redotian-sun team
+  author: ReSun-Developers
   version: "1.0"
-  engine_version: "26.1 LTS"
+  engine_version: "26.2 LTS"
   type: utility
   mode: assistive
   domain: gamedev
 
 ---
 
-# Redot Engine 26.1 LTS — GDScript Best Practices
+# Redot Engine 26.2 LTS — GDScript Best Practices
 
-Guide AI agents in writing high-quality, idiomatic GDScript code for **Redot Engine 26.1 LTS** (Forward Plus renderer). This skill covers coding standards, architecture patterns, scene composition, and performance optimization specific to the engine fork.
+Guide AI agents in writing high-quality, idiomatic GDScript code for **Redot Engine 26.2 LTS** (Forward Plus renderer). This skill covers coding standards, architecture patterns, scene composition, and performance optimization specific to the engine fork.
 
 ## When to Use This Skill
 
@@ -28,7 +28,7 @@ Use this skill when:
 - Reviewing GDScript code for quality issues or anti-patterns
 
 **Do NOT use this skill when:**
-- Working with C# (Redot 26.1 LTS has no C# bindings)
+- Working with C# (Redot 26.2 LTS has no C# bindings)
 - Using GDExtension / native libraries (.gdnlib files are out of scope)
 - Writing editor plugins that target the Redot editor itself
 - Targeting Godot 3.x — syntax and APIs differ significantly
@@ -87,7 +87,7 @@ func find_nearest_enemy(position: Vector3) -> Node3D:
 	# Implementation returns null if none found
 	return null
 
-# Typed signals (Redot 4.x style, used in Redot 26.1 LTS)
+# Typed signals (Redot 4.x style, used in Redot 26.2 LTS)
 signal score_updated(new_score: int, old_score: int)
 signal target_acquired(target: Node3D, distance: float)
 
@@ -519,7 +519,7 @@ static func from_json_string(json_str: String) -> GameSaveData:
 | Circular references between sibling nodes (Child A holds ref to B AND vice versa) | Unclear ownership, memory leaks if not cleaned up on `_exit_tree()`, confusing debug flow | Parent owns and wires children; siblings communicate via parent signals or the global Autoload bus. Never hold direct cross-references between peers |
 | Hardcoding scene paths as strings scattered across scripts | Path typos fail at runtime; refactoring a scene directory breaks every reference | Centralize in a single `const` file, use preload() for critical dependencies, or load via parameterized functions with consistent path templates |
 
-## Redot Engine 26.1 LTS — API Notes
+## Redot Engine 26.2 LTS — API Notes
 
 | Topic | Note |
 |-------|------|
@@ -528,7 +528,7 @@ static func from_json_string(json_str: String) -> GameSaveData:
 | **Collision layers** | StaticBody3D defaults to layer 1. Entity detection typically uses higher bits like `1 << 15`. Set masks via bit shifts: `collision_mask = 1 << LAYER_NUMBER`. |
 | **Node process modes** | Same as Godot 4.x: `PROCESS_MODE_INHERIT`, `PROCESS_MODE_PAUSED`, `PROCESS_MODE_ALWAYS`, `PROCESS_MODE_WHEN_PAUSED`. Use `process_mode` property to control behavior. |
 | **await syntax** | Full GDScript `await` support — use for timers, signals (`await node.timeout`), and coroutines. No need for deprecated `yield()`. |
-| **Documentation** | Always prefer Redot docs at `https://docs.redotengine.org/lts-26.1/` over upstream Godot documentation when there are differences. |
+| **Documentation** | Always prefer Redot docs at `https://docs.redotengine.org/` over upstream Godot documentation when there are differences. |
 
 ## Limitations
 

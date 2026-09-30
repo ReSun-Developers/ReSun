@@ -1,6 +1,6 @@
-# Redotian Sun — Documentation
+# ReSun — Documentation
 
-Research and planning set for turning Redotian Sun into one data-driven, isometric-3D engine
+Research and planning set for turning ReSun into one data-driven, isometric-3D engine
 that runs **Tiberian Sun**, **Firestorm**, **Red Alert 2**, and **Yuri's Revenge**.
 
 Produced 2026-09-14 from a code/spec audit + two research passes (first-pass recon, then an

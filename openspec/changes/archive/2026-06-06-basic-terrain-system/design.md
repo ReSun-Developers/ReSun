@@ -1,11 +1,11 @@
 ## Context
 
-Redotian Sun is an RTS remake using Redot 26.1 LTS with GDScript. The project has a working A* pathfinding system on a 2m x 2m grid (`Pathfinder.gd`), spatial hash for cell occupancy (`SpatialHash.gd`), and movement controller with catmull-rom interpolation (`MovementController.gd`). Currently, the game world uses a flat ground plane with no terrain variation.
+ReSun is an RTS remake using Redot 26.2 LTS with GDScript. The project has a working A* pathfinding system on a 2m x 2m grid (`Pathfinder.gd`), spatial hash for cell occupancy (`SpatialHash.gd`), and movement controller with catmull-rom interpolation (`MovementController.gd`). Currently, the game world uses a flat ground plane with no terrain variation.
 
 The existing `placeholder_terrain01.glb` contains 79 terrain tile meshes (clear, slope, cliff, water, shore, etc.) with 7 materials. The GLB is imported but unused. Terrain textures exist in `assets/textures/` but only the Ground texture is referenced by TestMap01.
 
 **Constraints**:
-- Engine: Redot 26.1 LTS (Forward Plus renderer)
+- Engine: Redot 26.2 LTS (Forward Plus renderer)
 - Language: GDScript only
 - Must integrate with existing 2m grid system (`Pathfinder.CELL_SIZE = 2.0`)
 - Must maintain backward compatibility with existing scenes (MapBase01, TestMap01)

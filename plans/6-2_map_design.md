@@ -1,4 +1,4 @@
-# Map Design & Level Editor - Redotian Sun
+# Map Design & Level Editor - ReSun
 
 ## Overview
 The map design system provides tools for creating, editing, and loading custom maps. This enables modding community engagement and varied gameplay experiences.

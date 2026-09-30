@@ -1,4 +1,4 @@
-# Combat AI System - Redotian Sun
+# Combat AI System - ReSun
 
 ## Overview
 The combat AI governs how units behave during engagements, including target selection, engagement rules, and tactical decision-making. This creates believable enemy behavior and assists player unit automation.

@@ -1,6 +1,6 @@
 # Cross-Engine Source Architecture — Tiberian Sun / Firestorm / Red Alert 2 / Yuri's Revenge
 
-Deep-research reference for the unified Redotian Sun RTS engine. **Engine architecture only** —
+Deep-research reference for the unified ReSun RTS engine. **Engine architecture only** —
 no content rosters, no tuning. Every claim is sourced from released/leaked official engine code,
 open-source engine reconstructions, the official map-editor source, or community engine-extension
 documentation. No source code is quoted in this document; class, function, and enum names are

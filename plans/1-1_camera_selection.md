@@ -1,4 +1,4 @@
-# Camera & Selection System - Redotian Sun
+# Camera & Selection System - ReSun
 
 ## Overview
 The camera and selection system forms the foundation of RTS gameplay, enabling players to view, navigate, and control units on the battlefield. This system must replicate classic C&C controls while leveraging modern 3D rendering capabilities.

@@ -1,4 +1,4 @@
-# Modding Support - Redotian Sun
+# Modding Support - ReSun
 
 ## Overview
 Modding support empowers the community to create custom content, extending game longevity and fostering creativity. This includes units, maps, factions, and gameplay mechanics.

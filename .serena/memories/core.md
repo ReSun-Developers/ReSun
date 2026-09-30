@@ -1,6 +1,6 @@
 # Core
 
-Redotian Sun — fan remake of C&C Tiberian Sun. Redot Engine 26.2 LTS (Forward Plus), pure GDScript, fully 3D RTS. Longer target: unified data-driven engine for TS, Firestorm, RA2, Yuri's Revenge.
+ReSun — fan remake of C&C Tiberian Sun. Redot Engine 26.2 LTS (Forward Plus), pure GDScript, fully 3D RTS. Longer target: unified data-driven engine for TS, Firestorm, RA2, Yuri's Revenge.
 
 Canonical terms live in `GLOSSARY.md`; `openspec/specs/` is authoritative. All changes under `openspec/changes/` must be archived before merge (CI rejects unarchived).
 

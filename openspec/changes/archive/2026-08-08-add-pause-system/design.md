@@ -1,6 +1,6 @@
 ## Context
 
-Redotian Sun has no pause at all: `get_tree().paused` is never set, there is no pause menu, and no input action is bound to it (`plans/5-2_game_management.md` marks pause as ❌). Gameplay runs in standalone map scenes that all inherit `scenes/maps/MapBase01.tscn`, whose `HUD` CanvasLayer (layer 256) hosts `Sidebar`, `DebugMenu`, and `FpsCounter`. `MainScene.tscn` has an empty `Gameplay` node and is not the playable surface yet (issue #262).
+ReSun has no pause at all: `get_tree().paused` is never set, there is no pause menu, and no input action is bound to it (`plans/5-2_game_management.md` marks pause as ❌). Gameplay runs in standalone map scenes that all inherit `scenes/maps/MapBase01.tscn`, whose `HUD` CanvasLayer (layer 256) hosts `Sidebar`, `DebugMenu`, and `FpsCounter`. `MainScene.tscn` has an empty `Gameplay` node and is not the playable surface yet (issue #262).
 
 ESC is already a cancel key in three `_process` polling loops: `BuildingManager.gd:67` (build mode, via built-in `ui_cancel`), `Sidebar.gd:118` (debug-place mode), `MouseHandler.gd:140` (sell/repair mode). The game uses the default theme (no project Theme resource); plain `Button` controls match the rest of the HUD.
 

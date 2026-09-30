@@ -489,6 +489,6 @@ Legend: **[TS]** base-game feature · **[FS]** Firestorm addition/change · **[u
 - CNCNZ.com — Firestorm new GDI/Nod weapons descriptions.
 - Local repo `games/ts/` data model (armor types, warheads, projectiles, land types,
   locomotors, resource types, `global_rules.tres`) and `openspec/specs/` for canonical
-  Redotian Sun terminology (foundation/footprint/bib/locomotor/land-type).
+  ReSun terminology (foundation/footprint/bib/locomotor/land-type).
 - Items marked **[uncertain]** were not verifiable via the sources reached (Fandom blocked
   403 for direct reads) and are flagged rather than asserted.
