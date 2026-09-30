@@ -1,4 +1,4 @@
-# Unit Movement & Commands System - Redotian Sun
+# Unit Movement & Commands System - ReSun
 
 ## Overview
 The movement system handles all unit navigation and command execution, translating player inputs into in-game actions. This includes basic movement, attack orders, formation management, and pathfinding integration.

@@ -1,6 +1,6 @@
 ## Context
 
-Redotian Sun is an RTS remake with 23 GDScript files (~3,500 lines), 25 scenes, and 21 tests. A full codebase review (issue #16) found 16 issues across bugs, dead code, over-engineering, and style. After verification against Redot 26.1 docs and codebase analysis, 11 were completed, 1 is valid remaining (#3 grid_cells setter), and 4 are deferred (#9 intentional, #12/#13 low-priority).
+ReSun is an RTS remake with 23 GDScript files (~3,500 lines), 25 scenes, and 21 tests. A full codebase review (issue #16) found 16 issues across bugs, dead code, over-engineering, and style. After verification against Redot 26.2 docs and codebase analysis, 11 were completed, 1 is valid remaining (#3 grid_cells setter), and 4 are deferred (#9 intentional, #12/#13 low-priority).
 
 The codebase is early-stage — many patterns were established quickly during prototyping. This change is the first systematic cleanup pass.
 

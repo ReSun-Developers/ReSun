@@ -1,4 +1,4 @@
-# Faction Systems - Redotian Sun
+# Faction Systems - ReSun
 
 ## Overview
 Faction systems define unique mechanics, units, buildings, and strategies for each playable side. This creates asymmetric gameplay that mirrors the original C&C: Tiberian Sun experience.

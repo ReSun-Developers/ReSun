@@ -38,7 +38,7 @@ A `.gutconfig.json` file SHALL exist at `test/.gutconfig.json` specifying test d
 
 ### Requirement: GUT shall load on Redot
 
-GUT plugin SHALL load without errors when Redot 26.1 LTS opens the project.
+GUT plugin SHALL load without errors when Redot 26.2 LTS opens the project.
 
 #### Scenario: Plugin loads successfully
 
@@ -73,7 +73,7 @@ The CI workflow SHALL install Redot Engine (not Godot) to match the project's ru
 
 - **WHEN** the CI workflow installs the engine
 - **THEN** the binary is `redot` (not `godot`)
-- **THEN** version matches project requirements (26.1 LTS)
+- **THEN** version matches project requirements (26.2 LTS)
 
 ### Requirement: CI shall enforce no open changes in openspec/changes
 

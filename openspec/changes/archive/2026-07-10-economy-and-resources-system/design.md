@@ -2,7 +2,7 @@
 
 The codebase has harvester entity data (`HARV` with `storage=28`, `dock="PROC"`), a `TransportComponent` shell (cargo container, no behavior), and `GlobalRules` placeholders (`tiberium_grows`, `growth_rate`). No runtime economy exists: credits are never tracked, harvesters are decorative, and `BuildingManager.place_building()` spawns entities for free. The project needs a full economy backbone — credit tracking, Tiberium harvesting, and docking — before gameplay becomes functional.
 
-Constraints: GDScript only, Redot 26.1 LTS, existing autoload pattern (6 registered in `project.godot`), existing component pattern (script-attached `Node` with `configure(data)`).
+Constraints: GDScript only, Redot 26.2 LTS, existing autoload pattern (6 registered in `project.godot`), existing component pattern (script-attached `Node` with `configure(data)`).
 
 ## Goals / Non-Goals
 

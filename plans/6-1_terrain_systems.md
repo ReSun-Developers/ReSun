@@ -1,4 +1,4 @@
-# Terrain Systems - Redotian Sun
+# Terrain Systems - ReSun
 
 ## Overview
 The terrain system defines the physical foundation of the game world, affecting unit movement, building placement, and resource distribution. This creates strategic depth through varied landscapes.

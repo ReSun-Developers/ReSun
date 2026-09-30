@@ -1,4 +1,4 @@
-# Multiplayer Support - Redotian Sun
+# Multiplayer Support - ReSun
 
 ## Overview
 Multiplayer support enables competitive and cooperative gameplay between multiple players over a network. This is critical for long-term engagement and community building.

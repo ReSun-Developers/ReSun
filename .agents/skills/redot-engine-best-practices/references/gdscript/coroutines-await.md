@@ -1,6 +1,6 @@
 # Coroutines and `await` Patterns
 
-Redot 26.1 LTS supports GDScript's modern `await` keyword for asynchronous operations, replacing the deprecated `yield()` function. This document covers all practical coroutine patterns in game development contexts.
+Redot 26.2 LTS supports GDScript's modern `await` keyword for asynchronous operations, replacing the deprecated `yield()` function. This document covers all practical coroutine patterns in game development contexts.
 
 ## Basic Syntax
 
@@ -129,7 +129,7 @@ func start_timed_sequence() -> void:
 
 Combine `await` with threaded resource loading to avoid frame stutter during level transitions.
 
-**Frame-pacing note:** Redot 26.1 LTS re-implements core and GDScript VM multithreading (PR #1121), improving await performance over upstream Godot 4.x. The engine-level preallocation optimizations also reduce GC pressure on repeated coroutine invocations. However, the official recommendation remains to poll `load_threaded_get_status()` across frames rather than in tight loops — our pattern below yields one frame per iteration via `await get_tree().process_frame`, which satisfies this requirement.
+**Frame-pacing note:** Redot 26.2 LTS re-implements core and GDScript VM multithreading (PR #1121), improving await performance over upstream Godot 4.x. The engine-level preallocation optimizations also reduce GC pressure on repeated coroutine invocations. However, the official recommendation remains to poll `load_threaded_get_status()` across frames rather than in tight loops — our pattern below yields one frame per iteration via `await get_tree().process_frame`, which satisfies this requirement.
 
 ```gdscript
 var _load_progress_value: float = 0.0

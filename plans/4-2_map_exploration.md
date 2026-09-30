@@ -1,4 +1,4 @@
-# Map Exploration & Win Conditions - Redotian Sun
+# Map Exploration & Win Conditions - ReSun
 
 ## Overview
 Map exploration tracking enables victory conditions based on territory control and provides feedback for strategic planning. This system works alongside the fog of war to create competitive gameplay objectives.

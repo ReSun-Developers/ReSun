@@ -2,7 +2,7 @@
 
 Terrain geometry authority is `TerrainSystem._vertex_grid` — per-vertex integer heights in `0..MAX_HEIGHT` scaled by `HEIGHT_STEP = 0.815`, on a diamond footprint defined by `grid_cells`. Every live terrain consumer (movement, picking, placement, debug, cell-type derivation, save/load) reads this one source via bilinear sampling (`get_height_at_world_smooth`). Authored `TerrainObject` tiles carry richer per-cell data (corners, `crease` diagonal, land types) but are not stamped into the runtime grid — the editor paints vertices, and all runtime geometry derives from them.
 
-The old `TerrainCollision.gd` built per-cell `StaticBody3D` trimesh bodies from GLB submeshes (art), had zero consumers, and is being removed (issue #208). Issue #209 directs future terrain physics to derive from the vertex heightfield instead. Redot 26.1 ships `HeightMapShape3D` (a fixed-grid heightfield physics shape with NAN-hole support), which is the natural native shape for this.
+The old `TerrainCollision.gd` built per-cell `StaticBody3D` trimesh bodies from GLB submeshes (art), had zero consumers, and is being removed (issue #208). Issue #209 directs future terrain physics to derive from the vertex heightfield instead. Redot 26.2 ships `HeightMapShape3D` (a fixed-grid heightfield physics shape with NAN-hole support), which is the natural native shape for this.
 
 ## Goals / Non-Goals
 
@@ -36,7 +36,7 @@ Provide a segment intersection (e.g. `intersect_heightfield_segment(from: Vector
 ### D3: `HeightMapShape3D` builder is opt-in
 A method (e.g. `build_heightfield_shape() -> HeightMapShape3D`) fills `map_data` from `_vertex_grid` (`height * HEIGHT_STEP`), with `NAN` for vertices outside the playable diamond, and sets `map_width`/`map_depth` to the square extent. Consumers that need collision response (knockback) instantiate it and own its lifetime.
 
-- **Rationale**: Redot 26.1's `HeightMapShape3D` natively models a fixed-grid heightfield — exactly this data. NAN holes give correct diamond corners. It is faster than `ConcavePolygonShape3D` and only exists when a consumer mounts it.
+- **Rationale**: Redot 26.2's `HeightMapShape3D` natively models a fixed-grid heightfield — exactly this data. NAN holes give correct diamond corners. It is faster than `ConcavePolygonShape3D` and only exists when a consumer mounts it.
 - **Alternative rejected**: `ConcavePolygonShape3D` from a generated mesh — slower, requires building a triangle mesh that duplicates the heightfield, and can fight the renderer's existing meshes.
 
 ### D4: Crease policy — runtime heightfield is bilinear

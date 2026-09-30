@@ -18,7 +18,7 @@ func _init() -> void:
     if _is_tap:
         print("TAP version 14")
     else:
-        print("=== Redotian Sun Test Suite ===\n")
+        print("=== ReSun Test Suite ===\n")
 
     # Wait for autoloads to be available
     var max_wait := 60

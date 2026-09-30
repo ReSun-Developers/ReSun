@@ -20,14 +20,14 @@ support · **P2** completeness/polish.
 | # | Wrong/absent doc | Reality | Action |
 |---|---|---|---|
 | D1 | `plans/00-0_project_status.md` (2026-08-08) | says fog/radar/power/projectiles/turrets/minimap/pause missing; 22 autoloads, 63 specs, 74 tests | Rewrite to 2026-09-14 verified state |
-| D2 | `plans/project_planning_roadmap.md` | Phase 2/3.1/6.1 unchecked despite implementation; 26.1 vs 26.2 skew | Reconcile checkboxes + engine version; add cross-title phase |
+| D2 | `plans/project_planning_roadmap.md` | Phase 2/3.1/6.1 unchecked despite implementation; engine version skew (resolved: 26.2) | Reconcile checkboxes; add cross-title phase |
 | D3 | `plans/3-1_combat_weapons.md` | wrong damage formula; claims WarheadData absent | Rewrite |
 | D4 | `plans/4-1_fog_vision.md` | "0% greenfield" | Rewrite to shipped state |
 | D5 | `plans/2-1_navigation.md` overview | "no global pathfinding" | Fix overview |
 | D6 | `plans/7-2_unit_roster.md` | "aircraft no weapons"; "6 land types" | Fix |
 | D7 | `plans/5-2_game_management.md` | minimap/pause/menu now exist | Fix |
 | D8 | `plans/1-4, 6-2, 6-3, 11-1` | under-/over-report shipped systems | Reconcile |
-| D9 | `AGENTS.md` | 23 components→29, 37 scenes→46, 22 plans→25; engine 26.1 vs 26.2 | Fix counts + version |
+| D9 | `AGENTS.md` | 23 components→29, 37 scenes→46, 22 plans→25; engine version skew (resolved: 26.2) | Fix counts (version now unified at 26.2) |
 | D10 | no `docs/` unified reference | — | Added by this work |
 | D11 | `GLOSSARY.md` lacks cross-title terms | — | Extend (see §D) |
 | D12 | no multi-title plan | — | Add `plans/12-0_unified_multi_title_expansion.md` |

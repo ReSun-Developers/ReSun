@@ -64,5 +64,5 @@ The actual gameplay area is ~512×512 units (from `BoundsSystem` configuration i
 ## Risks / Trade-offs
 
 - **[Risk] Objects beyond far clip invisible** → Mitigated by choosing 400 (covers full map diagonal). If maps grow beyond 512×512, `far` must be increased proportionally.
-- **[Risk] LOD bug (Godot #73472)** → Orthogonal cameras may pick lowest LOD for shadow casting. Fixed in Godot 4.3 (PR #92287). Verify Redot 26.1 includes this fix; if not, disable "Generate LODs" on .glb imports.
+- **[Risk] LOD bug (Godot #73472)** → Orthogonal cameras may pick lowest LOD for shadow casting. Fixed in Godot 4.3 (PR #92287). Verify Redot 26.2 includes this fix; if not, disable "Generate LODs" on .glb imports.
 - **[Trade-off] Larger shadow map = more GPU memory** → 4096 shadow map uses ~64MB VRAM. Acceptable for modern GPUs; the `far` reduction offsets this by rendering fewer objects.

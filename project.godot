@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Redotian Sun"
+config/name="ReSun"
 run/main_scene="uid://c6s5n02jefgmd"
 config/features=PackedStringArray("26.2", "Forward Plus", "Redot")
 config/icon="res://icon.svg"

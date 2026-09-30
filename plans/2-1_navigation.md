@@ -1,4 +1,4 @@
-# Navigation & Pathfinding System - Redotian Sun
+# Navigation & Pathfinding System - ReSun
 
 ## Overview
 The navigation system provides pathfinding capabilities for all moving entities, enabling units to traverse terrain efficiently while avoiding obstacles and respecting movement constraints. The grid cell size is **2m × 2m** — each vehicle unit occupies exactly one cell (radius = 1.0).

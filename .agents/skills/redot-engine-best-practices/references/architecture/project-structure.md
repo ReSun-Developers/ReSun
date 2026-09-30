@@ -1,6 +1,6 @@
 # Project Structure Conventions
 
-Recommended directory layout for Redot 26.1 LTS projects using the component-based architecture pattern. This structure is AI-navigable: scripts, scenes, and assets are organized so that related files share both path proximity and naming alignment.
+Recommended directory layout for Redot 26.2 LTS projects using the component-based architecture pattern. This structure is AI-navigable: scripts, scenes, and assets are organized so that related files share both path proximity and naming alignment.
 
 ## Top-Level Layout
 

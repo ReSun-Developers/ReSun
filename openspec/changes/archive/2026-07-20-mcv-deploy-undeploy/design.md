@@ -1,6 +1,6 @@
 ## Context
 
-Redotian Sun is an RTS remake of Command & Conquer: Tiberian Sun built in Redot Engine 26.1 LTS with pure GDScript. The game uses a data-driven entity system where entities are created from EntityData resources via EntityFactory autoload, with components dynamically attached based on data properties.
+ReSun is an RTS remake of Command & Conquer: Tiberian Sun built in Redot Engine 26.2 LTS with pure GDScript. The game uses a data-driven entity system where entities are created from EntityData resources via EntityFactory autoload, with components dynamically attached based on data properties.
 
 The MCV (Mobile Construction Vehicle) is a vehicle that transforms into a Construction Yard building. This bidirectional transformation is a core RTS mechanic — players start with an MCV, deploy it to begin base building, and can undeploy to relocate.
 

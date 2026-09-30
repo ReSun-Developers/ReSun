@@ -1,4 +1,4 @@
-# Base Building System - Redotian Sun
+# Base Building System - ReSun
 
 ## Overview
 The base building system enables players to construct, upgrade, and manage their structures throughout the game. This is a core RTS mechanic that requires careful design for placement validation, resource costs, and strategic depth.

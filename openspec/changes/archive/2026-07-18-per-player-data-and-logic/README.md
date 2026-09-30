@@ -1,6 +1,6 @@
 # per-player-data-and-logic
 
-Per-player data and logic infrastructure for Redotian Sun. Adds PlayerManager autoload, PlayerData, Faction, MapConfig resources. Refactors EconomyManager, BuildingManager, ProductionManager, Sidebar, PrerequisiteSystem to use centralized player state.
+Per-player data and logic infrastructure for ReSun. Adds PlayerManager autoload, PlayerData, Faction, MapConfig resources. Refactors EconomyManager, BuildingManager, ProductionManager, Sidebar, PrerequisiteSystem to use centralized player state.
 
 ## Key Decisions
 

@@ -5,7 +5,7 @@
 Redot exposes `ResourceLoader.load_threaded_request()` / `load_threaded_get_status()` / `load_threaded_get()`, the engine-native background loader. It performs the disk read and import on a worker thread and hands back a fully-formed `PackedScene`, which is exactly the producer/consumer + ready-queue pattern used by comparable RTS engines for streaming art. This change adopts it and adds a shared cache so repeat loads are free.
 
 Constraints:
-- GDScript only, Redot 26.1 LTS.
+- GDScript only, Redot 26.2 LTS.
 - `ArtComponent` is a `@tool` `Node3D`; editor code paths must stay synchronous-free of threaded loading.
 - Consumers that read `art.art_data` (e.g. `SelectionOverlay`) must keep working — they already do not depend on the mesh existing synchronously, so async arrival is safe.
 - `EntityFactory` calls `ArtComponent.configure()` inside `create_entity()`, so any signal emitted during `configure()` (the cache-hit case) fires before external code can connect.

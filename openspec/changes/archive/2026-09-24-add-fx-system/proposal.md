@@ -1,6 +1,6 @@
 ## Why
 
-Redotian Sun has no visual-effects system. `plans/9-2_final_polish.md` records
+ReSun has no visual-effects system. `plans/9-2_final_polish.md` records
 zero particle systems, and fields such as `WeaponData.attached_particle_system`
 and `WarheadData.hit_animation` are schema-only with no consumers. Every shot is
 visually silent and every hit has no impact feedback, so combat reads as

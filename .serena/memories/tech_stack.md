@@ -8,4 +8,4 @@
 - **Testing**: custom runner `test/run_tests.gd` — no external framework. `TestHelper` (`test/test_helper.gd`) static assertions; runner injects autoload shorthands `_ts _sh _sm _bm _em _pm _am _ss`.
 - **Lint/format**: gdtoolkit (`gdlint`, `gdformat`) installed globally via pip. Config `.gdlintrc`, `gdformatrc`.
 - **UID files**: Redot generates `.uid` alongside scripts/scenes; they are valid source and MUST be committed with their source file.
-- MCP tooling: `codebase-memory-mcp` (index name **`Redotian-Sun`**, mode **`full`** — moderate/fast skip `scripts/`), Serena (project name `redotian-sun`, `gdscript` language server).
+- MCP tooling: `codebase-memory-mcp` (index name **`ReSun`**, mode **`full`** — moderate/fast skip `scripts/`), Serena (project name `resun`, `gdscript` language server).

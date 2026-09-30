@@ -1,6 +1,6 @@
 # State Machine Pattern
 
-Two approaches for managing entity state in Redot 26.1 LTS GDScript. Choose based on complexity.
+Two approaches for managing entity state in Redot 26.2 LTS GDScript. Choose based on complexity.
 
 ## Approach A: Enum-Match (Simple Entities)
 

@@ -1,6 +1,6 @@
 # Unified Engine Architecture — Target for a 4-Title Data-Driven RTS
 
-How Redotian Sun becomes one engine that runs **Tiberian Sun**, **Firestorm**,
+How ReSun becomes one engine that runs **Tiberian Sun**, **Firestorm**,
 **Red Alert 2**, and **Yuri's Revenge** as data packages, rendered isometric-3D.
 
 Status note: the codebase already implements the bones of this model (`GameContext`,

@@ -1,4 +1,4 @@
-# Fog of War & Vision System - Redotian Sun
+# Fog of War & Vision System - ReSun
 
 ## Overview
 The fog of war system creates strategic depth by hiding unexplored areas, limiting vision to what units/buildings can see, and enabling classic RTS exploration mechanics.

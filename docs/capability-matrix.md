@@ -1,4 +1,4 @@
-# Redotian Sun — Unified Capability Matrix
+# ReSun — Unified Capability Matrix
 
 Master feature reference for supporting **Tiberian Sun (TS)**, **Firestorm (FS)**,
 **Red Alert 2 (RA2)**, and **Yuri's Revenge (YR)** in one data-driven, isometric-3D engine.
@@ -22,7 +22,7 @@ Companion docs:
 **Per-title columns** mark whether the title has the feature:
 `✓` present · `~` partial/variant · `–` absent · `+` added by the expansion over the base title.
 
-**Engine status** is measured against the current Redotian Sun code (see audit):
+**Engine status** is measured against the current ReSun code (see audit):
 `impl` implemented · `part` partial/schema-only · `miss` missing (no code, no spec).
 
 **Action** is the gap type:

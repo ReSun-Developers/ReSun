@@ -1,6 +1,6 @@
 ## Context
 
-Redotian Sun has no visual-effects layer. `plans/9-2_final_polish.md` records
+ReSun has no visual-effects layer. `plans/9-2_final_polish.md` records
 zero particle systems; `WeaponData.attached_particle_system`,
 `WarheadData.hit_animation`/`kill_animation`, `ProjectileData.graphic_name`, and
 `EntityData.death_explosion_ids` are schema-only with no consumers. This change

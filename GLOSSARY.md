@@ -1,6 +1,6 @@
 # Glossary
 
-Canonical term directory for Redotian Sun. Fast lookup — meaning readable here,
+Canonical term directory for ReSun. Fast lookup — meaning readable here,
 expanded semantics live in the anchored spec (authoritative) or code. Grouped by
 domain cluster.
 

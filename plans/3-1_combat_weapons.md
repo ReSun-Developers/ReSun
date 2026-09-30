@@ -1,4 +1,4 @@
-# Combat & Weapons System - Redotian Sun
+# Combat & Weapons System - ReSun
 
 ## Overview
 The combat system handles all damage calculation, weapon mechanics, and unit health management. This is critical for balanced gameplay and engaging tactical decisions.

@@ -1,6 +1,6 @@
 ## Why
 
-The 3D world currently renders at native resolution with no stylization. A pixel art post-processing shader with depth-based entity outlines will give Redotian Sun a retro aesthetic matching Tiberian Sun's pixel art heritage, while keeping the UI crisp at native resolution.
+The 3D world currently renders at native resolution with no stylization. A pixel art post-processing shader with depth-based entity outlines will give ReSun a retro aesthetic matching Tiberian Sun's pixel art heritage, while keeping the UI crisp at native resolution.
 
 ## What Changes
 

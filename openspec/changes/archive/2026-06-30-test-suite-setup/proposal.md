@@ -9,7 +9,7 @@ The project has no automated tests. As core systems grow (pathfinding, terrain, 
 - Create `test/` directory structure with unit and integration subdirectories
 - Create `.gutconfig.json` for default test configuration
 - Write smoke tests for `Pathfinder` pure functions (zero SceneTree dependencies)
-- Verify GUT works on Redot 26.1 LTS (compatibility risk — may fall back to `cyotee/Rut` fork)
+- Verify GUT works on Redot 26.2 LTS (compatibility risk — may fall back to `cyotee/Rut` fork)
 
 ## Capabilities
 

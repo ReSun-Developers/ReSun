@@ -1,6 +1,6 @@
-# Current-State Engine Capability Audit — Redotian Sun
+# Current-State Engine Capability Audit — ReSun
 
-Repo: `/mnt/work2/Redot/redotian-sun` · Engine: Redot 26.1/26.2 LTS (Forward Plus)
+Repo: `/mnt/work2/Redot/redotian-sun` · Engine: Redot 26.2 LTS (Forward Plus)
 Basis: code + 95 `openspec/specs/` + 25 `plans/` · 28 autoloads, 29 component scripts, 46 scenes, ~408 entity `.tres`.
 Audit date: 2026-09-14.
 
@@ -270,7 +270,7 @@ Spec-only is zero; the real gap is **Partial** (schema-first fields with no cons
 - `plans/7-2_unit_roster.md` — "AIRCRAFT no weapons" (false); "land types 6" (actual 11).
 - `plans/2-1_navigation.md` — overview "No global pathfinding" contradicted by `Pathfinder.gd`.
 - `AGENTS.md` — "23 components" (actual 29), "37 scenes" (46), "22 design docs" (25).
-- Engine-version skew: plans/status say Redot 26.2, AGENTS says 26.1, CI pins 26.1.
+- Engine-version skew: resolved — plans, AGENTS and CI all use Redot 26.2.
 
 ## Notable absences (cross-title features with no spec and no code)
 

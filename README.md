@@ -1,19 +1,19 @@
-# Redotian Sun
+# ReSun
 
-**Redotian Sun** is an unofficial fan remake of *Command & Conquer: Tiberian Sun*, recreated from the ground up using the [**Redot Engine**](https://github.com/Redot-Engine/redot-engine) — an open-source game engine derived from Godot.  
+**ReSun** is an unofficial fan remake of *Command & Conquer: Tiberian Sun*, recreated from the ground up using the [**Redot Engine**](https://github.com/Redot-Engine/redot-engine) — an open-source game engine derived from Godot.  
 The project aims to faithfully re-implement the original gameplay experience of *Tiberian Sun* with improved performance, cross-platform support, and modern modding capabilities.
 
 This remake is designed for educational, preservation, and community purposes, allowing players and modders to explore the classic *Command & Conquer* RTS systems in an open, extendable environment.  
 All gameplay logic, user interface, and engine functionality are being rebuilt to replicate the behavior of the original game while offering tools for future mod development.
 
-> **Note:** Redotian Sun does not aim to replace or compete with EA’s products.  
+> **Note:** ReSun does not aim to replace or compete with EA’s products.  
 > It is a free, non-commercial fan project created in accordance with EA’s modding guidelines.
 
 ---
 
 ## License
 
-The Redotian Sun project is an unofficial community remake of *Command & Conquer: Tiberian Sun* built on the Redot Engine.
+The ReSun project is an unofficial community remake of *Command & Conquer: Tiberian Sun* built on the Redot Engine.
 
 - **Code** — The original engine code and scripts developed for this project are licensed under the [MIT License](https://opensource.org/licenses/MIT).  
 - **Custom Media Assets** — All newly created art, models, textures, audio, and other media assets produced by the project team are licensed under [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).  
@@ -38,7 +38,7 @@ This project is **not affiliated with or endorsed by EA**.
 
 ### Prerequisites
 
-- [Redot Engine 26.1 LTS](https://github.com/Redot-Engine/redot-engine/releases)
+- [Redot Engine 26.2 LTS](https://github.com/Redot-Engine/redot-engine/releases)
 - Python 3.x (for linting)
 
 ### Running Tests

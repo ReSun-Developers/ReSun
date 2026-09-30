@@ -1,4 +1,4 @@
-# Main Menu & UI System - Redotian Sun
+# Main Menu & UI System - ReSun
 
 ## Overview
 The main menu serves as the primary hub for player interaction, providing access to all game modes and settings. It must capture the C&C aesthetic while delivering modern usability standards.

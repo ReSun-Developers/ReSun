@@ -42,7 +42,7 @@ Yield is a property of the resource type, not the instance. Add `@export var bal
 ### D5. Pacing defaults
 `games/ts/global_rules.tres` `harvester_fill_rate` 0.5 -> 1.667; `DockUnloadComponent` `unload_rate` 0.5 -> 2.0. Both are data/default changes, not new config.
 
-The project runs TS timings on a **2x time base** (matching the existing `build_speed = 0.4`, which is half TS's `BuildSpeed = .8`): TS's authored 15 ticks/second becomes 30 ticks/second. TS authors fill at 18 ticks/bail and unload at ~15 ticks/bail (HarvesterDumpRate = .016 min), so fill = 30/18 ~= 1.67 bales/s and unload = 30/15 = 2.0 bales/s. Redotian's own frame rate (60) is irrelevant because both rates are per-second and `delta`-scaled.
+The project runs TS timings on a **2x time base** (matching the existing `build_speed = 0.4`, which is half TS's `BuildSpeed = .8`): TS's authored 15 ticks/second becomes 30 ticks/second. TS authors fill at 18 ticks/bail and unload at ~15 ticks/bail (HarvesterDumpRate = .016 min), so fill = 30/18 ~= 1.67 bales/s and unload = 30/15 = 2.0 bales/s. ReSun's own frame rate (60) is irrelevant because both rates are per-second and `delta`-scaled.
 
 ## Risks / Trade-offs
 
