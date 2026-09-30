@@ -1,4 +1,4 @@
-## ADDED Requirements
+## Requirements
 
 ### Requirement: BuildingManager manages build mode lifecycle
 `BuildingManager` SHALL be an autoload singleton managing build mode entry, preview, placement, selling, and repairing. It emits `build_mode_changed(is_active)`, `building_placed(building, entity_data)`, `building_sold(building, entity_data)`, and `building_repaired(building, entity_data)` signals.
@@ -96,12 +96,16 @@
 - **THEN** `_is_cell_free()` returns false
 
 ### Requirement: Building sell
-`sell_building(building_node)` SHALL refund 50% of the building's cost, unregister from PrerequisiteSystem, unregister cells from SpatialHash, deselect the building, emit `building_sold`, and free the node.
+`sell_building(building_node)` SHALL refund the building's cost multiplied by `refund_percent` from the active `GlobalRules` (default 0.5), credited as free credits with the active resource category, unregister from PrerequisiteSystem, unregister cells from SpatialHash, deselect the building, emit `building_sold`, and free the node.
 
 #### Scenario: Sell building
-- **WHEN** `sell_building(building)` is called on a placed building
-- **THEN** 50% of cost is added to player credits
+- **WHEN** `sell_building(building)` is called on a placed building whose cost is 100, with active rules `refund_percent = 0.5`
+- **THEN** 50 credits are added to the player's free credits
 - **AND** building is removed from game
+
+#### Scenario: Sell building honors tuned refund_percent
+- **WHEN** `sell_building(building)` is called on a placed building whose cost is 100, with active rules `refund_percent = 0.25`
+- **THEN** 25 credits are added to the player's free credits
 
 #### Scenario: Sell building not found
 - **WHEN** `sell_building(node)` is called on a node not in the buildings list

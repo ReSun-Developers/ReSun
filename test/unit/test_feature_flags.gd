@@ -155,6 +155,7 @@ func test_sell_refund_uses_active_category():
     var snap := TestHelper.snapshot_game_context(_gc)
     var rules := GlobalRules.new()
     rules.primary_resource_category = "ore"
+    rules.refund_percent = 0.25
     _ef.set_global_rules(rules)
     var pid := PlayerManager.get_local_player_id()
     var before_total: int = _em.get_balance(pid)
@@ -175,9 +176,32 @@ func test_sell_refund_uses_active_category():
     )
     var sold: bool = _bm.sell_building(node)
     TestHelper.assert_true(sold, "sell_building succeeds")
-    TestHelper.assert_eq(_em.get_balance(pid), before_total + 50, "refund credited")
+    TestHelper.assert_eq(_em.get_balance(pid), before_total + 25, "refund honors refund_percent")
     TestHelper.assert_true(categories.has("ore"), "sell event tagged with the active category")
     TestHelper.assert_true(not categories.has("tiberium"), "no phantom tiberium category")
+    _bm._buildings.assign(saved)
+    TestHelper.restore_game_context(_gc, snap)
+
+
+func test_sell_refund_defaults_to_half():
+    var snap := TestHelper.snapshot_game_context(_gc)
+    var rules := GlobalRules.new()
+    _ef.set_global_rules(rules)
+    var pid := PlayerManager.get_local_player_id()
+    var before_total: int = _em.get_balance(pid)
+
+    var node := Node3D.new()
+    var data := EntityData.new()
+    data.id = "TEST_SELL_DEFAULT"
+    data.cost = 100
+    var saved: Array = _bm._buildings.duplicate()
+    _bm._buildings.clear()
+    _bm._buildings.append(
+        {"node": node, "type": data, "origin": Vector2i(5, 5), "cells": [] as Array}
+    )
+    var sold: bool = _bm.sell_building(node)
+    TestHelper.assert_true(sold, "sell_building succeeds")
+    TestHelper.assert_eq(_em.get_balance(pid), before_total + 50, "default refund_percent pays 50%")
     _bm._buildings.assign(saved)
     TestHelper.restore_game_context(_gc, snap)
 

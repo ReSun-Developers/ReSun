@@ -519,10 +519,12 @@ func sell_building(building_node: Node3D) -> bool:
     if not entity_data:
         return false
     var pid := PlayerManager.get_local_player_id()
-    # Refund half the cost
+    # Refund a rules-configurable share of the cost
     var em := get_node("/root/EconomyManager") as EconomyManager
     if em:
-        var refund: int = int(entity_data.cost * 0.5)
+        var rules := GlobalRules.get_current()
+        var refund_pct: float = rules.refund_percent if rules else 0.5
+        var refund: int = int(entity_data.cost * refund_pct)
         em.add(pid, refund, "sell:%s" % entity_data.id, EconomyManager.get_default_category(), true)
     # Unregister from prerequisite system
     var ps := get_node_or_null("/root/PrerequisiteSystem")
