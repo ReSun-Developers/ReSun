@@ -315,6 +315,7 @@ func get_order_for_target(
                 target_pos,
                 queued,
                 func(): set_ground_target(target_pos),
+                VoiceData.EVENT_ATTACK,
             )
         return OrderResult.new(
             CursorState.Type.ATTACK,
@@ -323,6 +324,7 @@ func get_order_for_target(
             target_pos,
             queued,
             func(): _attack(target),
+            VoiceData.EVENT_ATTACK,
         )
     if target == null:
         return null
@@ -337,6 +339,7 @@ func get_order_for_target(
                 target_pos,
                 queued,
                 func(): _attack(target),
+                VoiceData.EVENT_ATTACK,
             )
     return null
 

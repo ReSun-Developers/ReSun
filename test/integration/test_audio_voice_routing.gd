@@ -154,6 +154,8 @@ func test_select_voice_plays_for_local_unit():
     TestHelper.assert_true(sc != null, "unit has SelectComponent")
     if sc:
         _sm.select_entity(sc)
+        # The select line is deferred by SELECT_DEBOUNCE_MS; flush the window.
+        _am._process(1.0)
         (
             TestHelper
             . assert_true(
@@ -365,6 +367,8 @@ func test_group_select_plays_one_voice():
     var after_add := _am.get_child_count()
     TestHelper.assert_eq(after_add, before, "add_entity alone plays no voice (deferred to event)")
     sm.play_select_voice_for_entities([sc_a, sc_b, sc_c])
+    # The select line is deferred by SELECT_DEBOUNCE_MS; flush the window.
+    _am._process(1.0)
     TestHelper.assert_eq(
         _am.get_child_count(), after_add + 1, "group select event plays exactly one voice"
     )
@@ -396,4 +400,236 @@ func test_northwest_most_picks_screen_top_unit():
     a.queue_free()
     b.queue_free()
     c.queue_free()
+    _restore_bounds()
+
+
+## A voice set whose select/move/attack/die events resolve to distinct ids (all
+## pointing at the committed fixture tone), so order-voice routing is observable.
+func _register_distinct_voice() -> VoiceData:
+    var voice := VoiceData.new()
+    voice.id = "TEST_VOICE_DISTINCT"
+    voice.select = ["TEST_VOICE_SEL"]
+    voice.move = ["TEST_VOICE_MOV"]
+    voice.attack = ["TEST_VOICE_ATK"]
+    voice.die = ["TEST_VOICE_DIE"]
+    for id in ["TEST_VOICE_SEL", "TEST_VOICE_MOV", "TEST_VOICE_ATK", "TEST_VOICE_DIE"]:
+        _register_tone_id(id)
+    if _am:
+        _am._voice_cache[voice.id] = voice
+    return voice
+
+
+func _make_distinct_unit(player_id: int = 0) -> Node3D:
+    var entity := _make_unit_with_voice(player_id)
+    var voice_comp := entity.get_node_or_null("VoiceComponent") as VoiceComponent
+    if voice_comp:
+        voice_comp.voice_data = _register_distinct_voice()
+    return entity
+
+
+func _order(event: String, cursor: CursorState.Type) -> OrderResult:
+    return OrderResult.new(cursor, 10, null, Vector3.ZERO, false, Callable(), event)
+
+
+func test_harvest_order_plays_move_voice_not_attack():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    var unit := _make_distinct_unit(0)
+    TestHelper.assert_true(unit != null, "unit created")
+    if not unit or not _am:
+        return
+    var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
+    _sm.add_entity(sc)
+    var before_move: int = _am.get_active_count("TEST_VOICE_MOV")
+    var before_atk: int = _am.get_active_count("TEST_VOICE_ATK")
+    MouseHandler.play_order_voices(
+        [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_MOV"), before_move + 1, "harvest plays the move voice"
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_ATK"), before_atk, "harvest does not play the attack voice"
+    )
+    _sm.remove_entity(sc)
+    unit.queue_free()
+
+
+func test_attack_order_plays_attack_voice_not_move():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    var unit := _make_distinct_unit(0)
+    TestHelper.assert_true(unit != null, "unit created")
+    if not unit or not _am:
+        return
+    var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
+    _sm.add_entity(sc)
+    var before_move: int = _am.get_active_count("TEST_VOICE_MOV")
+    var before_atk: int = _am.get_active_count("TEST_VOICE_ATK")
+    MouseHandler.play_order_voices(
+        [_order(VoiceData.EVENT_ATTACK, CursorState.Type.ATTACK)] as Array[OrderResult], _sm
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_ATK"), before_atk + 1, "attack plays the attack voice"
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_MOV"), before_move, "attack does not play the move voice"
+    )
+    _sm.remove_entity(sc)
+    unit.queue_free()
+
+
+## Mixed-selection routing: the confirmation event must come from the
+## highest-priority resolved order, not from selection order.
+func test_order_voice_event_uses_highest_priority():
+    var move_order := OrderResult.new(
+        CursorState.Type.DEPLOY, 15, null, Vector3.ZERO, false, Callable(), VoiceData.EVENT_MOVE
+    )
+    var attack_order := OrderResult.new(
+        CursorState.Type.ATTACK, 30, null, Vector3.ZERO, false, Callable(), VoiceData.EVENT_ATTACK
+    )
+    (
+        TestHelper
+        . assert_eq(
+            MouseHandler._voice_event_for_orders([move_order, attack_order] as Array[OrderResult]),
+            VoiceData.EVENT_ATTACK,
+            "attack (priority 30) wins over an earlier move (priority 15)",
+        )
+    )
+    (
+        TestHelper
+        . assert_eq(
+            MouseHandler._voice_event_for_orders([attack_order, move_order] as Array[OrderResult]),
+            VoiceData.EVENT_ATTACK,
+            "result does not depend on batch order",
+        )
+    )
+
+
+## The speaker is the NW-most selected unit that can voice the event; a unit
+## without a variant for it is skipped rather than silencing the confirmation.
+func test_ack_voice_skips_speaker_without_event():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    var voiceless := _make_distinct_unit(0)
+    var voiceless_voice := voiceless.get_node_or_null("VoiceComponent") as VoiceComponent
+    var no_attack := VoiceData.new()
+    no_attack.id = "TEST_VOICE_NO_ATTACK"
+    no_attack.select = ["TEST_VOICE_SEL"]
+    if voiceless_voice:
+        voiceless_voice.voice_data = no_attack
+    var speaker := _make_distinct_unit(0)
+    # NW-most (world fallback) = smallest +Z, so the event-less unit is NW-most.
+    voiceless.position = Vector3(0, 0, 0)
+    speaker.position = Vector3(0, 0, 5)
+    var sc_v := voiceless.get_node_or_null("SelectComponent") as SelectComponent
+    var sc_s := speaker.get_node_or_null("SelectComponent") as SelectComponent
+    _sm.add_entity(sc_v)
+    _sm.add_entity(sc_s)
+    var before: int = _am.get_active_count("TEST_VOICE_ATK")
+    MouseHandler.play_ack_voice(_sm, VoiceData.EVENT_ATTACK)
+    (
+        TestHelper
+        . assert_eq(
+            _am.get_active_count("TEST_VOICE_ATK"),
+            before + 1,
+            "the NW-most unit that has the event's voice speaks",
+        )
+    )
+    _sm.remove_entity(sc_v)
+    _sm.remove_entity(sc_s)
+    voiceless.queue_free()
+    speaker.queue_free()
+
+
+func test_empty_voice_event_order_is_silent():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    var unit := _make_distinct_unit(0)
+    TestHelper.assert_true(unit != null, "unit created")
+    if not unit or not _am:
+        return
+    var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
+    _sm.add_entity(sc)
+    var before := _am.get_child_count()
+    MouseHandler.play_order_voices([_order("", CursorState.Type.MOVE)] as Array[OrderResult], _sm)
+    TestHelper.assert_eq(_am.get_child_count(), before, "empty voice event plays nothing")
+    _sm.remove_entity(sc)
+    unit.queue_free()
+
+
+## GH #305, realistic cadence: the order arrives after the debounce window, so
+## the select is already playing — the acknowledgment must stop it, not overlap.
+func test_order_after_window_cancels_playing_select():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    _ensure_playable_grid()
+    var rules := GlobalRules.get_current()
+    var saved_shroud: bool = rules.shroud_enabled
+    var saved_fog: bool = rules.fog_of_war
+    rules.shroud_enabled = false
+    rules.fog_of_war = false
+    var unit := _make_distinct_unit(0)
+    TestHelper.assert_true(unit != null, "unit created")
+    if not unit or not _am:
+        rules.shroud_enabled = saved_shroud
+        rules.fog_of_war = saved_fog
+        _restore_bounds()
+        return
+    var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
+    var before_sel: int = _am.get_active_count("TEST_VOICE_SEL")
+    var before_mov: int = _am.get_active_count("TEST_VOICE_MOV")
+    _sm.select_entity(sc)
+    # Window elapses: the select starts playing before the order arrives.
+    _am._process(1.0)
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_SEL"), before_sel + 1, "select is playing"
+    )
+    MouseHandler.play_order_voices(
+        [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_SEL"), before_sel, "the playing select is stopped"
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_MOV"), before_mov + 1, "only the ack line remains"
+    )
+    _sm.remove_entity(sc)
+    unit.queue_free()
+    rules.shroud_enabled = saved_shroud
+    rules.fog_of_war = saved_fog
+    _restore_bounds()
+
+
+## GH #305: a select immediately followed by an order must yield one voice line,
+## not two overlapped ones. The deferred select is discarded by the order ack.
+func test_select_then_order_yields_one_voice_line():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    _ensure_playable_grid()
+    var rules := GlobalRules.get_current()
+    var saved_shroud: bool = rules.shroud_enabled
+    var saved_fog: bool = rules.fog_of_war
+    rules.shroud_enabled = false
+    rules.fog_of_war = false
+    var unit := _make_distinct_unit(0)
+    TestHelper.assert_true(unit != null, "unit created")
+    if not unit or not _am:
+        rules.shroud_enabled = saved_shroud
+        rules.fog_of_war = saved_fog
+        _restore_bounds()
+        return
+    var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
+    var before_sel: int = _am.get_active_count("TEST_VOICE_SEL")
+    var before_mov: int = _am.get_active_count("TEST_VOICE_MOV")
+    _sm.select_entity(sc)
+    MouseHandler.play_order_voices(
+        [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
+    )
+    # Flush the debounce window: a surviving select would play here and overlap.
+    _am._process(1.0)
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_SEL"), before_sel, "select line discarded by the ack"
+    )
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_MOV"), before_mov + 1, "only the acknowledgment plays"
+    )
+    _sm.remove_entity(sc)
+    unit.queue_free()
+    rules.shroud_enabled = saved_shroud
+    rules.fog_of_war = saved_fog
     _restore_bounds()

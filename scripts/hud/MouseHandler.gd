@@ -67,6 +67,7 @@ func apply_selection_hotkey(is_stop: bool) -> void:
     if not selection_manager:
         return
     var local_id := PlayerManager.get_local_player_id()
+    var acted := false
     for sc in selection_manager.selected_entities:
         if not is_instance_valid(sc):
             continue
@@ -78,17 +79,22 @@ func apply_selection_hotkey(is_stop: bool) -> void:
             var deploy := entity.get_node_or_null("DeployComponent") as DeployComponent
             if deploy and deploy.can_deploy():
                 deploy.execute_deploy(entity)
+                acted = true
             if transport:
                 transport.execute_unload()
+                acted = true
         else:
             var harvest := entity.get_node_or_null("HarvestComponent") as HarvestComponent
             if harvest:
                 harvest.cancel_harvest(true)
+                acted = true
             if transport:
                 transport.cancel_unload()
+                acted = true
             var mc := entity.get_node_or_null("MovementController") as MovementController
             if mc:
                 mc.stop()
+                acted = true
             # Stop ends the engagement outright: a unit firing at a fixed point
             # (or a ground position) is IDLE, so mc.stop() is a no-op and never
             # emits movement_started. clear_target() reverts it to idle while
@@ -96,9 +102,14 @@ func apply_selection_hotkey(is_stop: bool) -> void:
             var combat := entity.get_node_or_null("CombatComponent") as CombatComponent
             if combat:
                 combat.clear_target()
+                acted = true
     if is_stop:
         selection_manager._pending_moves.clear()
         selection_manager._pending_index = 0
+    # Deploy/stop are non-attack orders: acknowledge with the move voice, once
+    # from the NW-most unit that can voice it (matching the order funnel).
+    if acted:
+        play_ack_voice(selection_manager, VoiceData.EVENT_MOVE)
 
 
 # Poll input directly (like CameraController.gd) instead of using _input().
@@ -355,39 +366,62 @@ static func acknowledge_target_lines(selection_manager: SelectionManager) -> voi
 
 ## Shared order-confirmation voice playback, used by both the world click path
 ## and the minimap. One voice per order event, from the NW-most selected local
-## unit — never one per unit (would stack on large selections).
+## unit that can actually voice the event — never one per unit (would stack on
+## large selections). The voice event is chosen by the order-producing component
+## and carried on the OrderResult.
 static func play_order_voices(
     orders: Array[OrderResult], selection_manager: SelectionManager
 ) -> void:
     if orders.is_empty() or selection_manager == null:
         return
-    var event := voice_event_for_cursor(orders[0].cursor)
+    var event := _voice_event_for_orders(orders)
     if event.is_empty():
         return
-    var chosen := (
-        selection_manager.get_northwest_most(selection_manager.selected_entities) as SelectComponent
-    )
-    var entity: Node3D = chosen.get_parent() as Node3D if chosen else null
-    if not is_instance_valid(entity):
-        return
-    var voice := entity.get_node_or_null("VoiceComponent") as VoiceComponent
-    if not voice or not voice.voice_data:
-        return
-    if not selection_manager._is_local_entity_node(entity):
-        return
-    AudioManager.play_voice(voice.voice_data.id, event)
+    play_ack_voice(selection_manager, event)
 
 
-static func voice_event_for_cursor(cursor: CursorState.Type) -> String:
-    match cursor:
-        CursorState.Type.MOVE:
-            return VoiceData.EVENT_MOVE
-        CursorState.Type.ATTACK, CursorState.Type.HARVEST, CursorState.Type.ENTER:
-            return VoiceData.EVENT_ATTACK
-        CursorState.Type.DEPLOY:
-            return VoiceData.EVENT_ATTACK
-        _:
-            return ""
+## Play one acknowledgment line of `event` from the selection: the NW-most local
+## selected unit whose voice set has a variant for that event. A unit without a
+## variant is skipped, so a mixed selection never lands on a speaker that would
+## silently no-op. Used by the order funnel and the deploy/stop hotkeys.
+static func play_ack_voice(selection_manager: SelectionManager, event: String) -> void:
+    if selection_manager == null or event.is_empty():
+        return
+    var candidates: Array[SelectComponent] = []
+    for sc in selection_manager.selected_entities:
+        if not is_instance_valid(sc):
+            continue
+        var entity := sc.get_parent() as Node3D
+        if not is_instance_valid(entity):
+            continue
+        if not selection_manager._is_local_entity_node(entity):
+            continue
+        var voice := entity.get_node_or_null("VoiceComponent") as VoiceComponent
+        if not voice or not voice.voice_data or voice.voice_data.get_event(event).is_empty():
+            continue
+        candidates.append(sc)
+    var chosen := selection_manager.get_northwest_most(candidates) as SelectComponent
+    if not chosen:
+        return
+    var speaker := chosen.get_parent() as Node3D
+    var speaker_voice := speaker.get_node_or_null("VoiceComponent") as VoiceComponent
+    if not speaker_voice or not speaker_voice.voice_data:
+        return
+    AudioManager.play_voice(speaker_voice.voice_data.id, event)
+
+
+## Voice event for an order batch: the event of the highest-priority resolved
+## order (ties keep the earlier order), matching how the cursor is resolved — an
+## attack in a mixed selection acknowledges with the attack voice, not whichever
+## entity happened to be selected first.
+static func _voice_event_for_orders(orders: Array[OrderResult]) -> String:
+    var best: OrderResult = null
+    for order in orders:
+        if order == null:
+            continue
+        if best == null or order.priority > best.priority:
+            best = order
+    return best.voice_event if best else ""
 
 
 ## Shared click-modifier snapshot (Ctrl = force-attack, Alt = force-move,

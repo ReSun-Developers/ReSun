@@ -103,3 +103,45 @@ func test_set_generator_replaces_previous_generator() -> void:
     TestHelper.assert_true(os.is_repair_mode(), "second set_generator replaces the first")
     TestHelper.assert_true(not os.is_sell_mode(), "sell mode no longer active after replace")
     _reset_mode()
+
+
+## Minimal sellable/repairable building: FoundationComponent + BUILDING stats +
+## HealthComponent. Foundation size is irrelevant to the generator's gate.
+func _make_building(damaged: bool = false) -> Node3D:
+    var building := Node3D.new()
+    building.name = "Building"
+    var foundation := FoundationComponent.new()
+    foundation.name = "FoundationComponent"
+    building.add_child(foundation)
+    var stats := StatsComponent.new()
+    stats.name = "StatsComponent"
+    stats.entity_type = EntityData.EntityType.BUILDING
+    building.add_child(stats)
+    var health := HealthComponent.new()
+    health.name = "HealthComponent"
+    health.max_health = 100
+    health.current_health = 50 if damaged else 100
+    building.add_child(health)
+    return building
+
+
+func test_sell_order_suppresses_voice_event() -> void:
+    var building := _make_building(false)
+    var orders := SellOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
+    TestHelper.assert_eq(orders.size(), 1, "sellable building produces one order")
+    if orders.size() == 1:
+        TestHelper.assert_eq(
+            orders[0].get("voice_event"), "", "sell order suppresses the voice event"
+        )
+    building.free()
+
+
+func test_repair_order_suppresses_voice_event() -> void:
+    var building := _make_building(true)
+    var orders := RepairOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
+    TestHelper.assert_eq(orders.size(), 1, "damaged building produces one order")
+    if orders.size() == 1:
+        TestHelper.assert_eq(
+            orders[0].get("voice_event"), "", "repair order suppresses the voice event"
+        )
+    building.free()

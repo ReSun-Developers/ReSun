@@ -127,6 +127,9 @@ func test_resolve_all_combat_entity_vs_enemy():
     )
     TestHelper.assert_eq(results.size(), 1, "combat entity vs enemy -> 1 order")
     TestHelper.assert_eq(results[0].cursor, CursorState.Type.ATTACK, "order cursor -> ATTACK")
+    TestHelper.assert_eq(
+        results[0].get("voice_event"), VoiceData.EVENT_ATTACK, "attack order -> attack voice event"
+    )
     _teardown_selection([entity])
     target.free()
 
@@ -287,8 +290,21 @@ func test_resolve_single_force_attack_allows_friendly():
         _sm.selected_entities, target, Vector2i.ZERO, Vector3.ZERO, modifiers
     )
     TestHelper.assert_true(result != null, "force_attack vs friendly -> order not null")
+    TestHelper.assert_eq(
+        result.get("voice_event"), VoiceData.EVENT_ATTACK, "force-fire entity -> attack voice event"
+    )
     _teardown_selection([entity])
     target.free()
+
+
+# --- voice event tests ---
+
+
+func test_order_result_defaults_to_move_voice_event():
+    var order := OrderResult.new(CursorState.Type.MOVE, 5)
+    TestHelper.assert_eq(
+        order.get("voice_event"), VoiceData.EVENT_MOVE, "default voice event is the move voice"
+    )
 
 
 # --- _is_better tests ---
