@@ -1344,6 +1344,11 @@ func test_harvest_order_resource_target():
     TestHelper.assert_true(order != null, "click resource -> order not null")
     TestHelper.assert_eq(order.cursor, CursorState.Type.HARVEST, "cursor -> HARVEST")
     TestHelper.assert_eq(order.priority, 20, "priority -> 20")
+    TestHelper.assert_eq(
+        order.get("voice_event"),
+        VoiceData.EVENT_MOVE,
+        "harvest order acknowledges with the move voice"
+    )
 
     resource_entity.queue_free()
     entity.queue_free()
@@ -1362,6 +1367,11 @@ func test_harvest_order_refinery_target():
     TestHelper.assert_true(order != null, "click refinery -> order not null")
     TestHelper.assert_eq(order.cursor, CursorState.Type.ENTER, "cursor -> ENTER")
     TestHelper.assert_eq(order.priority, 15, "priority -> 15")
+    TestHelper.assert_eq(
+        order.get("voice_event"),
+        VoiceData.EVENT_MOVE,
+        "dock order acknowledges with the move voice"
+    )
 
     dock_entity.queue_free()
     entity.queue_free()

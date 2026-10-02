@@ -15,6 +15,11 @@ var queued: bool
 var execute: Callable
 ## Surface level the order targets, resolved from the cursor pick (0 = ground).
 var target_level: int = 0
+## Voice event this order acknowledges with, chosen by the producing component.
+## Defaults to the move voice: every non-attack order (move, harvest, enter,
+## deploy) acknowledges with `move`, matching the original engine's rule. An empty
+## value suppresses the order voice (sell/repair).
+var voice_event: String = VoiceData.EVENT_MOVE
 
 
 func _init(
@@ -24,6 +29,7 @@ func _init(
     p_target_pos: Vector3 = Vector3.ZERO,
     p_queued: bool = false,
     p_execute: Callable = Callable(),
+    p_voice_event: String = VoiceData.EVENT_MOVE,
 ) -> void:
     cursor = p_cursor
     priority = p_priority
@@ -31,3 +37,4 @@ func _init(
     target_pos = p_target_pos
     queued = p_queued
     execute = p_execute
+    voice_event = p_voice_event

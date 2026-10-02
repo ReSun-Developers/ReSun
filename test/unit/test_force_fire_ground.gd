@@ -153,6 +153,7 @@ func test_ctrl_ground_issues_attack_order_and_cursor():
         and orders[0].cursor == CursorState.Type.ATTACK
         and orders[0].priority > 5
         and orders[0].target_pos == pos
+        and orders[0].get("voice_event") == VoiceData.EVENT_ATTACK
         and cursor == CursorState.Type.ATTACK
     )
     _deselect(unit, sc)

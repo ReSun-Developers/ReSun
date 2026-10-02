@@ -39,12 +39,24 @@ const VOICE_COMPRESSOR_THRESHOLD_DB: float = -18.0
 const VOICE_COMPRESSOR_RATIO: float = 2.0
 const VOICE_COMPRESSOR_GAIN_DB: float = 8.0
 
+## A `select` line is held briefly before playing. If an order acknowledgment
+## (`move`/`attack`/`feedback`) for the same voice set arrives inside the window,
+## the held select is discarded so the acknowledgment is the only line (GH #305).
+## `0` disables deferral (play select immediately).
+## ponytail: debounce knob, tune from playtesting.
+var SELECT_DEBOUNCE_MS: float = 150.0
+
 var _audio_cache: Dictionary = {}
 var _voice_cache: Dictionary = {}
 var _data_sets: Array[String] = []
 var _active_players_by_id: Dictionary = {}
 var _active_players_by_bus: Dictionary = {}
 var _last_played_at: Dictionary = {}
+## Deferred select lines, keyed by voice set: `{sound_id, remaining_seconds}`.
+var _pending_select: Dictionary = {}
+## Currently-playing select line per voice set, so a following acknowledgment can
+## stop it in place — the debounce only covers a select still waiting to start.
+var _active_select_by_voice: Dictionary = {}
 
 ## EVA "insufficient funds" line — announced when a build queue stalls for want
 ## of credits. Inert until an audio asset with this id is imported; the call
@@ -53,6 +65,9 @@ const EVA_INSUFFICIENT_FUNDS: String = "EVA_INSUFFICIENT_FUNDS"
 
 
 func _ready() -> void:
+    # Keep running while the tree is paused so a deferred select can still flush
+    # (the pause menu must not strand a pending voice line).
+    process_mode = Node.PROCESS_MODE_ALWAYS
     _ensure_buses()
     GameContext.game_changed.connect(_on_game_changed)
     _load_from_context()
@@ -91,11 +106,14 @@ func _on_game_changed(_def: GameDefinition) -> void:
 
 
 ## Clears all registered audio content. Called before every (re)registration.
-## In-flight playback state (active players, retrigger windows) is untouched.
+## Active players and retrigger windows are left alone; deferred selects are
+## dropped, since their voice sets no longer resolve.
 func reset_content() -> void:
     _audio_cache.clear()
     _voice_cache.clear()
     _data_sets.clear()
+    _pending_select.clear()
+    _active_select_by_voice.clear()
 
 
 func _ensure_buses() -> void:
@@ -239,76 +257,141 @@ func play_random(ids: PackedStringArray, position: Vector3 = Vector3.INF) -> voi
     play_sound(known[randi() % known.size()], position)
 
 
-func play_sound(id: String, position: Vector3 = Vector3.INF) -> void:
+## Play a sound id. Returns the created player (null when the id is unknown,
+## unloadable, or throttled) so callers such as play_voice can track it.
+func play_sound(id: String, position: Vector3 = Vector3.INF) -> Node:
     var audio := get_audio_data(id)
     if not audio:
         push_warning("AudioManager: Unknown sound id: %s" % id)
-        return
+        return null
     if audio.path.is_empty() or not ResourceLoader.exists(audio.path):
         push_warning("AudioManager: Missing audio file for id %s: %s" % [id, audio.path])
-        return
+        return null
     var stream := load(audio.path) as AudioStream
     if not stream:
         push_warning("AudioManager: Failed to load audio stream for id %s: %s" % [id, audio.path])
-        return
+        return null
 
     var now_ms := Time.get_ticks_msec()
     if now_ms - (_last_played_at.get(id, -1) as int) < _effective_retrigger_ms(audio):
-        return
+        return null
     _last_played_at[id] = now_ms
 
     var active := _active_players_by_id.get(id, []) as Array
     if active.size() >= MAX_STACK_PER_ID:
         var oldest := active.pop_front() as Node
-        if is_instance_valid(oldest):
-            oldest.call("stop")
-            oldest.queue_free()
-        _untrack_player(id, oldest)
+        _stop_player(id, oldest)
     _active_players_by_id[id] = active
 
     var spatial := audio.is_spatial and position != Vector3.INF
     if spatial:
-        var player := AudioStreamPlayer3D.new()
-        player.stream = stream
-        player.bus = audio.bus
-        player.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
-        add_child(player)
+        var player3d := AudioStreamPlayer3D.new()
+        player3d.stream = stream
+        player3d.bus = audio.bus
+        player3d.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
+        add_child(player3d)
         var viewport_rect := _viewport_rect()
         if viewport_rect.size == Vector2.ZERO:
             # No camera (headless/UI) — positional at the source, no falloff.
-            player.global_position = position
+            player3d.global_position = position
         else:
             # RTS rule: full volume while on screen, fall off beyond the
             # viewport edge (distance from the camera past the edge).
             # ponytail: unit_size is the falloff knob, tune from playtesting.
-            player.unit_size = maxf(viewport_rect.size.y, 1.0) * 0.5
-            player.global_position = _falloff_position(
+            player3d.unit_size = maxf(viewport_rect.size.y, 1.0) * 0.5
+            player3d.global_position = _falloff_position(
                 position, viewport_rect, _listener_position()
             )
-        player.play()
-        _track_player(id, player, active)
-    else:
-        var player := AudioStreamPlayer.new()
-        player.stream = stream
-        player.bus = audio.bus
-        add_child(player)
-        player.play()
-        _track_player(id, player, active)
+        player3d.play()
+        _track_player(id, player3d, active)
+        return player3d
+    var player := AudioStreamPlayer.new()
+    player.stream = stream
+    player.bus = audio.bus
+    add_child(player)
+    player.play()
+    _track_player(id, player, active)
+    return player
 
 
 ## Voice playback is commander radio chatter, always centered on the camera.
 ## It routes through play_sound, so stacked identical voices share the same
 ## loudness budget as any other stacked sound.
+##
+## A `select` line is deferred by `SELECT_DEBOUNCE_MS` (keyed by voice set) so a
+## following order acknowledgment can supersede it, and an acknowledgment also
+## stops a select that has already started — so select and acknowledgment never
+## overlap. `die` is exempt: death cries are never deferred and never cancel a
+## select.
 func play_voice(voice_id: String, event_name: String) -> void:
     var voice := get_voice_data(voice_id)
     if not voice:
         push_warning("AudioManager: Unknown voice id: %s" % voice_id)
         return
+    # An incoming command acknowledgment supersedes this voice set's pending
+    # select even when the acknowledgment itself has no playable variant — the
+    # request, not the sound, cancels the deferred line. `die` is exempt.
+    if event_name != VoiceData.EVENT_SELECT and event_name != VoiceData.EVENT_DIE:
+        _pending_select.erase(voice_id)
     var variants := voice.get_event(event_name)
     if variants.is_empty():
         return
     var chosen := variants[randi() % variants.size()]
+    if event_name == VoiceData.EVENT_SELECT:
+        if SELECT_DEBOUNCE_MS > 0.0:
+            _queue_pending_select(voice_id, chosen)
+        else:
+            _play_select(voice_id, chosen)
+        return
+    if event_name == VoiceData.EVENT_DIE:
+        play_sound(chosen, _listener_position())
+        return
+    # A command acknowledgment stops this speaker's in-flight select so the two
+    # lines never overlap, then plays.
+    _stop_active_select(voice_id)
     play_sound(chosen, _listener_position())
+
+
+## Defer a select line. Repeated selects for one voice set coalesce into a single
+## slot: the chosen variant refreshes but the original deadline is kept, so a
+## rapid burst still flushes one line at the first window's end.
+func _queue_pending_select(voice_id: String, sound_id: String) -> void:
+    if _pending_select.has(voice_id):
+        (_pending_select[voice_id] as Dictionary)["sound_id"] = sound_id
+        return
+    _pending_select[voice_id] = {"sound_id": sound_id, "remaining": SELECT_DEBOUNCE_MS / 1000.0}
+
+
+## Start a select line and remember it as the voice set's active select, so a
+## later acknowledgment can stop it in place.
+func _play_select(voice_id: String, sound_id: String) -> void:
+    _stop_active_select(voice_id)
+    var player := play_sound(sound_id, _listener_position())
+    if player:
+        _active_select_by_voice[voice_id] = player
+        player.set_meta("select_voice_set", voice_id)
+
+
+## Stop the voice set's currently-playing select line, if any.
+func _stop_active_select(voice_id: String) -> void:
+    var player: Node = _active_select_by_voice.get(voice_id, null) as Node
+    _active_select_by_voice.erase(voice_id)
+    if player and is_instance_valid(player):
+        _stop_player(player.get_meta("sound_id", "") as String, player)
+
+
+## Flush deferred select lines whose debounce window has elapsed. A select that
+## was superseded by an acknowledgment is never reached because play_voice erased
+## it. Runs only while a select is pending.
+func _process(delta: float) -> void:
+    if _pending_select.is_empty():
+        return
+    for voice_id in _pending_select.keys():
+        var entry: Dictionary = _pending_select[voice_id]
+        entry["remaining"] = float(entry["remaining"]) - delta
+        if float(entry["remaining"]) <= 0.0:
+            _pending_select.erase(voice_id)
+            _play_select(voice_id, entry["sound_id"] as String)
 
 
 ## Track a new copy on its bus. The whole bus stack is rebalanced so N
@@ -318,11 +401,27 @@ func _track_player(id: String, player: Node, active: Array) -> void:
     active.append(player)
     var audio := get_audio_data(id)
     player.set_meta("stack_base_db", audio.volume_db)
+    player.set_meta("sound_id", id)
     var bus_players := _active_players_by_bus.get(audio.bus, []) as Array
     bus_players.append(player)
     _active_players_by_bus[audio.bus] = bus_players
     _renormalize_bus(bus_players)
     player.connect("finished", _on_player_finished.bind(id, player))
+
+
+## Stop and release a tracked player: stop playback, drop it from the per-id and
+## per-bus stacks, and free it. Godot's stop() never emits `finished`, so the
+## untracking must be explicit here.
+func _stop_player(id: String, player: Node) -> void:
+    if not is_instance_valid(player):
+        return
+    player.call("stop")
+    _untrack_player(id, player)
+    var active := _active_players_by_id.get(id, []) as Array
+    active.erase(player)
+    if active.is_empty():
+        _active_players_by_id.erase(id)
+    player.queue_free()
 
 
 ## Scale every active copy on a bus by the bus's total concurrent count, so a
@@ -353,6 +452,9 @@ func _untrack_player(id: String, player: Node) -> void:
 func _on_player_finished(id: String, player: Node) -> void:
     _untrack_player(id, player)
     if is_instance_valid(player):
+        var voice_set := player.get_meta("select_voice_set", "") as String
+        if not voice_set.is_empty() and _active_select_by_voice.get(voice_set, null) == player:
+            _active_select_by_voice.erase(voice_set)
         player.queue_free()
     var active := _active_players_by_id.get(id, []) as Array
     active.erase(player)

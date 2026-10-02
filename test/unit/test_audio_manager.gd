@@ -433,11 +433,13 @@ func test_stack_voice_path_normalized():
     fixture.is_spatial = false
     var voice := VoiceData.new()
     voice.id = "STACK_VOICE"
-    voice.select = [fixture.id]
+    # `die` is exempt from select deferral, so it exercises the voice stack path
+    # immediately (a `select` would now be held for the debounce window).
+    voice.die = [fixture.id]
     _am._voice_cache[voice.id] = voice
     for i in 3:
         _expire_retrigger(fixture.id)
-        _am.play_voice(voice.id, "select")
+        _am.play_voice(voice.id, "die")
         var players := _stack_players(fixture.bus)
         var expected_db: float = -4.0 + linear_to_db(1.0 / float(i + 1))
         TestHelper.assert_eq(players.size(), i + 1, "voice copy joins the stack")
@@ -451,6 +453,180 @@ func test_stack_voice_path_normalized():
                 )
             )
     _release_players(_stack_players(fixture.bus))
+
+
+## Registers a voice set whose select/move/attack/die events map to distinct
+## fixture ids, so select deferral/discard can be observed via active counts.
+func _defer_voice_fixture() -> VoiceData:
+    var voice := VoiceData.new()
+    voice.id = "DEFER_VOICE"
+    voice.select = [_stack_fixture("DEFER_SEL", 0.0).id]
+    voice.move = [_stack_fixture("DEFER_MOV", 0.0).id]
+    voice.attack = [_stack_fixture("DEFER_ATK", 0.0).id]
+    voice.die = [_stack_fixture("DEFER_DIE", 0.0).id]
+    _am._voice_cache[voice.id] = voice
+    return voice
+
+
+func test_select_deferred_then_ack_discards_select():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 0, "select is deferred, not played")
+    _expire_retrigger("DEFER_MOV")
+    _am.play_voice(voice.id, "move")
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 0, "deferred select discarded by ack")
+    TestHelper.assert_eq(_am.get_active_count("DEFER_MOV"), 1, "acknowledgment plays")
+    _am._process(1.0)
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 0, "discarded select never flushes")
+    _release_players(_stack_players("DEFER_MOV_BUS"))
+
+
+func test_select_flushes_without_ack():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 0, "select is deferred")
+    _am._process(1.0)
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 1, "select flushes after the window")
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+
+
+func test_rapid_selects_coalesce():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    var first_remaining: float = float(_am._pending_select[voice.id]["remaining"])
+    _am.play_voice(voice.id, "select")
+    TestHelper.assert_eq(_am._pending_select.size(), 1, "two rapid selects share one pending slot")
+    (
+        TestHelper
+        . assert_true(
+            is_equal_approx(float(_am._pending_select[voice.id]["remaining"]), first_remaining),
+            "a second select does not extend the window",
+        )
+    )
+    _am._process(1.0)
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 1, "coalesced selects flush one line")
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+
+
+func test_die_not_deferred_and_does_not_cancel_select():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _expire_retrigger("DEFER_DIE")
+    _am.play_voice(voice.id, "select")
+    TestHelper.assert_true(
+        _am._pending_select.has(voice.id), "select is pending, not playing, before the die"
+    )
+    _am.play_voice(voice.id, "die")
+    TestHelper.assert_eq(_am.get_active_count("DEFER_DIE"), 1, "die plays immediately")
+    TestHelper.assert_true(
+        _am._pending_select.has(voice.id), "die does not cancel the deferred select"
+    )
+    _am._process(1.0)
+    TestHelper.assert_eq(
+        _am.get_active_count("DEFER_SEL"), 1, "the select still flushes after the die"
+    )
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+    _release_players(_stack_players("DEFER_DIE_BUS"))
+
+
+func test_zero_window_disables_deferral():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    var saved: float = _am.SELECT_DEBOUNCE_MS
+    _am.SELECT_DEBOUNCE_MS = 0.0
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    _am.SELECT_DEBOUNCE_MS = saved
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 1, "window 0 plays select immediately")
+    TestHelper.assert_true(not _am._pending_select.has(voice.id), "window 0 leaves nothing pending")
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+
+
+func test_ack_cancels_in_flight_select():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    _am._process(1.0)
+    TestHelper.assert_eq(
+        _am.get_active_count("DEFER_SEL"), 1, "select is playing once the window elapses"
+    )
+    _expire_retrigger("DEFER_MOV")
+    _am.play_voice(voice.id, "move")
+    TestHelper.assert_eq(
+        _am.get_active_count("DEFER_SEL"), 0, "an in-flight select is stopped by the ack"
+    )
+    TestHelper.assert_eq(_am.get_active_count("DEFER_MOV"), 1, "the acknowledgment plays")
+    _release_players(_stack_players("DEFER_MOV_BUS"))
+
+
+func test_select_flush_respects_window_boundary():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    _am._process(0.05)
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 0, "not flushed before the window")
+    _am._process(0.2)
+    TestHelper.assert_eq(_am.get_active_count("DEFER_SEL"), 1, "flushed once the window elapses")
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+
+
+## An acknowledgment that has no playable variant must still cancel the pending
+## select: the request is what supersedes the line, not the sound.
+func test_empty_variant_ack_still_discards_select():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    voice.feedback = []
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    TestHelper.assert_true(_am._pending_select.has(voice.id), "select pending before the ack")
+    _am.play_voice(voice.id, "feedback")
+    _am._process(1.0)
+    (
+        TestHelper
+        . assert_eq(
+            _am.get_active_count("DEFER_SEL"),
+            0,
+            "an acknowledgment with no variant still cancels the select",
+        )
+    )
+
+
+## Scope boundary: only the same voice set supersedes the select.
+func test_other_voice_set_does_not_cancel_pending_select():
+    if not _am:
+        return
+    var voice := _defer_voice_fixture()
+    var other := VoiceData.new()
+    other.id = "DEFER_OTHER"
+    other.move = [_stack_fixture("DEFER_OTHER_MOV", 0.0).id]
+    _am._voice_cache[other.id] = other
+    _expire_retrigger("DEFER_SEL")
+    _am.play_voice(voice.id, "select")
+    _expire_retrigger("DEFER_OTHER_MOV")
+    _am.play_voice(other.id, "move")
+    _am._process(1.0)
+    TestHelper.assert_eq(
+        _am.get_active_count("DEFER_SEL"), 1, "a different voice set does not cancel the select"
+    )
+    _release_players(_stack_players("DEFER_SEL_BUS"))
+    _release_players(_stack_players("DEFER_OTHER_MOV_BUS"))
 
 
 func test_stack_cross_id_scales_to_bus_total():
