@@ -3,7 +3,7 @@
 Reads `tools/isotem/isotem_catalog.json` (produced by catalog.py, canonical
 orientation) and writes one `TerrainObject` resource per directional variant —
 every base family × 4 rotations (`<base>_n`, `<base>_e`, `<base>_s`,
-`<base>_w`) — to `resources/terrain_objects/`.
+`<base>_w`) — to `games/ts/terrain_objects/`.
 
 Each cell carries baked geometry: `corners` (4 absolute vertex heights in
 NW/NE/SE/SW order, rotated to the variant's facing), a `crease` triangulation
@@ -40,7 +40,7 @@ KIND_TO_CELL_TYPE = {
 }
 
 DEFAULT_CATALOG = "tools/isotem/isotem_catalog.json"
-DEFAULT_OUT = "resources/terrain_objects"
+DEFAULT_OUT = "games/ts/terrain_objects"
 
 TERRAIN_OBJECT_SCRIPT = "res://scripts/data/TerrainObject.gd"
 
