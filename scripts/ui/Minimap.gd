@@ -72,11 +72,10 @@ func _ready() -> void:
     if custom_minimum_size == Vector2.ZERO:
         custom_minimum_size = Vector2(200, 200)
     _setup_static_overlay()
-    _radar_system = get_node_or_null("/root/RadarSystem")
+    _radar_system = RadarSystem
     _radar_online = _compute_radar_online()
     _transition_from_online = _radar_online
-    if _radar_system and _radar_system.has_signal("radar_availability_changed"):
-        _radar_system.radar_availability_changed.connect(_on_radar_availability_changed)
+    _radar_system.radar_availability_changed.connect(_on_radar_availability_changed)
     TerrainSystem.grid_initialized.connect(_on_grid_initialized)
     if TerrainSystem.grid_cells != Vector2i.ZERO:
         _schedule_terrain_bake()
@@ -771,7 +770,7 @@ func _handle_click(cell: Vector2i) -> void:
     if orders.is_empty():
         BoundsSystem.center_camera_on_cell(cell)
         return
-    var selection := get_node_or_null("/root/SelectionManager") as SelectionManager
+    var selection := SelectionManager
     MouseHandler.play_order_voices(orders, selection)
     for order in orders:
         order.execute.call()

@@ -25,7 +25,7 @@ var _hovered_entity: Node3D = null
 
 func _ready():
     selection_rect.hide()
-    selection_manager = get_node_or_null("/root/SelectionManager") as SelectionManager
+    selection_manager = SelectionManager
 
     # Debug logging for raycasting infrastructure
     if not camera_controller:
@@ -120,11 +120,10 @@ func _process(_delta):
     if Engine.is_editor_hint():
         return
 
-    var bm := get_node_or_null("/root/BuildingManager") as Node
-    if bm and bm.is_build_mode:
+    if BuildingManager.is_build_mode:
         return
-    if bm and bm.exiting_build_mode:
-        bm.exiting_build_mode = false
+    if BuildingManager.exiting_build_mode:
+        BuildingManager.exiting_build_mode = false
         mouse_dragging = false
         _skip_release = true
         return

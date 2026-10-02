@@ -100,11 +100,7 @@ func start_mission(id: String) -> void:
     if id.is_empty():
         current_mission = null
         return
-    var catalog := get_node_or_null("/root/CampaignCatalog")
-    if catalog == null:
-        push_error("GameContext: CampaignCatalog not ready; cannot start mission '%s'" % id)
-        return
-    var mission: Mission = catalog.get_mission(id)
+    var mission: Mission = CampaignCatalog.get_mission(id)
     if mission == null:
         push_error("GameContext: unknown mission id '%s'" % id)
         return

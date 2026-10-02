@@ -25,14 +25,11 @@ var _displayed := Vector2.ZERO
 
 
 func _process(delta: float) -> void:
-    var grid := get_node_or_null("/root/PowerGrid")
-    if grid == null:
-        return
     var pid := PlayerManager.get_local_player_id()
     var rules := GlobalRules.get_current()
     var max_power: float = rules.power_bar_max_output if rules else DEFAULT_MAX_POWER
     var exponent: float = rules.power_bar_curve_exponent if rules else DEFAULT_CURVE_EXPONENT
-    var target := _ratios(grid.get_output(pid), grid.get_drain(pid), max_power, exponent)
+    var target := _ratios(PowerGrid.get_output(pid), PowerGrid.get_drain(pid), max_power, exponent)
     if _displayed.is_equal_approx(target):
         return
     _displayed = _advance(_displayed, target, delta)

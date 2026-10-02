@@ -25,21 +25,19 @@ var _target_credits: int = 0
 var _step_accumulator: float = 0.0
 ## Cached cheapest buildable cost (entity cache is static after load). -1 = none.
 var _cheapest_cost: int = -1
-## Autoload refs resolved once in _ready. Handlers may fire while this node is
-## momentarily out of the tree (test harness), where absolute get_node() errors.
+## Autoload refs cached in _ready. Direct singleton access stays valid even
+## while this node is momentarily out of the tree (test harness), where
+## absolute get_node() paths would error.
 var _em: Node = null
 var _ef: Node = null
 
 
 func _ready() -> void:
-    _em = get_node_or_null("/root/EconomyManager")
-    _ef = get_node_or_null("/root/EntityFactory")
-    if _em:
-        _em.credits_changed.connect(_on_credits_changed)
+    _em = EconomyManager
+    _ef = EntityFactory
+    EconomyManager.credits_changed.connect(_on_credits_changed)
     PlayerManager.players_changed.connect(_on_players_changed)
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps and ps.has_signal("prerequisites_changed"):
-        ps.prerequisites_changed.connect(_on_prerequisites_changed)
+    PrerequisiteSystem.prerequisites_changed.connect(_on_prerequisites_changed)
     _cheapest_cost = _compute_cheapest_cost()
     _resync()
 

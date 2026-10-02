@@ -613,8 +613,7 @@ func _add_ice_component(entity: Node3D, data: EntityData) -> void:
         return
     if not data.breakable_surface:
         return
-    var gc := get_node_or_null("/root/GameContext")
-    if gc and not gc.has_feature("breakable_ice"):
+    if not GameContext.has_feature("breakable_ice"):
         return
     var component := Node.new()
     component.name = "IceComponent"

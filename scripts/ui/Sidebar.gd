@@ -95,9 +95,7 @@ func _ready() -> void:
     _shader.shader = preload("res://shaders/ui/angular_progress.gdshader")
 
     _build_tabs()
-    var gc := get_node_or_null("/root/GameContext")
-    if gc and gc.has_signal("game_changed"):
-        gc.game_changed.connect(_on_game_changed)
+    GameContext.game_changed.connect(_on_game_changed)
 
     scroll_up.pressed.connect(_on_scroll_up)
     scroll_down.pressed.connect(_on_scroll_down)
@@ -110,17 +108,13 @@ func _ready() -> void:
     # Placing mode refreshes the grid (all entities shown while armed).
     EntityPlacer.placing_mode_changed.connect(_on_placing_mode_changed)
 
-    var ps := get_node("/root/PrerequisiteSystem") as Node
-    if ps:
-        ps.prerequisites_changed.connect(_on_prerequisites_changed)
+    PrerequisiteSystem.prerequisites_changed.connect(_on_prerequisites_changed)
 
-    var pm := get_node("/root/ProductionManager") as Node
-    if pm:
-        pm.production_started.connect(_on_production_started)
-        pm.production_progress.connect(_on_production_progress)
-        pm.production_completed.connect(_on_production_completed)
-        pm.production_cancelled.connect(_on_production_cancelled)
-        pm.production_paused.connect(_on_production_paused)
+    ProductionManager.production_started.connect(_on_production_started)
+    ProductionManager.production_progress.connect(_on_production_progress)
+    ProductionManager.production_completed.connect(_on_production_completed)
+    ProductionManager.production_cancelled.connect(_on_production_cancelled)
+    ProductionManager.production_paused.connect(_on_production_paused)
 
     _switch_tab(0)
     _prewarm_available_models()
@@ -150,14 +144,13 @@ func _on_tab_pressed(tab_index: int) -> void:
 ## default when the definition declares none. Feature-gated tabs are dropped
 ## when the feature is off.
 func _resolve_tabs() -> Array[Dictionary]:
-    var gc := get_node_or_null("/root/GameContext")
     var raw: Array = DEFAULT_TABS
-    if gc and gc.current and not gc.current.sidebar_tabs.is_empty():
-        raw = gc.current.sidebar_tabs
+    if GameContext.current and not GameContext.current.sidebar_tabs.is_empty():
+        raw = GameContext.current.sidebar_tabs
     var out: Array[Dictionary] = []
     for entry in raw:
         var required := String(entry.get("requires_feature", ""))
-        if not required.is_empty() and not (gc and gc.has_feature(required)):
+        if not required.is_empty() and not GameContext.has_feature(required):
             continue
         var types: Array[int] = []
         for type_name: String in entry.get("entity_types", []):
@@ -251,15 +244,12 @@ func _get_current_entities() -> Array[EntityData]:
     if _current_tab >= 0 and _current_tab < _tabs.size():
         types = _tabs[_current_tab]["entity_types"]
     var result: Array[EntityData] = []
-    var ps := get_node("/root/PrerequisiteSystem") as Node
     for etype in types:
         var all := EntityFactory.get_all_by_type(etype as EntityData.EntityType)
         for data in all:
             if not data.buildable:
                 continue
-            if ps and ps.can_build(PlayerManager.get_local_player_id(), data):
-                result.append(data)
-            elif not ps:
+            if PrerequisiteSystem.can_build(PlayerManager.get_local_player_id(), data):
                 result.append(data)
     return sort_buildables(result, _tab_types)
 
@@ -411,9 +401,10 @@ func _create_cameo(data: EntityData) -> Button:
     _cameo_progress[btn] = progress_rect
 
     # Check build limit
-    var ps := get_node("/root/PrerequisiteSystem")
-    if ps and data.build_limit > 0:
-        var count: int = ps.get_build_count(PlayerManager.get_local_player_id(), data.id)
+    if data.build_limit > 0:
+        var count: int = PrerequisiteSystem.get_build_count(
+            PlayerManager.get_local_player_id(), data.id
+        )
         if count >= data.build_limit:
             btn.modulate = Color(0.4, 0.4, 0.4, 0.6)
 
@@ -421,11 +412,7 @@ func _create_cameo(data: EntityData) -> Button:
     btn.set_meta("entity_id", data.id)
 
     # Show progress gradient if item has partial progress
-    var pm := get_node_or_null("/root/ProductionManager") as ProductionManager
-    if not pm:
-        # Autoloads make this unreachable in-game; hand back the dressed button
-        # (progress/overlays missing) instead of a null the grid would crash on.
-        return btn
+    var pm := ProductionManager
     var player_id := PlayerManager.get_local_player_id()
     var current_progress := pm.get_item_progress(player_id, data)
     if current_progress > 0.0 and progress_rect.material:
@@ -570,18 +557,15 @@ func _pack_words_to_end(display_name: String, max_width: float) -> String:
 
 
 func _get_cameo_color(data: EntityData) -> Color:
-    var catalog := get_node_or_null("/root/FactionCatalog")
-    if catalog:
-        for faction in catalog.get_ordered():
-            var f := faction as Faction
-            if f and data.owner.has(f.id):
-                return f.color
+    for faction in FactionCatalog.get_ordered():
+        var f := faction as Faction
+        if f and data.owner.has(f.id):
+            return f.color
     return Color.GRAY
 
 
 func _is_placing(data: EntityData) -> bool:
-    var bm := get_node("/root/BuildingManager") as BuildingManager
-    return bm and bm.is_build_mode and bm.current_building_type == data
+    return BuildingManager.is_build_mode and BuildingManager.current_building_type == data
 
 
 func _is_paused(pm: ProductionManager, data: EntityData) -> bool:
@@ -621,10 +605,7 @@ func _on_cameo_gui_input(event: InputEvent, data: EntityData) -> void:
         get_viewport().set_input_as_handled()
         return
 
-    var pm := get_node_or_null("/root/ProductionManager") as ProductionManager
-    if not pm:
-        return
-    pm.handle_cameo_click(
+    ProductionManager.handle_cameo_click(
         PlayerManager.get_local_player_id(), data, mb.button_index, mb.shift_pressed
     )
     get_viewport().set_input_as_handled()
@@ -665,9 +646,7 @@ func _on_production_started(_queue_key: String) -> void:
 
 func _on_production_progress(queue_key: String, progress: float) -> void:
     # Update the angular progress overlay on the matching cameo
-    var pm := get_node("/root/ProductionManager") as ProductionManager
-    if not pm:
-        return
+    var pm := ProductionManager
     var active_idx := pm.get_active_index(queue_key)
     var items := pm.get_queue_items(queue_key)
     if active_idx >= items.size():

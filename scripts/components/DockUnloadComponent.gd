@@ -15,10 +15,8 @@ var _global_rules: GlobalRules = null
 
 
 func _ready() -> void:
-    _economy_manager = get_node_or_null("/root/EconomyManager")
-    var ef := get_node_or_null("/root/EntityFactory")
-    if ef and ef.has_method("get_global_rules"):
-        _global_rules = ef.get_global_rules() as GlobalRules
+    _economy_manager = EconomyManager
+    _global_rules = EntityFactory.get_global_rules() as GlobalRules
     var dock := get_parent().get_node_or_null("DockHostComponent") as DockHostComponent
     if dock:
         dock.docker_undocked.connect(_on_docker_undocked)

@@ -375,23 +375,19 @@ func _do_deploy(
         for dz in target_data.foundation.y:
             cells.append(origin + Vector2i(dx, dz))
     SpatialHash.instance.register_building_cells(cells)
-    var bm := get_node_or_null("/root/BuildingManager") as BuildingManager
-    if bm:
-        (
-            bm
-            . _buildings
-            . append(
-                {
-                    "node": target_entity,
-                    "type": target_data,
-                    "origin": origin,
-                    "cells": cells,
-                }
-            )
+    (
+        BuildingManager
+        . _buildings
+        . append(
+            {
+                "node": target_entity,
+                "type": target_data,
+                "origin": origin,
+                "cells": cells,
+            }
         )
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps:
-        ps.register_building(snap["player_id"], target_data)
+    )
+    PrerequisiteSystem.register_building(snap["player_id"], target_data)
     _apply_snapshot(target_entity, snap)
     source.queue_free()
     _state = DeployState.IDLE
@@ -438,11 +434,10 @@ func _complete_undeploy(source_entity: Node3D) -> void:
     var source_data_id: String = source_stats.id if source_stats else ""
     _deselect_entity(source_entity)
     _unregister_building_cells(source_entity)
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps and not source_data_id.is_empty():
+    if not source_data_id.is_empty():
         var source_data := EntityFactory.get_entity_data(source_data_id)
         if source_data:
-            ps.unregister_building(snap["player_id"], source_data)
+            PrerequisiteSystem.unregister_building(snap["player_id"], source_data)
     call_deferred("_do_undeploy", source_entity, source_position, target_data, snap)
 
 
@@ -558,15 +553,13 @@ func _remove_source_from_systems(_source_entity: Node3D) -> void:
 
 ## Unregister building cells from spatial hash.
 func _unregister_building_cells(building_entity: Node3D) -> void:
-    var bm := get_node_or_null("/root/BuildingManager") as BuildingManager
-    if bm:
-        var idx := bm._find_building_index(building_entity)
-        if idx >= 0:
-            var entry: Dictionary = bm._buildings[idx]
-            var cells: Array = entry.get("cells", []) as Array
-            if not cells.is_empty():
-                SpatialHash.instance.unregister_building_cells(cells)
-            bm._buildings.remove_at(idx)
+    var idx := BuildingManager._find_building_index(building_entity)
+    if idx >= 0:
+        var entry: Dictionary = BuildingManager._buildings[idx]
+        var cells: Array = entry.get("cells", []) as Array
+        if not cells.is_empty():
+            SpatialHash.instance.unregister_building_cells(cells)
+        BuildingManager._buildings.remove_at(idx)
 
 
 ## --- Utility ----------------------------------------------------------------
@@ -574,13 +567,7 @@ func _unregister_building_cells(building_entity: Node3D) -> void:
 
 ## Get buildings parent node.
 func _get_buildings_parent() -> Node3D:
-    var bm := get_node_or_null("/root/BuildingManager") as BuildingManager
-    if bm:
-        return bm._get_buildings_parent()
-    var tree := get_tree()
-    if tree and tree.current_scene:
-        return tree.current_scene
-    return null
+    return BuildingManager._get_buildings_parent()
 
 
 ## Calculate world position from origin cell and foundation.

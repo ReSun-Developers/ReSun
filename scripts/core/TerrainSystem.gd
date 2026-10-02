@@ -1166,14 +1166,12 @@ func export_to_json(path: String, extra_data: Dictionary = {}) -> void:
                 land_out[CellUtil.cell_key_str(land_cell)] = land_id
     if not land_out.is_empty():
         data["land_types"] = land_out
-    var bounds: Node = get_node_or_null("/root/BoundsSystem")
-    if bounds:
-        data["visible_bounds"] = [
-            int(bounds.left_inset),
-            int(bounds.right_inset),
-            int(bounds.top_inset),
-            int(bounds.bottom_inset),
-        ]
+    data["visible_bounds"] = [
+        int(BoundsSystem.left_inset),
+        int(BoundsSystem.right_inset),
+        int(BoundsSystem.top_inset),
+        int(BoundsSystem.bottom_inset),
+    ]
     for key in extra_data:
         data[key] = extra_data[key]
     var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)

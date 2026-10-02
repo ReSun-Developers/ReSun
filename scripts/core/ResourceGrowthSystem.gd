@@ -57,10 +57,9 @@ func _physics_process(delta: float) -> void:
         _tick_resource_batch(rules)
 
 
-## True when the active game enables the tree-seeded growth model (no context = allow).
+## True when the active game enables the tree-seeded growth model.
 func _tree_regrowth_enabled() -> bool:
-    var gc := get_node_or_null("/root/GameContext")
-    return gc == null or gc.has_feature("resource_tree_regrowth")
+    return GameContext.has_feature("resource_tree_regrowth")
 
 
 func _rebuild_cache() -> void:
@@ -233,8 +232,7 @@ func _find_nearest_tree_comp(world_pos: Vector3) -> ResourceTreeComponent:
 
 
 func _spawn_at_cell(cell: Vector2i, tree_comp: ResourceTreeComponent, bales: float) -> void:
-    var ef := get_node_or_null("/root/EntityFactory") as EntityFactory
-    var base_data: EntityData = ef.get_entity_data(tree_comp.spawned_entity_id) if ef else null
+    var base_data: EntityData = EntityFactory.get_entity_data(tree_comp.spawned_entity_id)
     var max_health: int = base_data.strength if base_data else 1
     var rules := GlobalRules.get_current()
     var rt := rules.get_resource_type(tree_comp.resource_type_id) if rules else null
