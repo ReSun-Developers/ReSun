@@ -28,9 +28,7 @@ func _ready() -> void:
 
 
 func _on_building_placed(_building: Node3D, entity_data: EntityData) -> void:
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps:
-        ps.register_building(PlayerManager.get_local_player_id(), entity_data)
+    PrerequisiteSystem.register_building(PlayerManager.get_local_player_id(), entity_data)
 
 
 func _load_building_types() -> void:
@@ -205,20 +203,18 @@ func _white_cells_in_bounds(building_type: EntityData) -> Array[Vector2i]:
 
 func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
     var pid := PlayerManager.get_local_player_id()
-    var pm := get_node_or_null("/root/ProductionManager")
     # A production-paid building committing through any placement path (build
     # mode or the cheat ghost) must not charge twice; its ready entry is
     # consumed only once the building actually lands (#339).
-    var was_ready: bool = pm != null and pm.is_ready_to_place(pid, building_type.id)
+    var was_ready: bool = ProductionManager.is_ready_to_place(pid, building_type.id)
 
     if not can_place(building_type, origin_cell):
         return false
 
     # Deduct cost unless already paid via the production queue
     if not was_ready:
-        var em := get_node("/root/EconomyManager") as EconomyManager
         var reason := "build:%s" % building_type.id
-        if em and not em.deduct(pid, building_type.cost, reason):
+        if not EconomyManager.deduct(pid, building_type.cost, reason):
             push_warning("[BuildingManager] Insufficient funds for %s" % building_type.id)
             return false
 
@@ -279,10 +275,9 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
         art.play_buildup()
 
     # Resume production queue for this player
-    if pm:
-        pm.clear_waiting_for_placement(pid)
+    ProductionManager.clear_waiting_for_placement(pid)
     if was_ready:
-        pm.consume_ready_building(pid, building_type.id)
+        ProductionManager.consume_ready_building(pid, building_type.id)
 
     return true
 
@@ -520,16 +515,14 @@ func sell_building(building_node: Node3D) -> bool:
         return false
     var pid := PlayerManager.get_local_player_id()
     # Refund a rules-configurable share of the cost
-    var em := get_node("/root/EconomyManager") as EconomyManager
-    if em:
-        var rules := GlobalRules.get_current()
-        var refund_pct: float = rules.refund_percent if rules else 0.5
-        var refund: int = int(entity_data.cost * refund_pct)
-        em.add(pid, refund, "sell:%s" % entity_data.id, EconomyManager.get_default_category(), true)
+    var rules := GlobalRules.get_current()
+    var refund_pct: float = rules.refund_percent if rules else 0.5
+    var refund: int = int(entity_data.cost * refund_pct)
+    EconomyManager.add(
+        pid, refund, "sell:%s" % entity_data.id, EconomyManager.get_default_category(), true
+    )
     # Unregister from prerequisite system
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps:
-        ps.unregister_building(pid, entity_data)
+    PrerequisiteSystem.unregister_building(pid, entity_data)
     # Unregister cells
     var cells: Array = entry.get("cells", []) as Array
     if not cells.is_empty():
@@ -556,9 +549,7 @@ func _on_building_destroyed(building_node: Node3D) -> void:
     var entity_data: EntityData = entry.get("type") as EntityData
     var pid := PlayerManager.get_local_player_id()
     # Unregister from prerequisite system
-    var ps := get_node_or_null("/root/PrerequisiteSystem")
-    if ps:
-        ps.unregister_building(pid, entity_data)
+    PrerequisiteSystem.unregister_building(pid, entity_data)
     # Unregister cells
     var cells: Array = entry.get("cells", []) as Array
     if not cells.is_empty():

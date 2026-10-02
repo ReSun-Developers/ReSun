@@ -1250,10 +1250,9 @@ func _damage_ice(cell: Vector2i) -> void:
             hc.take_damage(roundi(_weight))
 
 
-## True when the active game enables breakable-ice (no context = allow).
+## True when the active game enables breakable-ice.
 func _breakable_ice_enabled() -> bool:
-    var gc := get_node_or_null("/root/GameContext")
-    return gc == null or gc.has_feature("breakable_ice")
+    return GameContext.has_feature("breakable_ice")
 
 
 func _apply_facing(direction: Vector3) -> void:

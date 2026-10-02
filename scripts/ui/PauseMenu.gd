@@ -32,8 +32,7 @@ func _unhandled_input(event: InputEvent) -> void:
 ## Mode state comes from the owners: OrderSystem (sell/repair) and EntityPlacer
 ## (free placement) — never from UI scripts.
 func _esc_busy() -> bool:
-    var bm := get_node_or_null("/root/BuildingManager")
-    if bm and bm.is_build_mode:
+    if BuildingManager.is_build_mode:
         return true
     if OrderSystem.is_action_mode():
         return true

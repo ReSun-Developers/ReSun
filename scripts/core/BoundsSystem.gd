@@ -60,10 +60,8 @@ var immediate_visible_mesh: ImmediateMesh
 func _ready() -> void:
     create_bounds_nodes()
     if not Engine.is_editor_hint():
-        var ts: Node = get_node_or_null("/root/TerrainSystem")
-        if ts:
-            grid_cells = ts.grid_cells
-            ts.grid_initialized.connect(_on_grid_initialized)
+        grid_cells = TerrainSystem.grid_cells
+        TerrainSystem.grid_initialized.connect(_on_grid_initialized)
         if not camera_pivot:
             camera_pivot = _find_camera_pivot()
         if camera_pivot:
@@ -76,9 +74,7 @@ func _ready() -> void:
 
 
 func _on_grid_initialized() -> void:
-    var ts: Node = get_node_or_null("/root/TerrainSystem")
-    if ts:
-        grid_cells = ts.grid_cells
+    grid_cells = TerrainSystem.grid_cells
     create_bounds_edges()
     _resolve_camera_pivot()
     if camera_pivot:
@@ -432,7 +428,4 @@ func _sum_diff_to_world(sum_axis: float, diff_axis: float, cs: float) -> Vector3
 func _sample_terrain_height(world_pos: Vector3) -> float:
     if Engine.is_editor_hint():
         return 0.0
-    var ts: Node = get_node_or_null("/root/TerrainSystem")
-    if ts:
-        return ts.get_height_at_world_smooth(world_pos)
-    return 0.0
+    return TerrainSystem.get_height_at_world_smooth(world_pos)

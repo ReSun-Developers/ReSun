@@ -241,17 +241,11 @@ func _exit_tree() -> void:
 ## fog-of-war/shroud plane) from draping over the inspected asset. Restored on
 ## exit to whatever state was active when the browser entered.
 func _suppress_gameplay_overlays() -> void:
-    var fog := get_node_or_null("/root/FogRenderer")
-    if fog != null and fog.has_method("set_overlay_enabled"):
-        _fog_was_enabled = bool(fog.call("set_overlay_enabled", false))
-    else:
-        _set_fog_overlay(false)
+    _fog_was_enabled = FogRenderer.set_overlay_enabled(false)
 
 
 func _set_fog_overlay(enabled: bool) -> void:
-    var fog := get_node_or_null("/root/FogRenderer")
-    if fog != null and fog.has_method("set_overlay_enabled"):
-        fog.call("set_overlay_enabled", enabled)
+    FogRenderer.set_overlay_enabled(enabled)
 
 
 func _process(delta: float) -> void:

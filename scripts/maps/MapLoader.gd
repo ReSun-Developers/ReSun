@@ -40,9 +40,7 @@ static func load_map_into(path: String, parent: Node) -> Array[Dictionary]:
     if not theater_id.is_empty():
         TerrainCatalog.set_active_theater(theater_id)
 
-    var bounds: Node = parent.get_node_or_null("/root/BoundsSystem")
-    if bounds:
-        bounds.apply_saved_bounds(json)
+    BoundsSystem.apply_saved_bounds(json)
     var entities: Array = json.get("entities", [])
 
     # Pre-warm BatchLoader with all unique model paths before entity creation.

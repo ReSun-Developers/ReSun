@@ -71,9 +71,7 @@ func _ready() -> void:
     _ensure_buses()
     GameContext.game_changed.connect(_on_game_changed)
     _load_from_context()
-    var pm := get_node_or_null("/root/ProductionManager")
-    if pm:
-        pm.production_stalled.connect(_on_production_stalled)
+    ProductionManager.production_stalled.connect(_on_production_stalled)
 
 
 ## Announce a stalled build queue. Local player only, suppressed by the no-cost

@@ -42,13 +42,9 @@ const MAX_STACK: int = 25
 
 
 func _ready() -> void:
-    var bm := get_node_or_null("/root/BuildingManager")
-    if bm:
-        bm.build_mode_changed.connect(_on_build_mode_changed)
+    BuildingManager.build_mode_changed.connect(_on_build_mode_changed)
     get_tree().node_added.connect(_on_node_added)
-    var power_grid := get_node_or_null("/root/PowerGrid")
-    if power_grid:
-        power_grid.grid_state_changed.connect(_on_power_grid_changed)
+    PowerGrid.grid_state_changed.connect(_on_power_grid_changed)
 
 
 func _on_power_grid_changed(player_id: int) -> void:
@@ -80,8 +76,7 @@ func start_production(player_id: int, entity_data: EntityData, count: int = 1) -
     if queue_type.is_empty():
         return false
 
-    var ps := get_node("/root/PrerequisiteSystem")
-    if ps and not ps.can_build(player_id, entity_data):
+    if not PrerequisiteSystem.can_build(player_id, entity_data):
         return false
 
     var key := _queue_key(player_id, queue_type)
@@ -119,9 +114,8 @@ func cancel_production(player_id: int, queue_key: String, index: int, count: int
     # Decrement or remove
     if count >= item.count:
         # Removing entirely — refund only what was actually deducted
-        var em := get_node("/root/EconomyManager") as EconomyManager
-        if em and item.deducted > 0.0:
-            em.add(player_id, int(item.deducted), "cancel:%s" % item.entity_data.id)
+        if item.deducted > 0.0:
+            EconomyManager.add(player_id, int(item.deducted), "cancel:%s" % item.entity_data.id)
         queue.remove_at(index)
         # Adjust active index
         var active: int = _active_index.get(queue_key, 0)
@@ -244,13 +238,11 @@ func _process(delta: float) -> void:
 
 
 ## Deduct `amount` for `item` from the player's balance. Returns false when the
-## balance cannot cover it (caller stalls). With no EconomyManager (isolated
-## tests) the amount is booked as paid so queue logic stays testable.
+## balance cannot cover it (caller stalls).
 func _pay(player_id: int, item: ProductionQueue, amount: int) -> bool:
     if amount <= 0:
         return true
-    var em := get_node_or_null("/root/EconomyManager") as EconomyManager
-    if em and not em.deduct(player_id, amount, "prod:%s" % item.entity_data.id):
+    if not EconomyManager.deduct(player_id, amount, "prod:%s" % item.entity_data.id):
         return false
     item.deducted += amount
     return true
@@ -405,10 +397,8 @@ func _get_production_speed(queue_key: String) -> float:
         multiple_factory = rules.multiple_factory
     var speed: float = 1.0 + (result.count - 1) * multiple_factory
     # Low power slows (never halts) construction: multiply by the grid's
-    # interpolated build rate. Missing PowerGrid (isolated tests) -> 1.0.
-    var power_grid := get_node_or_null("/root/PowerGrid")
-    if power_grid:
-        speed *= power_grid.get_build_rate(player_id)
+    # interpolated build rate.
+    speed *= PowerGrid.get_build_rate(player_id)
     _speed_cache[queue_key] = speed
     return speed
 
@@ -456,17 +446,14 @@ func place_ready_building(player_id: int, entity_id: String) -> bool:
     for i in range(list.size()):
         var data: EntityData = (list[i] as Dictionary)["data"] as EntityData
         if data.id == entity_id:
-            var bm := get_node("/root/BuildingManager") as BuildingManager
-            if not bm:
-                return false
             # Entry survives until the building lands (#339): a cancelled
             # placement keeps the paid item ready instead of losing it, so
             # re-clicking the cameo never charges a second time. The charge
             # skip itself is decided inside place_building via the readiness
             # check.
-            if bm.is_build_mode and bm.current_building_type == data:
+            if BuildingManager.is_build_mode and BuildingManager.current_building_type == data:
                 return true
-            bm.enter_build_mode(data)
+            BuildingManager.enter_build_mode(data)
             return true
     return false
 
@@ -498,9 +485,7 @@ func cancel_ready_building(player_id: int, entity_id: String) -> bool:
                 _ready_to_place.erase(player_id)
             # Refund exactly what was deducted for this building — production
             # deducted gradually, but the building was never placed.
-            var em := get_node("/root/EconomyManager") as EconomyManager
-            if em:
-                em.add(player_id, int(entry["deducted"]), "cancel_ready:%s" % data.id)
+            EconomyManager.add(player_id, int(entry["deducted"]), "cancel_ready:%s" % data.id)
             clear_waiting_for_placement(player_id)
             production_cancelled.emit("%d:%s" % [player_id, data.buildable_queue])
             return true
@@ -685,9 +670,7 @@ func cancel_ready_spawn(player_id: int, entity_id: String) -> bool:
             list.remove_at(i)
             if list.is_empty():
                 _ready_to_spawn.erase(player_id)
-            var em := get_node("/root/EconomyManager") as EconomyManager
-            if em:
-                em.add(player_id, data.cost, "cancel_ready_spawn:%s" % data.id)
+            EconomyManager.add(player_id, data.cost, "cancel_ready_spawn:%s" % data.id)
             var qk: String = entry["queue_key"] as String
             production_cancelled.emit(qk)
             return true

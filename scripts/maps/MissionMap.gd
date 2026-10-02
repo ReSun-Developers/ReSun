@@ -68,8 +68,4 @@ func _apply_home_cell(home_cell: String) -> void:
     if parts.size() != 2 or not parts[0].is_valid_int() or not parts[1].is_valid_int():
         push_warning("MissionMap: invalid home_cell '%s'" % home_cell)
         return
-    var bounds: Node = get_node_or_null("/root/BoundsSystem")
-    if bounds == null:
-        push_error("MissionMap: BoundsSystem not ready; cannot center on home cell")
-        return
-    bounds.center_camera_on_cell(Vector2i(parts[0].to_int(), parts[1].to_int()))
+    BoundsSystem.center_camera_on_cell(Vector2i(parts[0].to_int(), parts[1].to_int()))

@@ -39,7 +39,7 @@ func _ready() -> void:
     var mc := get_parent().get_node_or_null("MovementController") as MovementController
     if mc:
         mc.arrived.connect(on_arrived)
-    _entity_factory = get_node("/root/EntityFactory")
+    _entity_factory = EntityFactory
     dock_client = get_parent().get_node_or_null("DockClientComponent") as DockClientComponent
     if dock_client:
         dock_client.dock_slot_failed.connect(_on_dock_slot_failed)

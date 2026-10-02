@@ -71,17 +71,11 @@ func _ready():
 
 
 func _connect_to_selection_manager():
-    var sm := get_node_or_null("/root/SelectionManager") as SelectionManager
-    if not sm:
-        # Autoload ordering normally guarantees SelectionManager exists at
-        # _ready; retry once on the next idle if it does not.
-        call_deferred("_connect_to_selection_manager")
-        return
-    _selection_manager = sm
-    if not sm.selection_changed.is_connected(_on_selection_changed):
-        sm.selection_changed.connect(_on_selection_changed)
-    if not sm.hover_changed.is_connected(_on_hover_changed):
-        sm.hover_changed.connect(_on_hover_changed)
+    _selection_manager = SelectionManager
+    if not _selection_manager.selection_changed.is_connected(_on_selection_changed):
+        _selection_manager.selection_changed.connect(_on_selection_changed)
+    if not _selection_manager.hover_changed.is_connected(_on_hover_changed):
+        _selection_manager.hover_changed.connect(_on_hover_changed)
 
 
 func _on_selection_changed(selected: Array[SelectComponent]):
@@ -185,15 +179,12 @@ func _power_label_for(entity: Node3D, is_selected: bool) -> String:
     var pc := entity.get_node_or_null("PowerComponent") as PowerComponent
     if pc == null or pc.power <= 0:
         return ""
-    var grid := get_node_or_null("/root/PowerGrid")
-    if grid == null:
-        return ""
     var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
     if stats == null:
         return ""
     return (
         "POWER = %d\nDRAIN = %d"
-        % [grid.get_output(stats.player_id), grid.get_drain(stats.player_id)]
+        % [PowerGrid.get_output(stats.player_id), PowerGrid.get_drain(stats.player_id)]
     )
 
 

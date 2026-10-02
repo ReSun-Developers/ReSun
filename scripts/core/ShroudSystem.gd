@@ -33,12 +33,11 @@ var _emit_touched := PackedByteArray()
 
 
 func _ready() -> void:
-    _terrain = get_node_or_null("/root/TerrainSystem")
-    if _terrain:
-        _max_height_delta = TerrainSystem.HEIGHT_STEP * 0.75
-        if not _terrain.grid_initialized.is_connected(_on_grid_initialized):
-            _terrain.grid_initialized.connect(_on_grid_initialized)
-        _init_grid(_terrain.grid_cells)
+    _terrain = TerrainSystem
+    _max_height_delta = TerrainSystem.HEIGHT_STEP * 0.75
+    if not _terrain.grid_initialized.is_connected(_on_grid_initialized):
+        _terrain.grid_initialized.connect(_on_grid_initialized)
+    _init_grid(_terrain.grid_cells)
 
 
 func _physics_process(delta: float) -> void:
@@ -69,9 +68,8 @@ func _init_grid(grid_cells: Vector2i) -> void:
 
 
 func _on_grid_initialized() -> void:
-    _terrain = get_node_or_null("/root/TerrainSystem")
-    if _terrain:
-        _init_grid(_terrain.grid_cells)
+    _terrain = TerrainSystem
+    _init_grid(_terrain.grid_cells)
 
 
 # ========================================

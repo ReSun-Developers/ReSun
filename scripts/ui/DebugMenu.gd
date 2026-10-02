@@ -254,14 +254,10 @@ func _on_cover_shroud() -> void:
 
 
 func _refresh_fog_renderer() -> void:
-    var fog_renderer := get_node_or_null("/root/FogRenderer")
-    if fog_renderer and fog_renderer.has_method("refresh"):
-        fog_renderer.refresh()
+    FogRenderer.refresh()
     # Toggling fog/shroud changes effective state with no dirty cells, so ghost
     # membership is swept explicitly (mirrors FogRenderer.refresh()).
-    var umr := get_node_or_null("/root/UnitMeshRenderer")
-    if umr and umr.has_method("sweep_ghosts"):
-        umr.sweep_ghosts()
+    UnitMeshRenderer.sweep_ghosts()
 
 
 # --- Entity inspection ---

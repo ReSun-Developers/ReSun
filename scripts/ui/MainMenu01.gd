@@ -14,8 +14,7 @@ func _ready() -> void:
 ## Applies the active game's menu background and accent colour, leaving the
 ## scene defaults when the game declares none.
 func _apply_game_theme() -> void:
-    var gc := get_node_or_null("/root/GameContext")
-    var def: GameDefinition = gc.current if gc else null
+    var def: GameDefinition = GameContext.current
     if def == null:
         return
     if not def.menu_background.is_empty():

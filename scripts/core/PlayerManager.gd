@@ -194,11 +194,9 @@ static func resolve_tech_level(mission_level: int, rules_level: int) -> int:
 ## roster has no entry at that index.
 func _faction_for_house(house_id: String, playable: Array[Faction], fallback_index: int) -> Faction:
     if not house_id.is_empty():
-        var catalog := get_node_or_null("/root/FactionCatalog")
-        if catalog and catalog.has_method("get_faction"):
-            var faction := catalog.get_faction(house_id) as Faction
-            if faction:
-                return faction
+        var faction := FactionCatalog.get_faction(house_id) as Faction
+        if faction:
+            return faction
         push_warning("[PlayerManager] mission player_house '%s' not found" % house_id)
     if fallback_index < playable.size():
         return playable[fallback_index]
@@ -298,14 +296,11 @@ func _init_defaults() -> void:
     players_changed.emit()
 
 
-## The default-roster factions (ascending order), or [] when the catalog is
-## absent or empty.
+## The default-roster factions (ascending order), or [] when the roster is empty.
 func _get_playable_factions() -> Array[Faction]:
     var out: Array[Faction] = []
-    var catalog := get_node_or_null("/root/FactionCatalog")
-    if catalog and catalog.has_method("get_playable"):
-        for faction in catalog.get_playable():
-            out.append(faction as Faction)
+    for faction in FactionCatalog.get_playable():
+        out.append(faction as Faction)
     return out
 
 

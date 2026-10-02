@@ -38,13 +38,9 @@ func _process(_delta: float):
 
 
 func _connect_to_selection_manager():
-    var sm := get_node_or_null("/root/SelectionManager") as SelectionManager
-    if not sm:
-        call_deferred("_connect_to_selection_manager")
-        return
-    _selection_manager = sm
-    if not sm.hover_changed.is_connected(_on_hover_changed):
-        sm.hover_changed.connect(_on_hover_changed)
+    _selection_manager = SelectionManager
+    if not _selection_manager.hover_changed.is_connected(_on_hover_changed):
+        _selection_manager.hover_changed.connect(_on_hover_changed)
 
 
 func _on_hover_changed(_entity: Node3D):

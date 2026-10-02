@@ -198,11 +198,8 @@ func _commit_placement() -> void:
 ## so the session acts as free placement; a refused placement (no cheat,
 ## invalid spot) keeps the session armed for a retry.
 func _commit_building(data: EntityData, ground_pos: Vector3) -> void:
-    var bm := get_node_or_null("/root/BuildingManager") as BuildingManager
-    if not bm:
-        return
     var origin := building_origin_for(data, ground_pos)
-    if not bm.place_building(data, origin):
+    if not BuildingManager.place_building(data, origin):
         return
     exit_placing_mode()
     _consumed_click_frame = Engine.get_process_frames()
