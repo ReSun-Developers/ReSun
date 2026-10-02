@@ -1,11 +1,11 @@
 extends Node
 
 ## TerrainCatalog autoload — the global registry for terrain content, mirroring
-## EntityFactory's data sets. Scans resources/terrain_objects/, resources/art/
-## terrain/, and resources/theaters/ and caches TerrainObject, TerrainArtData,
-## and TheaterData by id. Owns the active theater (selected from the map JSON by
-## MapLoader) and the resolve_art mesh-resolution choke point shared by the
-## renderer and collision.
+## EntityFactory's data sets. Scans the active game's registered data-set layers
+## (each layer's terrain_objects/, art/terrain/, and theaters/ dirs) and caches
+## TerrainObject, TerrainArtData, and TheaterData by id. Owns the active theater
+## (selected from the map JSON by MapLoader) and the resolve_art mesh-resolution
+## choke point shared by the renderer and collision.
 
 var _objects: Dictionary = {}
 var _art: Dictionary = {}
