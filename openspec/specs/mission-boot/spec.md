@@ -2,7 +2,9 @@
 
 ## Purpose
 Defines the mission boot flow: resolving and activating a mission, applying per-player overrides with mission > map > global precedence (the map layer sourced from the map JSON's optional players array), loading the mission map into the gameplay node, and centering the camera.
+
 ## Requirements
+
 ### Requirement: Mission override precedence
 Starting a mission SHALL resolve per-player values with precedence **mission > map > global rules**:
 a mission value that is set SHALL win, otherwise the map's own value SHALL be used, otherwise the
@@ -29,18 +31,23 @@ the map JSON's optional top-level `players` array — and SHALL be resolved by
 - **THEN** the local player's credits are `200`
 
 ### Requirement: Mission map loading
-Starting a mission SHALL load the mission's `map_path` JSON into the gameplay node
-(`MainScene/Gameplay`) using the existing `MapLoader`, after the mission's overrides are applied.
-A missing or unreadable map file SHALL log an error and leave the gameplay node empty.
+
+Starting a mission SHALL load the mission's `map_path` JSON into the match's
+World root under `MainScene/Gameplay` using the existing `MapLoader`, after the
+mission's overrides are applied. A missing or unreadable map file SHALL log an
+error and leave the World root without map entities.
 
 #### Scenario: Mission map loads entities
+
 - **WHEN** a mission whose map JSON contains entities is started
-- **THEN** those entities are instantiated under the gameplay node and `GameContext.current_mission`
-  remains the started mission
+- **THEN** those entities are instantiated under the match's World root and
+  `GameContext.current_mission` remains the started mission
 
 #### Scenario: Missing map reported
+
 - **WHEN** a mission's `map_path` does not exist
-- **THEN** an error is logged and no map entities are created
+- **THEN** an error is logged, the World root is left without map entities, and no
+  map entities are created
 
 ### Requirement: Mission start camera
 When a mission defines `home_cell` (`"x,y"`), starting the mission SHALL center the gameplay
@@ -69,14 +76,19 @@ and `OS.get_cmdline_user_args()`, mirroring `--game`.
 - **THEN** `GameContext.current_mission` is `null`
 
 ### Requirement: Mission start occludes menu overlays
-Starting a mission SHALL hide the menu overlays so the running mission is the only visible surface:
-the main menu and the boot screen SHALL both be hidden.
+
+Starting a mission SHALL switch the UI session shell to `Match` mode so the
+running match is the only visible surface: the main menu and the boot screen
+SHALL no longer be shown, and the in-game HUD surface SHALL be mounted.
 
 #### Scenario: Boot screen hidden on mission start
+
 - **WHEN** a mission starts with the boot screen visible
-- **THEN** both the boot screen and the main menu are hidden
+- **THEN** session mode is `Match`, so neither the boot screen nor the main menu
+  is shown, and the in-game HUD surface is mounted
 
 #### Scenario: Main menu hidden on mission start
-- **WHEN** a mission starts with the main menu visible
-- **THEN** both the main menu and the boot screen are hidden
 
+- **WHEN** a mission starts with the main menu visible
+- **THEN** session mode is `Match`, so neither the main menu nor the boot screen
+  is shown, and the in-game HUD surface is mounted
