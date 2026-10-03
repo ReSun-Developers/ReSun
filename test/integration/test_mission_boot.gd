@@ -12,6 +12,18 @@ const GDI01_MAP_PATH: String = "res://games/ts/maps/gdi01.json"
 const MISSING_MAP_PATH: String = "res://games/ts/maps/does_not_exist.json"
 const CREDITS_MAP_PATH: String = "res://test/fixtures/maps/mission_map_credits.json"
 
+
+## Minimal stand-in for the UI session shell: records that mission start asked
+## for match mode without instantiating the real GUI surfaces.
+class _StubSessionShell:
+    extends Node
+
+    var match_requested := false
+
+    func show_match() -> void:
+        match_requested = true
+
+
 var _gc: Node = null
 var _pm: Node = null
 
@@ -239,16 +251,21 @@ func test_start_mission_via_boot_seam() -> void:
     TestHelper.assert_eq(_gc.current_mission.id, "gdi01", "start_mission sets the active mission")
     TestHelper.assert_eq(emitted[0], 1, "start_mission emits mission_started exactly once")
     var gameplay: Node = ctx["gameplay"]
-    TestHelper.assert_eq(gameplay.get_child_count(), 1, "boot seam adds one MissionMap to Gameplay")
+    TestHelper.assert_eq(gameplay.get_child_count(), 1, "boot seam adds one World root to Gameplay")
     if gameplay.get_child_count() == 1:
-        (
-            TestHelper
-            . assert_eq(
-                _count_map_entities(gameplay.get_child(0)),
-                _count_json_owned(),
-                "boot-loaded map has its owned entities",
+        var world: Node = gameplay.get_child(0)
+        TestHelper.assert_eq(world.name, "World", "the match is hosted in a World root")
+        var map: Node = world.get_node_or_null("MissionMap")
+        TestHelper.assert_true(map != null, "the map is hosted under the World root")
+        if map != null:
+            (
+                TestHelper
+                . assert_eq(
+                    _count_map_entities(map),
+                    _count_json_owned(),
+                    "boot-loaded map has its owned entities",
+                )
             )
-        )
     _gc.select_game("ts")
     TestHelper.assert_true(
         _gc.current_mission == null, "selecting a game clears the active mission"
@@ -309,48 +326,46 @@ func _boot(ctx: Dictionary, mission: Mission) -> Node:
     var boot: Node = MISSION_BOOT_SCRIPT.new()
     (ctx["root"] as Node).add_child(boot)
     boot._on_mission_started(mission)
-    return (ctx["gameplay"] as Node).get_child(0)
+    var gameplay: Node = ctx["gameplay"]
+    if gameplay.get_child_count() == 0:
+        return null
+    var world: Node = gameplay.get_child(0)
+    return world.get_node_or_null("MissionMap")
 
 
-## A booting mission must hide the menu overlays so it is the only visible
-## surface (the --mission launch path would otherwise sit behind BootScreen).
-func test_mission_start_hides_menu_overlays() -> void:
+## Starting a mission must hand the UI off to the match surface, so the menu
+## overlays are no longer shown (the --mission launch path would otherwise sit
+## behind BootScreen). Surface mounting itself is covered by
+## test_session_shell.gd; here we assert the boot seam requests match mode and
+## hosts the match in a World root.
+func test_mission_start_switches_session_to_match() -> void:
     if not _guard():
         return
     _gc.select_game("ts")
     var tree: SceneTree = Engine.get_main_loop() as SceneTree
     var root := Node.new()
-    root.name = "MissionOverlayTestRoot"
+    root.name = "MissionSessionTestRoot"
     tree.root.add_child(root)
     var gameplay := Node3D.new()
     gameplay.name = "Gameplay"
     root.add_child(gameplay)
-    var hud := Node.new()
-    hud.name = "HUD"
-    root.add_child(hud)
-    var ui := Node.new()
-    ui.name = "UI"
-    hud.add_child(ui)
-    var main_menu := Control.new()
-    main_menu.name = "MainMenu01"
-    main_menu.visible = true
-    ui.add_child(main_menu)
-    var boot_screen := Control.new()
-    boot_screen.name = "BootScreen"
-    boot_screen.visible = true
-    ui.add_child(boot_screen)
+    var shell := _StubSessionShell.new()
+    shell.name = "SessionShell"
+    root.add_child(shell)
 
     var boot: Node = MISSION_BOOT_SCRIPT.new()
     root.add_child(boot)
     var mission := Mission.new()
-    mission.id = "overlay_test"
+    mission.id = "session_test"
     mission.map_path = CREDITS_MAP_PATH
     mission.show_briefing = false
     _gc.current_mission = mission
     boot._on_mission_started(mission)
 
-    TestHelper.assert_eq(main_menu.visible, false, "MainMenu01 hidden on mission start")
-    TestHelper.assert_eq(boot_screen.visible, false, "BootScreen hidden on mission start")
+    TestHelper.assert_true(shell.match_requested, "mission start requests match session mode")
+    TestHelper.assert_eq(gameplay.get_child_count(), 1, "the match is hosted in a World root")
+    if gameplay.get_child_count() == 1:
+        TestHelper.assert_eq(gameplay.get_child(0).name, "World", "the World root is active")
 
     _gc.current_mission = null
     _pm._players.clear()

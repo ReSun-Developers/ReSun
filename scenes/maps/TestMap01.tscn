@@ -23,7 +23,7 @@ size = Vector3(2, 1, 2)
 
 [node name="MapBase01" instance=ExtResource("1_gkgsa")]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." index="5"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." index="4"]
 visible = false
 material_override = SubResource("StandardMaterial3D_ground")
 mesh = SubResource("PlaneMesh_gkgsa")
@@ -34,370 +34,370 @@ mesh = SubResource("PlaneMesh_gkgsa")
 transform = Transform3D(0.9999998, 0, 0, 0, 1, 0, 0, 0, 0.9999998, 0, 0, 0)
 shape = SubResource("BoxShape3D_h8fgv")
 
-[node name="GDIConYard" parent="." index="6" instance=ExtResource("2_h8fgv")]
+[node name="GDIConYard" parent="." index="5" instance=ExtResource("2_h8fgv")]
 
-[node name="NodBuggy" parent="." index="7" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy" parent="." index="6" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, 0)
 
-[node name="NodBuggy2" parent="." index="8" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy2" parent="." index="7" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, 0)
 
-[node name="NodBuggy3" parent="." index="9" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy3" parent="." index="8" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, 0)
 
-[node name="NodBuggy4" parent="." index="10" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy4" parent="." index="9" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, 2)
 
-[node name="NodBuggy5" parent="." index="11" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy5" parent="." index="10" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, 2)
 
-[node name="NodBuggy6" parent="." index="12" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy6" parent="." index="11" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, 2)
 
-[node name="NodBuggy7" parent="." index="13" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy7" parent="." index="12" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, 4)
 
-[node name="NodBuggy8" parent="." index="14" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy8" parent="." index="13" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, 4)
 
-[node name="NodBuggy9" parent="." index="15" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy9" parent="." index="14" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, 4)
 
-[node name="NodBuggy10" parent="." index="16" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy10" parent="." index="15" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, 6)
 
-[node name="NodBuggy11" parent="." index="17" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy11" parent="." index="16" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, 6)
 
-[node name="NodBuggy12" parent="." index="18" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy12" parent="." index="17" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, 6)
 
-[node name="NodBuggy13" parent="." index="19" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy13" parent="." index="18" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, 0)
 
-[node name="NodBuggy14" parent="." index="20" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy14" parent="." index="19" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, 0)
 
-[node name="NodBuggy15" parent="." index="21" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy15" parent="." index="20" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, 0)
 
-[node name="NodBuggy16" parent="." index="22" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy16" parent="." index="21" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, 2)
 
-[node name="NodBuggy17" parent="." index="23" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy17" parent="." index="22" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, 2)
 
-[node name="NodBuggy18" parent="." index="24" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy18" parent="." index="23" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, 2)
 
-[node name="NodBuggy19" parent="." index="25" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy19" parent="." index="24" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, 4)
 
-[node name="NodBuggy20" parent="." index="26" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy20" parent="." index="25" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, 4)
 
-[node name="NodBuggy21" parent="." index="27" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy21" parent="." index="26" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, 4)
 
-[node name="NodBuggy22" parent="." index="28" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy22" parent="." index="27" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, 6)
 
-[node name="NodBuggy23" parent="." index="29" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy23" parent="." index="28" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, 6)
 
-[node name="NodBuggy24" parent="." index="30" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy24" parent="." index="29" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, 6)
 
-[node name="NodBuggy25" parent="." index="31" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy25" parent="." index="30" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, -10)
 
-[node name="NodBuggy26" parent="." index="32" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy26" parent="." index="31" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, -10)
 
-[node name="NodBuggy27" parent="." index="33" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy27" parent="." index="32" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, -10)
 
-[node name="NodBuggy28" parent="." index="34" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy28" parent="." index="33" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, -8)
 
-[node name="NodBuggy29" parent="." index="35" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy29" parent="." index="34" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, -8)
 
-[node name="NodBuggy30" parent="." index="36" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy30" parent="." index="35" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, -8)
 
-[node name="NodBuggy31" parent="." index="37" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy31" parent="." index="36" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, -6)
 
-[node name="NodBuggy32" parent="." index="38" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy32" parent="." index="37" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, -6)
 
-[node name="NodBuggy33" parent="." index="39" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy33" parent="." index="38" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, -6)
 
-[node name="NodBuggy34" parent="." index="40" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy34" parent="." index="39" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 8, 0, -4)
 
-[node name="NodBuggy35" parent="." index="41" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy35" parent="." index="40" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 6, 0, -4)
 
-[node name="NodBuggy36" parent="." index="42" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy36" parent="." index="41" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 4, 0, -4)
 
-[node name="NodBuggy37" parent="." index="43" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy37" parent="." index="42" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, -10)
 
-[node name="NodBuggy38" parent="." index="44" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy38" parent="." index="43" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, -10)
 
-[node name="NodBuggy39" parent="." index="45" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy39" parent="." index="44" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, -10)
 
-[node name="NodBuggy40" parent="." index="46" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy40" parent="." index="45" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, -8)
 
-[node name="NodBuggy41" parent="." index="47" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy41" parent="." index="46" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, -8)
 
-[node name="NodBuggy42" parent="." index="48" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy42" parent="." index="47" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, -8)
 
-[node name="NodBuggy43" parent="." index="49" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy43" parent="." index="48" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, -6)
 
-[node name="NodBuggy44" parent="." index="50" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy44" parent="." index="49" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, -6)
 
-[node name="NodBuggy45" parent="." index="51" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy45" parent="." index="50" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, -6)
 
-[node name="NodBuggy46" parent="." index="52" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy46" parent="." index="51" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -4, 0, -4)
 
-[node name="NodBuggy47" parent="." index="53" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy47" parent="." index="52" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -6, 0, -4)
 
-[node name="NodBuggy48" parent="." index="54" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy48" parent="." index="53" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -8, 0, -4)
 
-[node name="NodBuggy49" parent="." index="55" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy49" parent="." index="54" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, 0)
 
-[node name="NodBuggy50" parent="." index="56" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy50" parent="." index="55" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, 0)
 
-[node name="NodBuggy51" parent="." index="57" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy51" parent="." index="56" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, 0)
 
-[node name="NodBuggy52" parent="." index="58" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy52" parent="." index="57" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, 2)
 
-[node name="NodBuggy53" parent="." index="59" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy53" parent="." index="58" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, 2)
 
-[node name="NodBuggy54" parent="." index="60" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy54" parent="." index="59" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, 2)
 
-[node name="NodBuggy55" parent="." index="61" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy55" parent="." index="60" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, 4)
 
-[node name="NodBuggy56" parent="." index="62" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy56" parent="." index="61" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, 4)
 
-[node name="NodBuggy57" parent="." index="63" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy57" parent="." index="62" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, 4)
 
-[node name="NodBuggy58" parent="." index="64" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy58" parent="." index="63" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, 6)
 
-[node name="NodBuggy59" parent="." index="65" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy59" parent="." index="64" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, 6)
 
-[node name="NodBuggy60" parent="." index="66" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy60" parent="." index="65" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, 6)
 
-[node name="NodBuggy61" parent="." index="67" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy61" parent="." index="66" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, -10)
 
-[node name="NodBuggy62" parent="." index="68" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy62" parent="." index="67" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, -10)
 
-[node name="NodBuggy63" parent="." index="69" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy63" parent="." index="68" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, -10)
 
-[node name="NodBuggy64" parent="." index="70" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy64" parent="." index="69" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, -8)
 
-[node name="NodBuggy65" parent="." index="71" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy65" parent="." index="70" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, -8)
 
-[node name="NodBuggy66" parent="." index="72" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy66" parent="." index="71" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, -8)
 
-[node name="NodBuggy67" parent="." index="73" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy67" parent="." index="72" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, -6)
 
-[node name="NodBuggy68" parent="." index="74" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy68" parent="." index="73" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, -6)
 
-[node name="NodBuggy69" parent="." index="75" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy69" parent="." index="74" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, -6)
 
-[node name="NodBuggy70" parent="." index="76" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy70" parent="." index="75" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -12, 0, -4)
 
-[node name="NodBuggy71" parent="." index="77" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy71" parent="." index="76" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -14, 0, -4)
 
-[node name="NodBuggy72" parent="." index="78" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy72" parent="." index="77" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -16, 0, -4)
 
-[node name="NodBuggy73" parent="." index="79" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy73" parent="." index="78" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, 0)
 
-[node name="NodBuggy74" parent="." index="80" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy74" parent="." index="79" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, 0)
 
-[node name="NodBuggy75" parent="." index="81" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy75" parent="." index="80" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, 0)
 
-[node name="NodBuggy76" parent="." index="82" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy76" parent="." index="81" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, 2)
 
-[node name="NodBuggy77" parent="." index="83" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy77" parent="." index="82" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, 2)
 
-[node name="NodBuggy78" parent="." index="84" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy78" parent="." index="83" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, 2)
 
-[node name="NodBuggy79" parent="." index="85" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy79" parent="." index="84" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, 4)
 
-[node name="NodBuggy80" parent="." index="86" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy80" parent="." index="85" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, 4)
 
-[node name="NodBuggy81" parent="." index="87" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy81" parent="." index="86" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, 4)
 
-[node name="NodBuggy82" parent="." index="88" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy82" parent="." index="87" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, 6)
 
-[node name="NodBuggy83" parent="." index="89" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy83" parent="." index="88" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, 6)
 
-[node name="NodBuggy84" parent="." index="90" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy84" parent="." index="89" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, 6)
 
-[node name="NodBuggy85" parent="." index="91" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy85" parent="." index="90" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, -10)
 
-[node name="NodBuggy86" parent="." index="92" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy86" parent="." index="91" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, -10)
 
-[node name="NodBuggy87" parent="." index="93" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy87" parent="." index="92" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, -10)
 
-[node name="NodBuggy88" parent="." index="94" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy88" parent="." index="93" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, -8)
 
-[node name="NodBuggy89" parent="." index="95" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy89" parent="." index="94" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, -8)
 
-[node name="NodBuggy90" parent="." index="96" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy90" parent="." index="95" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, -8)
 
-[node name="NodBuggy91" parent="." index="97" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy91" parent="." index="96" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, -6)
 
-[node name="NodBuggy92" parent="." index="98" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy92" parent="." index="97" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, -6)
 
-[node name="NodBuggy93" parent="." index="99" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy93" parent="." index="98" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, -6)
 
-[node name="NodBuggy94" parent="." index="100" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy94" parent="." index="99" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -19, 0, -4)
 
-[node name="NodBuggy95" parent="." index="101" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy95" parent="." index="100" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -21, 0, -4)
 
-[node name="NodBuggy96" parent="." index="102" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy96" parent="." index="101" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -23, 0, -4)
 
-[node name="NodBuggy97" parent="." index="103" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy97" parent="." index="102" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, 0)
 
-[node name="NodBuggy98" parent="." index="104" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy98" parent="." index="103" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, 0)
 
-[node name="NodBuggy99" parent="." index="105" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy99" parent="." index="104" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, 0)
 
-[node name="NodBuggy100" parent="." index="106" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy100" parent="." index="105" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, 2)
 
-[node name="NodBuggy101" parent="." index="107" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy101" parent="." index="106" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, 2)
 
-[node name="NodBuggy102" parent="." index="108" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy102" parent="." index="107" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, 2)
 
-[node name="NodBuggy103" parent="." index="109" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy103" parent="." index="108" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, 4)
 
-[node name="NodBuggy104" parent="." index="110" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy104" parent="." index="109" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, 4)
 
-[node name="NodBuggy105" parent="." index="111" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy105" parent="." index="110" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, 4)
 
-[node name="NodBuggy106" parent="." index="112" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy106" parent="." index="111" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, 6)
 
-[node name="NodBuggy107" parent="." index="113" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy107" parent="." index="112" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, 6)
 
-[node name="NodBuggy108" parent="." index="114" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy108" parent="." index="113" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, 6)
 
-[node name="NodBuggy109" parent="." index="115" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy109" parent="." index="114" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, -10)
 
-[node name="NodBuggy110" parent="." index="116" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy110" parent="." index="115" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, -10)
 
-[node name="NodBuggy111" parent="." index="117" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy111" parent="." index="116" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, -10)
 
-[node name="NodBuggy112" parent="." index="118" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy112" parent="." index="117" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, -8)
 
-[node name="NodBuggy113" parent="." index="119" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy113" parent="." index="118" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, -8)
 
-[node name="NodBuggy114" parent="." index="120" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy114" parent="." index="119" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, -8)
 
-[node name="NodBuggy115" parent="." index="121" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy115" parent="." index="120" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, -6)
 
-[node name="NodBuggy116" parent="." index="122" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy116" parent="." index="121" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, -6)
 
-[node name="NodBuggy117" parent="." index="123" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy117" parent="." index="122" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, -6)
 
-[node name="NodBuggy118" parent="." index="124" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy118" parent="." index="123" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -27, 0, -4)
 
-[node name="NodBuggy119" parent="." index="125" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy119" parent="." index="124" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -29, 0, -4)
 
-[node name="NodBuggy120" parent="." index="126" instance=ExtResource("3_vfa0v")]
+[node name="NodBuggy120" parent="." index="125" instance=ExtResource("3_vfa0v")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, -31, 0, -4)
 
-[node name="MeshInstance3D2" type="MeshInstance3D" parent="." index="129"]
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="." index="128"]
 transform = Transform3D(1, 0, 0, 0, 3, 0, 0, 0, 1, 3.5, 1.5, 3.5)
 mesh = SubResource("BoxMesh_vfa0v")
 
-[node name="GroundPlane2" parent="." index="131" instance=ExtResource("4_grndp")]
+[node name="GroundPlane2" parent="." index="130" instance=ExtResource("4_grndp")]

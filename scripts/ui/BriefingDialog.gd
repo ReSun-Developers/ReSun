@@ -25,6 +25,14 @@ func _ready() -> void:
     _maybe_auto_show()
 
 
+## A detached dialog (its HUD surface was released, e.g. when a match is
+## replaced) must stop reacting to global signals — otherwise it runs
+## out-of-tree, where `get_tree()` is null.
+func _exit_tree() -> void:
+    if GameContext.mission_started.is_connected(_on_mission_started):
+        GameContext.mission_started.disconnect(_on_mission_started)
+
+
 ## ESC closes the briefing while it is open. The event is consumed here so the
 ## pause menu's _unhandled_input cannot toggle pause underneath the dialog.
 func _input(event: InputEvent) -> void:
@@ -38,7 +46,7 @@ func _input(event: InputEvent) -> void:
 ## Shows the briefing for `mission`. `from_pause` records the entry point so
 ## closing knows whether to unpause. No-ops when `mission` is null.
 func show_for_mission(mission: Mission, from_pause: bool) -> void:
-    if mission == null:
+    if mission == null or not is_inside_tree():
         return
     _from_pause = from_pause
     title_label.text = mission.display_name

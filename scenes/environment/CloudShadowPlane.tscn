@@ -11,7 +11,7 @@ shader_parameter/scroll_speed = 0.04
 shader_parameter/noise_scale = 0.04
 shader_parameter/opacity = 0.8
 
-[node name="CloudShadowPlane" type="MeshInstance3D"]
+[node name="CloudShadowPlane" type="MeshInstance3D" groups=["cloud_shadow_overlay"]]
 transform = Transform3D(0.707107, 0, 0.707107, 0, 1, 0, -0.707107, 0, 0.707107, 50, 50, 50)
 mesh = SubResource("PlaneMesh_cloud")
 material_override = SubResource("ShaderMaterial_cloud")

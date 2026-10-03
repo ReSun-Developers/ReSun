@@ -62,9 +62,9 @@ func _ready() -> void:
     if not Engine.is_editor_hint():
         grid_cells = TerrainSystem.grid_cells
         TerrainSystem.grid_initialized.connect(_on_grid_initialized)
-        if not camera_pivot:
+        if not _has_live_pivot():
             camera_pivot = _find_camera_pivot()
-        if camera_pivot:
+        if _has_live_pivot():
             _center_camera_on_diamond()
         call_deferred("_resolve_camera_pivot")
         call_deferred("_position_cloud_overlay")
@@ -77,9 +77,15 @@ func _on_grid_initialized() -> void:
     grid_cells = TerrainSystem.grid_cells
     create_bounds_edges()
     _resolve_camera_pivot()
-    if camera_pivot:
+    if _has_live_pivot():
         _center_camera_on_diamond()
     call_deferred("_position_cloud_overlay")
+
+
+## True when the pivot is a live node that is currently in the tree. A pivot left
+## over from a released match is detached (or freed) and must be replaced.
+func _has_live_pivot() -> bool:
+    return is_instance_valid(camera_pivot) and camera_pivot.is_inside_tree()
 
 
 func _find_camera_pivot() -> Node3D:
@@ -93,15 +99,16 @@ func _find_camera_pivot() -> Node3D:
 
 ## Re-resolve the camera pivot after the main scene enters the tree. The
 ## autoload _ready() runs before the gameplay scene exists, so the pivot can
-## only be discovered here (or on grid init) in real gameplay.
+## only be discovered here (or on grid init) in real gameplay. A pivot left over
+## from a released match is detached, so it is re-resolved rather than reused.
 func _resolve_camera_pivot() -> void:
-    if camera_pivot:
+    if _has_live_pivot():
         return
     camera_pivot = _find_camera_pivot()
 
 
 func _center_camera_on_diamond() -> void:
-    if not camera_pivot:
+    if not _has_live_pivot():
         return
     camera_pivot.global_position = Vector3(0.0, camera_pivot.global_position.y, 0.0)
 
@@ -123,7 +130,7 @@ func default_start_cell(player_id: int) -> Vector2i:
 ## Center the camera pivot on a cell's world position, preserving the pivot's
 ## current height (matches _center_camera_on_diamond, which only patches x/z).
 func center_camera_on_cell(cell: Vector2i) -> void:
-    if not camera_pivot:
+    if not _has_live_pivot():
         return
     var p := CellUtil.cell_to_world(cell)
     camera_pivot.global_position = Vector3(p.x, camera_pivot.global_position.y, p.z)
@@ -347,10 +354,9 @@ func create_bounds_edges() -> void:
 
 
 func _position_cloud_overlay() -> void:
-    var scene: Node = get_tree().current_scene
-    if not is_instance_valid(scene):
-        return
-    var cloud_overlay: Node3D = scene.get_node_or_null("CloudShadowOverlay") as Node3D
+    # The overlay lives under the loaded map (World/MissionMap/MapBase01), which
+    # is not `current_scene`, so it is found by group rather than by path.
+    var cloud_overlay: Node3D = get_tree().get_first_node_in_group("cloud_shadow_overlay") as Node3D
     var camera: Camera3D = get_viewport().get_camera_3d()
     if not is_instance_valid(cloud_overlay) or not is_instance_valid(camera):
         return

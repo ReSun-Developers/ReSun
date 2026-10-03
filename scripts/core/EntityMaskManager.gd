@@ -60,8 +60,6 @@ func _find_main_camera() -> void:
     var vp := get_viewport()
     if is_instance_valid(vp):
         _main_camera = vp.get_camera_3d()
-    if not is_instance_valid(_main_camera):
-        _main_camera = get_node("/root/MainScene/Gameplay/Camera/Camera3D") as Camera3D
 
 
 func _sync_mask_camera() -> void:

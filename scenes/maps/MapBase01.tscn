@@ -1,24 +1,16 @@
-[gd_scene load_steps=16 format=3 uid="uid://ce077cqvy5f6p"]
+[gd_scene load_steps=8 format=3 uid="uid://ce077cqvy5f6p"]
 
 [ext_resource type="PackedScene" uid="uid://b53rjho7dyptw" path="res://scenes/hud/Camera01.tscn" id="1_uw0ss"]
 [ext_resource type="PackedScene" uid="uid://c0blgqnig6dyh" path="res://scenes/hud/MouseHandler.tscn" id="2_cuur3"]
-[ext_resource type="PackedScene" uid="uid://crhsfehgv36e0" path="res://scenes/ui/FPSCounter01.tscn" id="2_drtgo"]
 [ext_resource type="PackedScene" uid="uid://lyypxbj55k8q" path="res://scenes/environment/DefaultSunLight01.tscn" id="3_4u5nk"]
 [ext_resource type="PackedScene" uid="uid://6bkboqg3gg1r" path="res://scenes/environment/DefaultWorldEnvironment01.tscn" id="4_cuur3"]
-[ext_resource type="PackedScene" path="res://scenes/components/GroundPlane.tscn" id="8_grndp"]
-[ext_resource type="PackedScene" path="res://scenes/ui/Sidebar.tscn" id="9_build"]
-[ext_resource type="PackedScene" path="res://scenes/environment/CloudShadowPlane.tscn" id="10_cloud"]
-[ext_resource type="Script" path="res://scripts/environment/LightingControls.gd" id="11_light"]
-[ext_resource type="PackedScene" path="res://scenes/ui/DebugMenu.tscn" id="12_debug"]
-[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="13_pause"]
-[ext_resource type="PackedScene" path="res://scenes/ui/HoverTooltip.tscn" id="14_tooltip"]
-[ext_resource type="PackedScene" path="res://scenes/ui/CreditsLabel.tscn" id="15_credits"]
-[ext_resource type="PackedScene" path="res://scenes/ui/Minimap.tscn" id="16_minimap"]
-[ext_resource type="PackedScene" path="res://scenes/ui/BriefingDialog.tscn" id="17_briefing"]
+[ext_resource type="PackedScene" path="res://scenes/components/GroundPlane.tscn" id="5_grndp"]
+[ext_resource type="PackedScene" path="res://scenes/environment/CloudShadowPlane.tscn" id="6_cloud"]
+[ext_resource type="Script" path="res://scripts/environment/LightingControls.gd" id="7_light"]
 
 [node name="MapBase01" type="Node3D"]
 
-[node name="GroundPlane" parent="." instance=ExtResource("8_grndp")]
+[node name="GroundPlane" parent="." instance=ExtResource("5_grndp")]
 
 [node name="Buildings" type="Node3D" parent="."]
 
@@ -27,30 +19,11 @@ camera_controller = NodePath("../Camera")
 
 [node name="Camera" parent="." instance=ExtResource("1_uw0ss")]
 
-[node name="HUD" type="CanvasLayer" parent="."]
-layer = 256
-
-[node name="FpsCounter" parent="HUD" instance=ExtResource("2_drtgo")]
-
 [node name="LightPivot" parent="." instance=ExtResource("3_4u5nk")]
 
 [node name="WorldEnvironment" parent="." instance=ExtResource("4_cuur3")]
 
-[node name="Sidebar" parent="HUD" instance=ExtResource("9_build")]
-
-[node name="CloudShadowOverlay" parent="." instance=ExtResource("10_cloud")]
+[node name="CloudShadowOverlay" parent="." instance=ExtResource("6_cloud")]
 
 [node name="LightingControls" type="Node3D" parent="."]
-script = ExtResource("11_light")
-
-[node name="DebugMenu" parent="HUD" instance=ExtResource("12_debug")]
-
-[node name="PauseMenu" parent="HUD" instance=ExtResource("13_pause")]
-
-[node name="BriefingDialog" parent="HUD" instance=ExtResource("17_briefing")]
-
-[node name="HoverTooltip" parent="HUD" instance=ExtResource("14_tooltip")]
-
-[node name="CreditsLabel" parent="HUD" instance=ExtResource("15_credits")]
-
-[node name="Minimap" parent="HUD" instance=ExtResource("16_minimap")]
+script = ExtResource("7_light")

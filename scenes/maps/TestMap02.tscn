@@ -10,5 +10,5 @@ script = ExtResource("2_script")
 [node name="GroundPlane" parent="." index="0"]
 visible = false
 
-[node name="TerrainRenderer" type="Node" parent="." index="8"]
+[node name="TerrainRenderer" type="Node" parent="." index="7"]
 script = ExtResource("3_terrain")
