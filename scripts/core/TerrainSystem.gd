@@ -2,6 +2,7 @@ extends Node
 
 signal cell_changed(cell_key: String, cell_data: Dictionary)
 signal grid_initialized
+signal cell_tag_changed(cell: Vector2i, tag_id: String)
 
 const HEIGHT_STEP: float = 0.815
 const MAX_HEIGHT: int = 10
@@ -24,6 +25,11 @@ var _land_types: Dictionary = {}
 ## their pinned object regardless of height-derived resolution and lock their
 ## vertices against height edits. Persisted as "cell_pins" in map JSON.
 var _cell_pins: Dictionary = {}
+## Cell tags: cell_key -> opaque scripting tag id. Sparse overlay binding cells
+## to mission tag ids (e.g. a reveal region or bridge cells). Queried by the
+## trigger engine to resolve a tag id to its cells and back. Persisted as
+## "cell_tags" in map JSON.
+var _cell_tags: Dictionary = {}
 
 ## World-lifetime per-cell corner-vertex height snapshot: cell_key -> [h_nw, h_ne, h_sw, h_se]
 ## (raw ints, HEIGHT_STEP applied by consumers). Populated lazily on first query; heights only —
@@ -117,6 +123,7 @@ func _init_vertex_grid() -> void:
         _vertex_grid[vx] = row
     _height_snapshot.clear()
     _cell_pins.clear()
+    _cell_tags.clear()
     height_snapshot_generation += 1
 
 
@@ -175,6 +182,7 @@ func clear() -> void:
     _cells.clear()
     _land_types.clear()
     _cell_pins.clear()
+    _cell_tags.clear()
 
 
 # ========================================
@@ -800,6 +808,63 @@ func _is_vertex_editable(vx: int, vz: int) -> bool:
 
 
 # ========================================
+# Cell tags
+# ========================================
+
+
+## Binds a cell to an opaque tag id. Returns false when the cell is outside the
+## playable diamond or the tag id is empty. Re-tagging overwrites. Emits
+## cell_tag_changed.
+func set_cell_tag(cell: Vector2i, tag_id: String) -> bool:
+    if tag_id.is_empty():
+        return false
+    if not CellUtil.is_in_diamond(cell, grid_cells):
+        push_warning("TerrainSystem: set_cell_tag outside diamond ignored: %s" % cell)
+        return false
+    _cell_tags[CellUtil.cell_key_str(cell)] = tag_id
+    cell_tag_changed.emit(cell, tag_id)
+    return true
+
+
+## Removes a cell's tag. Returns false when the cell had none. Emits
+## cell_tag_changed.
+func clear_cell_tag(cell: Vector2i) -> bool:
+    var key := CellUtil.cell_key_str(cell)
+    if not _cell_tags.has(key):
+        return false
+    _cell_tags.erase(key)
+    cell_tag_changed.emit(cell, "")
+    return true
+
+
+## Tag id bound to a cell, or "" when untagged.
+func get_cell_tag(cell: Vector2i) -> String:
+    return String(_cell_tags.get(CellUtil.cell_key_str(cell), ""))
+
+
+## True when the cell carries a tag.
+func has_cell_tag(cell: Vector2i) -> bool:
+    return _cell_tags.has(CellUtil.cell_key_str(cell))
+
+
+## Every cell currently bound to `tag_id`, in unspecified order.
+func cells_with_tag(tag_id: String) -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
+    for key in _cell_tags:
+        if String(_cell_tags[key]) != tag_id:
+            continue
+        var parts := String(key).split(",")
+        if parts.size() == 2:
+            result.append(Vector2i(parts[0].to_int(), parts[1].to_int()))
+    return result
+
+
+## Copy of the full cell -> tag-id overlay. Used by the editor label overlay.
+func get_all_cell_tags() -> Dictionary:
+    return _cell_tags.duplicate()
+
+
+# ========================================
 # TerrainObject stamping
 # ========================================
 
@@ -1157,6 +1222,8 @@ func export_to_json(path: String, extra_data: Dictionary = {}) -> void:
     }
     if not _cell_pins.is_empty():
         data["cell_pins"] = _cell_pins.duplicate()
+    if not _cell_tags.is_empty():
+        data["cell_tags"] = _cell_tags.duplicate()
     var land_out: Dictionary = {}
     for cx in extent.x:
         for cz in extent.y:
@@ -1186,6 +1253,7 @@ func import_from_json(path: String) -> void:
         cell_changed.emit(key, {})
     _cells.clear()
     _cell_pins.clear()
+    _cell_tags.clear()
     _land_types.clear()
     var file: FileAccess = FileAccess.open(path, FileAccess.READ)
     if not file:
@@ -1224,8 +1292,9 @@ func import_from_json(path: String) -> void:
             if pin_parts.size() != 2:
                 continue
             var pin_cell := Vector2i(int(pin_parts[0]), int(pin_parts[1]))
-            if CellUtil.is_in_diamond(pin_cell, grid_cells):
-                _cell_pins[String(pin_key)] = String(json_pins[pin_key])
+            var pin_id := _json_string(json_pins[pin_key])
+            if not pin_id.is_empty() and CellUtil.is_in_diamond(pin_cell, grid_cells):
+                _cell_pins[CellUtil.cell_key_str(pin_cell)] = pin_id
 
     var json_land: Variant = data.get("land_types", {})
     if json_land is Dictionary:
@@ -1236,9 +1305,23 @@ func import_from_json(path: String) -> void:
             var land_cell := Vector2i(int(land_parts[0]), int(land_parts[1]))
             if not CellUtil.is_in_diamond(land_cell, grid_cells):
                 continue
-            var land_id := String(json_land[land_key])
+            var land_id := _json_string(json_land[land_key])
             if not land_id.is_empty() and land_id != DEFAULT_LAND_TYPE:
                 _land_types[CellUtil.cell_key(land_cell)] = land_id
+
+    var json_tags: Variant = data.get("cell_tags", {})
+    if json_tags is Dictionary:
+        for tag_key in json_tags:
+            var tag_parts: PackedStringArray = String(tag_key).split(",")
+            if tag_parts.size() != 2:
+                continue
+            if not tag_parts[0].is_valid_int() or not tag_parts[1].is_valid_int():
+                continue
+            var tag_cell := Vector2i(int(tag_parts[0]), int(tag_parts[1]))
+            var tag_id := _json_string(json_tags[tag_key])
+            if tag_id.is_empty() or not CellUtil.is_in_diamond(tag_cell, grid_cells):
+                continue
+            _cell_tags[CellUtil.cell_key_str(tag_cell)] = tag_id
 
     # Pins carry no geometry, so rebuild stamped objects from their pinned ids.
     _restore_pinned_objects()
@@ -1264,6 +1347,15 @@ func import_from_json(path: String) -> void:
 
 func _make_clear(height: int) -> Dictionary:
     return {"height": height, "type": "clear", "variant": 1, "direction": "", "rotation": 0.0}
+
+
+## String value of a JSON field, or "" for any non-string variant. Guards the
+## built-in String() constructor, which aborts the calling function on a
+## non-string argument — a malformed map value must not brick the whole load.
+static func _json_string(value: Variant) -> String:
+    if typeof(value) == TYPE_STRING:
+        return value as String
+    return ""
 
 
 func _make_slope(variant: int, direction: String, height: int, corners: Array) -> Dictionary:

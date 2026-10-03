@@ -1,7 +1,16 @@
 @tool
 extends Node3D
 
-enum Tool { NONE, PAINT_HEIGHT, PAINT_RESOURCE, PLACE_TREE, ERASE, PLACE_ENTITY, PLAYER_START }
+enum Tool {
+    NONE,
+    PAINT_HEIGHT,
+    PAINT_RESOURCE,
+    PLACE_TREE,
+    ERASE,
+    PLACE_ENTITY,
+    PLAYER_START,
+    CELL_TAG,
+}
 
 @export var map_size: Vector2 = Vector2(50.0, 50.0)
 @export var show_grid: bool = true
@@ -22,6 +31,7 @@ var _entity_selector: Node
 var _entity_properties: Node
 var _settings_popup: PopupMenu
 var _player_start_tool: Node
+var _cell_tag_tool: Node
 var _selected_start_player: int = 0
 var _player_count: int = 2
 
@@ -57,6 +67,8 @@ func _exit_tree() -> void:
     _entity_placer.cleanup()
     _entity_selector.cleanup()
     _player_start_tool.cleanup()
+    if _cell_tag_tool and is_instance_valid(_cell_tag_tool):
+        _cell_tag_tool.cleanup()
     _painted_entities.clear()
     TerrainSystem.clear()
     var renderer := get_node_or_null("TerrainRenderer")
@@ -83,6 +95,8 @@ func _input(event: InputEvent) -> void:
         _entity_selector.handle_input(event)
     elif _active_tool == Tool.PLAYER_START:
         _handle_player_start_input(event)
+    elif _active_tool == Tool.CELL_TAG:
+        _handle_cell_tag_input(event)
     elif _active_tool == Tool.PLACE_TREE:
         _entity_placer.handle_tree_input(event)
     elif _active_tool == Tool.PLACE_ENTITY:
@@ -105,6 +119,15 @@ func _handle_player_start_input(event: InputEvent) -> void:
             var assigned: Vector2i = _player_start_tool.effective_cell(_selected_start_player)
             if assigned == cell:
                 _player_start_tool.reset(_selected_start_player)
+
+
+func _handle_cell_tag_input(event: InputEvent) -> void:
+    if not event is InputEventMouseButton or not event.pressed:
+        return
+    if event.button_index == MOUSE_BUTTON_LEFT:
+        _cell_tag_tool.assign(_hovered_cell)
+    elif event.button_index == MOUSE_BUTTON_RIGHT:
+        _cell_tag_tool.clear_at(_hovered_cell)
 
 
 func _setup_camera() -> void:
@@ -194,6 +217,7 @@ func _setup_ui() -> void:
         {"name": "Paint Resource", "tool": Tool.PAINT_RESOURCE},
         {"name": "Place Tree", "tool": Tool.PLACE_TREE},
         {"name": "Set Player Start", "tool": Tool.PLAYER_START},
+        {"name": "Cell Tags", "tool": Tool.CELL_TAG},
         {"name": "Erase", "tool": Tool.ERASE},
     ]
     for t in tools:
@@ -222,11 +246,26 @@ func _setup_ui() -> void:
     player_spin.value_changed.connect(func(v: float) -> void: _selected_start_player = int(v) - 1)
     tool_bar.add_child(player_spin)
 
+    var tag_label := Label.new()
+    tag_label.text = "Tag:"
+    tool_bar.add_child(tag_label)
+    var tag_edit := LineEdit.new()
+    tag_edit.name = "CellTagLineEdit"
+    tag_edit.placeholder_text = "tag id"
+    tag_edit.custom_minimum_size = Vector2(90, 0)
+    tag_edit.text_changed.connect(func(text: String) -> void: _cell_tag_tool.set_tag_id(text))
+    tool_bar.add_child(tag_edit)
+
     _player_start_tool = preload("res://scripts/editor/PlayerStartTool.gd").new()
     _player_start_tool.name = "PlayerStartTool"
     add_child(_player_start_tool)
     _player_start_tool.setup(self)
     _player_start_tool.set_player_count(_player_count)
+
+    _cell_tag_tool = preload("res://scripts/editor/CellTagTool.gd").new()
+    _cell_tag_tool.name = "CellTagTool"
+    add_child(_cell_tag_tool)
+    _cell_tag_tool.setup(self)
 
     _resource_painter = preload("res://scripts/editor/ResourcePainter.gd").new()
     _resource_painter.name = "ResourcePainter"
