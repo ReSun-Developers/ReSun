@@ -1,34 +1,14 @@
-[gd_scene load_steps=4 format=3 uid="uid://c6s5n02jefgmd"]
+[gd_scene load_steps=3 format=3 uid="uid://c6s5n02jefgmd"]
 
-[ext_resource type="PackedScene" uid="uid://bqgqoidrni3ed" path="res://scenes/ui/MainMenu01.tscn" id="1_echbf"]
-[ext_resource type="PackedScene" uid="uid://evckb76qoeyd" path="res://scenes/LoadingScreen.tscn" id="2_ibiss"]
-[ext_resource type="PackedScene" path="res://scenes/ui/BootScreen.tscn" id="3_boot"]
-[ext_resource type="Script" path="res://scripts/maps/MissionBoot.gd" id="4_missionboot"]
+[ext_resource type="Script" path="res://scripts/maps/MissionBoot.gd" id="1_missionboot"]
+[ext_resource type="Script" path="res://scripts/ui/SessionShell.gd" id="2_shell"]
 
 [node name="Main" type="Node"]
 
 [node name="Gameplay" type="Node" parent="."]
 
-[node name="HUD" type="CanvasLayer" parent="."]
-layer = 256
-
-[node name="UI" type="Control" parent="HUD"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="MainMenu01" parent="HUD/UI" instance=ExtResource("1_echbf")]
-layout_mode = 1
-
-[node name="LoadingScreen" parent="HUD/UI" instance=ExtResource("2_ibiss")]
-visible = false
-
-[node name="BootScreen" parent="HUD/UI" instance=ExtResource("3_boot")]
-layout_mode = 1
+[node name="SessionShell" type="Node" parent="."]
+script = ExtResource("2_shell")
 
 [node name="MissionBoot" type="Node" parent="."]
-script = ExtResource("4_missionboot")
+script = ExtResource("1_missionboot")

@@ -1,0 +1,26 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" uid="uid://bqgqoidrni3ed" path="res://scenes/ui/MainMenu01.tscn" id="1_menu"]
+[ext_resource type="PackedScene" uid="uid://evckb76qoeyd" path="res://scenes/LoadingScreen.tscn" id="2_loading"]
+[ext_resource type="PackedScene" path="res://scenes/ui/BootScreen.tscn" id="3_boot"]
+
+[node name="MenuSurface" type="CanvasLayer"]
+layer = 256
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MainMenu01" parent="UI" instance=ExtResource("1_menu")]
+layout_mode = 1
+
+[node name="LoadingScreen" parent="UI" instance=ExtResource("2_loading")]
+visible = false
+
+[node name="BootScreen" parent="UI" instance=ExtResource("3_boot")]
+layout_mode = 1

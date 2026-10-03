@@ -1,0 +1,29 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" uid="uid://crhsfehgv36e0" path="res://scenes/ui/FPSCounter01.tscn" id="1_fps"]
+[ext_resource type="PackedScene" path="res://scenes/ui/Sidebar.tscn" id="2_sidebar"]
+[ext_resource type="PackedScene" path="res://scenes/ui/DebugMenu.tscn" id="3_debug"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PauseMenu.tscn" id="4_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/BriefingDialog.tscn" id="5_briefing"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HoverTooltip.tscn" id="6_tooltip"]
+[ext_resource type="PackedScene" path="res://scenes/ui/CreditsLabel.tscn" id="7_credits"]
+[ext_resource type="PackedScene" path="res://scenes/ui/Minimap.tscn" id="8_minimap"]
+
+[node name="HudSurface" type="CanvasLayer"]
+layer = 256
+
+[node name="FpsCounter" parent="." instance=ExtResource("1_fps")]
+
+[node name="Sidebar" parent="." instance=ExtResource("2_sidebar")]
+
+[node name="DebugMenu" parent="." instance=ExtResource("3_debug")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("4_pause")]
+
+[node name="BriefingDialog" parent="." instance=ExtResource("5_briefing")]
+
+[node name="HoverTooltip" parent="." instance=ExtResource("6_tooltip")]
+
+[node name="CreditsLabel" parent="." instance=ExtResource("7_credits")]
+
+[node name="Minimap" parent="." instance=ExtResource("8_minimap")]

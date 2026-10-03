@@ -344,20 +344,9 @@ func _disconnect_inspection_signals() -> void:
 
 
 func _find_selection_overlay() -> CanvasLayer:
-    var root := get_tree().current_scene
-    if not root:
-        return null
-    return _find_node_recursive(root, "SelectionOverlay") as CanvasLayer
-
-
-func _find_node_recursive(node: Node, target_name: String) -> Node:
-    if node.name == target_name:
-        return node
-    for child in node.get_children():
-        var result := _find_node_recursive(child, target_name)
-        if result:
-            return result
-    return null
+    # SelectionOverlay is a registered autoload in the root viewport, not a child
+    # of the gameplay scene, so it is referenced by its singleton identifier.
+    return SelectionOverlay as CanvasLayer
 
 
 func _init_lighting_sliders() -> void:

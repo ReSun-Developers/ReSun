@@ -21,10 +21,18 @@ Entry form: term → one-line meaning → anchor.
 | layering (last-wins) | Same resource id in a later data-set root overrides the earlier registration within one game. Borrowing another game's content = listing its root; same-id claims by two non-borrowing games are a validator error, not layering. | [game-content](openspec/changes/add-game-definition-context/specs/game-content/spec.md) |
 | campaign | Ordered collection of missions won one by one; `Campaign` resource (`id`, `display_name`, `faction_id`, `missions` in win order). One `.tres` per `<game>/campaigns/`. | [campaign-catalog](openspec/changes/mission-boot/specs/campaign-catalog/spec.md) · scripts/data/Campaign.gd |
 | mission | One single-player map plus campaign metadata and per-mission overrides; `Mission` resource under `<game>/missions/`. Override sentinels inherit from the map, then GlobalRules. | [campaign-catalog](openspec/changes/mission-boot/specs/campaign-catalog/spec.md) · scripts/data/Mission.gd |
-| mission boot | Starting a mission: resolve the campaign's first mission, set it active, apply overrides (`mission > map > global rules`), load its map into `MainScene/Gameplay`, and center the camera. | [mission-boot](openspec/changes/mission-boot/specs/mission-boot/spec.md) · [design](openspec/changes/mission-boot/design.md) |
+| mission boot | Starting a mission: resolve the campaign's first mission, set it active, apply overrides (`mission > map > global rules`), load its map into the match's World root under `MainScene/Gameplay`, and center the camera. | [mission-boot](openspec/specs/mission-boot/spec.md) · [design](openspec/changes/archive/2026-09-15-mission-boot/design.md) |
 | briefing | Pre-mission narrative dialog, auto-shown when `Mission.show_briefing` is true; the game stays paused until it closes, and the pause menu can re-open it. | [briefing-screen](openspec/changes/mission-boot/specs/briefing-screen/spec.md) · [design](openspec/changes/mission-boot/design.md) |
 | home cell | Start-camera cell override on a `Mission` (`"x,y"` string); empty defers to the map's own start location. Bridge until named waypoints land. | [mission-boot](openspec/changes/mission-boot/specs/mission-boot/spec.md) · scripts/data/Mission.gd |
 | next mission | Chained following mission id on a `Mission` (`next_mission_id`); empty = none. Consumed by campaign progression. | [campaign-catalog](openspec/changes/mission-boot/specs/campaign-catalog/spec.md) · scripts/data/Mission.gd |
+
+## Session & Scenes
+
+| Term | Meaning | Where |
+|------|---------|-------|
+| match root | The per-match container node under `MainScene/Gameplay` (`scenes/core/World.tscn`, node named `World`): owns the loaded map and the content loaded with it, and is the single teardown point when a match is replaced. Not the 3D game world/terrain and not the **World frame** coordinate frame; runtime-spawned content is not yet routed under it. | [match-root](openspec/specs/match-root/spec.md) · scripts/core/World.gd |
+| session mode | The `SessionShell` selector (`Menu` or `Match`) that decides which GUI surface is mounted; exactly one at a time. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
+| UI session shell | The persistent `SessionShell` node under `MainScene` that mounts the menu surface (`MenuSurface`) or the match HUD surface (`HudSurface`) and outlives a match. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
 
 ## Placement & Building
 

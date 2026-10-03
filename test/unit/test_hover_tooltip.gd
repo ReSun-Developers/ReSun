@@ -7,6 +7,7 @@ extends Node
 const HOVER_TOOLTIP_SCENE: PackedScene = preload("res://scenes/ui/HoverTooltip.tscn")
 const HOVER_TOOLTIP_SCRIPT: GDScript = preload("res://scripts/ui/HoverTooltip.gd")
 const MAP_BASE_SCENE: PackedScene = preload("res://scenes/maps/MapBase01.tscn")
+const HUD_SURFACE_SCENE: PackedScene = preload("res://scenes/ui/HudSurface.tscn")
 const SELECT_COMPONENT_SCENE: PackedScene = preload("res://scenes/components/SelectComponent.tscn")
 const MOVEMENT_CONTROLLER_SCENE: PackedScene = preload(
     "res://scenes/components/MovementController.tscn"
@@ -395,16 +396,24 @@ func test_empty_display_name_hides_tooltip() -> void:
 
 
 func test_tooltip_instanced_in_gameplay_hud() -> void:
-    var map := MAP_BASE_SCENE.instantiate()
-    _pm.get_tree().root.add_child(map)
-    var hud := map.get_node_or_null("HUD")
-    TestHelper.assert_true(hud != null, "MapBase01 has a HUD CanvasLayer (setup branch reached)")
-    var tooltip: Node = hud.get_node_or_null("HoverTooltip") if hud else null
+    var hud := HUD_SURFACE_SCENE.instantiate()
+    _pm.get_tree().root.add_child(hud)
+    var tooltip: Node = hud.get_node_or_null("HoverTooltip")
     (
         TestHelper
         . assert_true(
             is_instance_valid(tooltip),
-            "gameplay HUD contains the HoverTooltip so hover renders in every map",
+            "the match HUD surface contains the HoverTooltip so hover renders in every map",
+        )
+    )
+    hud.free()
+    # The map scene no longer hosts the HUD: it is a peer of the World root.
+    var map := MAP_BASE_SCENE.instantiate()
+    (
+        TestHelper
+        . assert_true(
+            map.get_node_or_null("HUD") == null,
+            "MapBase01 does not host the in-game HUD",
         )
     )
     map.free()

@@ -487,22 +487,20 @@ func _try_place_building() -> void:
 
 func _get_camera_3d() -> Camera3D:
     # The gameplay camera is the root viewport's current camera. Prefer that —
-    # the map is nested under MainScene/Gameplay, so it is no longer
+    # the map is nested under MainScene/Gameplay/World, so it is not
     # `current_scene` and a current_scene/Camera path would miss it.
     var camera := get_viewport().get_camera_3d()
     if camera:
         return camera
-    # Fallback for a standalone map scene with a top-level Camera/Camera3D.
+    # Fallback for when no camera is current (e.g. a standalone map scene):
+    # search the scene recursively rather than assuming a fixed child path.
     var tree := get_tree()
     if not tree:
         return null
     var root := tree.current_scene
     if not root:
         return null
-    var camera_controller := root.get_node_or_null("Camera")
-    if not camera_controller:
-        return null
-    return camera_controller.get_node_or_null("Camera3D") as Camera3D
+    return root.find_child("Camera3D", true, false) as Camera3D
 
 
 func sell_building(building_node: Node3D) -> bool:
