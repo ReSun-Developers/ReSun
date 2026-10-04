@@ -4,7 +4,7 @@ class_name DeployComponent extends Node
 ## Configures vehicle→building (deploy) and building→vehicle (undeploy) transformations.
 ## Uses snapshot+deferred pattern: capture state → deselect → defer create+free.
 
-enum DeployState { IDLE, ROTATING_DEPLOY, ROTATING_UNDEPLOY, TRANSFORMING }
+enum DeployState { IDLE, SEEKING_DEPLOY, ROTATING_DEPLOY, ROTATING_UNDEPLOY, TRANSFORMING }
 
 ## Entity id to create when deploying (e.g., "GDI_CONSTRUCTION_YARD" for MCV).
 @export_group("Deploy")
@@ -20,9 +20,13 @@ enum DeployState { IDLE, ROTATING_DEPLOY, ROTATING_UNDEPLOY, TRANSFORMING }
 @export var deploy_cell: Vector2i = Vector2i(0, 0)
 ## Transfer health as ratio between source and target max_health.
 @export var transfer_health_ratio: bool = true
+## Search radius in cells for a deployable cell whose foundation is free. The
+## deploying unit drives to the centre of the nearest valid cell before rotating.
+@export var deploy_search_radius_cells: int = 6
 
 var _state: int = DeployState.IDLE
 var _target_entity: Node3D = null
+var _target_cell: Vector2i = Vector2i(-1, -1)
 var _target_rot_y: float = 0.0
 var _rotation_speed: float = 180.0
 var _pending_move_target: Vector3 = Vector3.ZERO
@@ -32,10 +36,14 @@ var _has_pending_move: bool = false
 func _exit_tree() -> void:
     _state = DeployState.IDLE
     _target_entity = null
+    _target_cell = Vector2i(-1, -1)
 
 
 func _process(delta: float) -> void:
-    if _state == DeployState.IDLE or _state == DeployState.TRANSFORMING:
+    if _state == DeployState.SEEKING_DEPLOY:
+        _check_seek_interrupted()
+        return
+    if _state != DeployState.ROTATING_DEPLOY and _state != DeployState.ROTATING_UNDEPLOY:
         return
     if not is_instance_valid(_target_entity):
         _state = DeployState.IDLE
@@ -74,6 +82,27 @@ func can_undeploy() -> bool:
 
 func is_transitioning() -> bool:
     return _state != DeployState.IDLE
+
+
+## Cancel an in-flight deploy or undeploy (Stop command). A committed
+## `TRANSFORMING` step cannot be cancelled; every other state reverts to IDLE so
+## the unit is commandable again and does not resume the cancelled order.
+func cancel_deploy() -> void:
+    if _state == DeployState.TRANSFORMING:
+        return
+    _state = DeployState.IDLE
+    _target_entity = null
+    _target_cell = Vector2i(-1, -1)
+
+
+## True when `entity` has a DeployComponent mid-transition. Movement systems that
+## relocate idle units (scatter/nudge) must skip it: deploy halts the unit to
+## IDLE while it rotates, but it must not be moved until the transform completes.
+static func is_entity_transitioning(entity: Node) -> bool:
+    if entity == null:
+        return false
+    var deploy := entity.get_node_or_null("DeployComponent") as DeployComponent
+    return deploy != null and deploy.is_transitioning()
 
 
 func get_order_for_target(
@@ -137,25 +166,17 @@ func _undeploy_with_offset(entity: Node3D, click_pos: Vector3) -> void:
     execute_undeploy(entity, undeploy_target)
 
 
-## Validate that deploy is possible. Returns true if foundation cells are free.
-func validate_deploy(source_entity: Node3D) -> bool:
-    if not can_deploy():
-        return false
-    var source_data := EntityFactory.get_entity_data(deploys_into)
-    if not source_data:
-        push_warning("[Deploy] Unknown deploy target: %s" % deploys_into)
-        return false
-    var origin := calculate_deploy_origin(source_entity, source_data)
-    return _are_foundation_cells_free(origin, source_data.foundation, source_entity)
-
-
 ## Calculate the origin cell for the deployed building, centering it on the source entity.
 func calculate_deploy_origin(source_entity: Node3D, target_data: EntityData) -> Vector2i:
     var source_cell := CellUtil.world_to_cell(source_entity.global_position)
-    var foundation := target_data.foundation
+    return _origin_for_cell(source_cell, target_data.foundation)
+
+
+## Origin cell (top-left for buildings) of a foundation centred on `cell`.
+func _origin_for_cell(cell: Vector2i, foundation: Vector2i) -> Vector2i:
     var half_x: int = int(foundation.x * 0.5)
     var half_y: int = int(foundation.y * 0.5)
-    return source_cell - Vector2i(half_x, half_y)
+    return cell - Vector2i(half_x, half_y)
 
 
 ## Check if all foundation cells are free (no buildings, blocked cells, or entities).
@@ -275,6 +296,9 @@ func _scatter_single_cell(cell: Vector2i, source_entity: Node3D) -> bool:
             continue
         if mc._state != MovementController.State.IDLE:
             continue
+        # Never scatter another unit that is itself mid-deploy.
+        if is_entity_transitioning(entity_node):
+            continue
         var push_cell := _find_adjacent_free_cell(cell)
         if push_cell == Vector2i(-1, -1):
             continue
@@ -296,25 +320,168 @@ func _find_adjacent_free_cell(origin: Vector2i) -> Vector2i:
     return Vector2i(-1, -1)
 
 
-## Execute the deploy transformation. Returns true on success.
+## Execute the deploy order. Returns true if the deploy engaged (the unit is
+## either moving to a deployable cell, rotating, or transforming).
+##
+## A deploying unit must stand at the centre of a cell whose whole foundation is
+## free. If the current cell does not qualify, the nearest valid cell within
+## `deploy_search_radius_cells` is chosen and the unit drives to its centre
+## before rotating to `deploy_rotation` and transforming.
 func execute_deploy(source_entity: Node3D) -> bool:
-    if is_transitioning():
-        return false
-    if not can_deploy():
+    if is_transitioning() or not can_deploy() or not is_instance_valid(source_entity):
         return false
     var target_data := EntityFactory.get_entity_data(deploys_into)
     if not target_data:
         return false
-    if not validate_deploy(source_entity):
-        scatter_blockers(source_entity, target_data)
-        if not validate_deploy(source_entity):
-            push_warning("[Deploy] Cannot deploy — foundation cells blocked")
-            return false
 
+    var deploy_cell := _find_deploy_cell(source_entity, target_data)
+    if deploy_cell == Vector2i(-1, -1):
+        push_warning("[Deploy] No free cell for %s" % deploys_into)
+        return false
+
+    # Only once a cell is confirmed: cancel the orders that must not resume
+    # after the deploy. A failed search above leaves the unit's orders intact.
+    _cancel_non_movement_activity(source_entity)
+
+    _target_cell = deploy_cell
+    _target_entity = source_entity
     _rotation_speed = _get_rotation_speed(source_entity)
     _target_rot_y = deg_to_rad(deploy_rotation)
-    _target_entity = source_entity
+    return _move_to_deploy_cell(source_entity, deploy_cell)
 
+
+## Drive to the chosen cell (or settle into it) before the deploy rotation.
+func _move_to_deploy_cell(source_entity: Node3D, deploy_cell: Vector2i) -> bool:
+    var mc := source_entity.get_node_or_null("MovementController") as MovementController
+    if not mc:
+        if CellUtil.world_to_cell(source_entity.global_position) != deploy_cell:
+            push_warning("[Deploy] Cannot reach deploy cell without a MovementController")
+            _state = DeployState.IDLE
+            return false
+        _begin_deploy_rotation(source_entity)
+        return true
+
+    _connect_movement(mc)
+    var centre := CellUtil.cell_to_world(deploy_cell)
+    var h_dist := (
+        Vector2(
+            source_entity.global_position.x - centre.x, source_entity.global_position.z - centre.z
+        )
+        . length()
+    )
+    if h_dist < 0.05:
+        # Already centred on the chosen cell: nothing to drive, rotate in place.
+        _begin_deploy_rotation(source_entity)
+        return true
+
+    _state = DeployState.SEEKING_DEPLOY
+    if CellUtil.world_to_cell(source_entity.global_position) == deploy_cell:
+        # Same cell: a pathfinder move to its own cell is empty, so glide
+        # straight to the centre through the normal movement step.
+        mc.move_to_point(centre)
+    else:
+        mc.set_target_position(centre)
+    return _state == DeployState.SEEKING_DEPLOY
+
+
+## Choose the cell to deploy on. Follows the unit's current path forward — like
+## the Stop command — returning the first cell ahead whose foundation is free, so
+## a moving unit continues in its travel direction instead of reversing. An idle
+## unit uses its own cell, else the nearest free cell within the search radius.
+## Returns (-1, -1) when none is found.
+func _find_deploy_cell(source_entity: Node3D, target_data: EntityData) -> Vector2i:
+    var mc := source_entity.get_node_or_null("MovementController") as MovementController
+    if mc:
+        for cell in mc.get_remaining_path_cells():
+            if _is_deploy_cell_valid(cell, target_data, source_entity):
+                return cell
+
+    var start := CellUtil.world_to_cell(source_entity.global_position)
+    if _is_deploy_cell_valid(start, target_data, source_entity):
+        return start
+    var best := Vector2i(-1, -1)
+    var best_dist := INF
+    for dx in range(-deploy_search_radius_cells, deploy_search_radius_cells + 1):
+        for dz in range(-deploy_search_radius_cells, deploy_search_radius_cells + 1):
+            if dx == 0 and dz == 0:
+                continue
+            var cell := start + Vector2i(dx, dz)
+            if not _is_deploy_cell_valid(cell, target_data, source_entity):
+                continue
+            var dist := float(dx * dx + dz * dz)
+            if dist < best_dist:
+                best_dist = dist
+                best = cell
+    if best != Vector2i(-1, -1):
+        return best
+    scatter_blockers(source_entity, target_data)
+    if _is_deploy_cell_valid(start, target_data, source_entity):
+        return start
+    return Vector2i(-1, -1)
+
+
+## True when a foundation centred on `cell` is entirely free for the source.
+func _is_deploy_cell_valid(cell: Vector2i, target_data: EntityData, source_entity: Node3D) -> bool:
+    var origin := _origin_for_cell(cell, target_data.foundation)
+    return _are_foundation_cells_free(origin, target_data.foundation, source_entity)
+
+
+## Connect to the movement controller's arrival/failure signals exactly once.
+func _connect_movement(mc: MovementController) -> void:
+    if not mc.arrived.is_connected(_on_arrived):
+        mc.arrived.connect(_on_arrived)
+    if not mc.pathfinding_failed.is_connected(_on_pathfinding_failed):
+        mc.pathfinding_failed.connect(_on_pathfinding_failed)
+
+
+## Arrival during SEEKING_DEPLOY: if the unit drifted into a neighbouring cell,
+## re-issue the move; otherwise re-check the cell is still free and start the
+## deploy rotation.
+func _on_arrived(_position: Vector3) -> void:
+    if _state != DeployState.SEEKING_DEPLOY:
+        return
+    var source_entity := _target_entity
+    if not is_instance_valid(source_entity):
+        _state = DeployState.IDLE
+        return
+    if CellUtil.world_to_cell(source_entity.global_position) != _target_cell:
+        var mc := source_entity.get_node_or_null("MovementController") as MovementController
+        if mc:
+            mc.set_target_position(CellUtil.cell_to_world(_target_cell))
+        return
+    var target_data := EntityFactory.get_entity_data(deploys_into)
+    if not target_data or not _is_deploy_cell_valid(_target_cell, target_data, source_entity):
+        push_warning("[Deploy] Deploy cell became blocked")
+        _state = DeployState.IDLE
+        _target_entity = null
+        return
+    _begin_deploy_rotation(source_entity)
+
+
+func _on_pathfinding_failed() -> void:
+    if _state == DeployState.SEEKING_DEPLOY:
+        push_warning("[Deploy] Pathfinding failed while seeking a deploy cell")
+        cancel_deploy()
+
+
+## Safety net for a seek that was interrupted without an `arrived` or
+## `pathfinding_failed` event (e.g. the Stop command halting the controller).
+## A live seek always has the controller MOVING/ROTATING, so IDLE means stalled.
+func _check_seek_interrupted() -> void:
+    if not is_instance_valid(_target_entity):
+        cancel_deploy()
+        return
+    var mc := _target_entity.get_node_or_null("MovementController") as MovementController
+    if mc and not mc.is_moving():
+        push_warning("[Deploy] Seek interrupted; deploy cancelled")
+        cancel_deploy()
+
+
+## Rotate the entity to the deploy heading, or transform immediately when aligned.
+func _begin_deploy_rotation(source_entity: Node3D) -> void:
+    _target_entity = source_entity
+    _rotation_speed = _get_rotation_speed(source_entity)
+    _target_rot_y = deg_to_rad(deploy_rotation)
     if abs(angle_difference(source_entity.rotation.y, _target_rot_y)) < 0.05:
         source_entity.rotation.y = _target_rot_y
         _target_entity = null
@@ -322,7 +489,21 @@ func execute_deploy(source_entity: Node3D) -> bool:
         _complete_deploy(source_entity)
     else:
         _state = DeployState.ROTATING_DEPLOY
-    return true
+
+
+## Cancel the orders that must not resume after the deploy: harvesting,
+## transport unloading, and combat. Movement is repurposed by the seek, so it is
+## not halted here. Each component is optional, so absent ones are no-ops.
+func _cancel_non_movement_activity(entity: Node3D) -> void:
+    var harvest := entity.get_node_or_null("HarvestComponent") as HarvestComponent
+    if harvest:
+        harvest.cancel_harvest(true)
+    var transport := entity.get_node_or_null("TransportComponent") as TransportComponent
+    if transport:
+        transport.cancel_unload()
+    var combat := entity.get_node_or_null("CombatComponent") as CombatComponent
+    if combat:
+        combat.clear_target()
 
 
 func _complete_deploy(source_entity: Node3D) -> void:
@@ -333,7 +514,7 @@ func _complete_deploy(source_entity: Node3D) -> void:
     if not target_data:
         _state = DeployState.IDLE
         return
-    var origin := calculate_deploy_origin(source_entity, target_data)
+    var origin := _origin_for_cell(_target_cell, target_data.foundation)
     var snap := _snapshot_entity(source_entity)
     _deselect_entity(source_entity)
     _remove_source_from_systems(source_entity)
