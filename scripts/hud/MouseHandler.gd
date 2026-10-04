@@ -91,6 +91,12 @@ func apply_selection_hotkey(is_stop: bool) -> void:
             if transport:
                 transport.cancel_unload()
                 acted = true
+            # Stop must also cancel an in-flight deploy/undeploy seek or rotation,
+            # otherwise the unit stays locked in `is_transitioning()` forever.
+            var deploy := entity.get_node_or_null("DeployComponent") as DeployComponent
+            if deploy:
+                deploy.cancel_deploy()
+                acted = true
             var mc := entity.get_node_or_null("MovementController") as MovementController
             if mc:
                 mc.stop()

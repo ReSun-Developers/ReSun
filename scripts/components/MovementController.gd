@@ -775,6 +775,76 @@ func get_target_position() -> Vector3:
     return _waypoints[_waypoints.size() - 1]
 
 
+## Cell centres still ahead on the current path, nearest first and de-duplicated
+## (empty when idle). Walked at ~half-cell resolution so the first entry is the
+## cell the unit is heading into — matching the Stop command's forward stop —
+## rather than a far waypoint several cells away. Callers that act on arrival
+## (e.g. deploy) use this to continue forward instead of reversing.
+func get_remaining_path_cells(max_cells: int = 32) -> Array[Vector2i]:
+    var cells: Array[Vector2i] = []
+    if _state == State.IDLE or _waypoints.is_empty():
+        return cells
+    var seg := _spline_segment()
+    var from := _parent.global_position
+    for i in range(seg + 1, _waypoints.size()):
+        var to: Vector3 = _waypoints[i]
+        _collect_cells_along(from, to, cells, max_cells)
+        from = to
+        if cells.size() >= max_cells:
+            break
+    return cells
+
+
+## Append the cells crossed from `from` to `to`, sampled at half-cell steps.
+func _collect_cells_along(from: Vector3, to: Vector3, out: Array[Vector2i], cap: int) -> void:
+    var dist := Vector2(to.x - from.x, to.z - from.z).length()
+    if dist < 0.001:
+        return
+    var steps := int(ceil(dist / (CellUtil.CELL_SIZE * 0.5)))
+    var last_cell := CellUtil.world_to_cell(from)
+    for s in range(1, steps + 1):
+        var cell := CellUtil.world_to_cell(from.lerp(to, float(s) / float(steps)))
+        if cell == last_cell:
+            continue
+        last_cell = cell
+        if out.is_empty() or out[out.size() - 1] != cell:
+            out.append(cell)
+        if out.size() >= cap:
+            return
+
+
+## Straight-line move to a nearby world point without pathfinding. Used for a
+## short reposition inside the unit's current cell (e.g. deploy centring), where
+## a pathfinder query from and to the same cell yields no path. Emits
+## `movement_started` / `arrived` like a normal move.
+func move_to_point(target: Vector3, internal: bool = false) -> void:
+    var full_path := PackedVector3Array([_parent.global_position, target])
+    var full_levels := PackedInt32Array([_surface_level, _surface_level])
+    full_path[1].y = TerrainSystem.get_height_at_world_smooth(target)
+    _waypoints = full_path
+    _waypoint_levels = full_levels
+    _has_sub_slot = false
+    _hybrid_active = false
+    _land_on_arrival = false
+    _bake_spline()
+    _spline_t = 0.0
+    _wait_time = 0.0
+    _repair_time = 0.0
+    _last_position = _parent.global_position
+    if _instant_turn:
+        _state = State.MOVING
+        var tangent := (_waypoints[1] - _waypoints[0]).normalized()
+        var target_yaw := atan2(-tangent.x, -tangent.z)
+        _rotation_yaw = target_yaw
+        _apply_facing(Vector3(-sin(target_yaw), 0.0, -cos(target_yaw)))
+    else:
+        _state = State.ROTATING
+    if _locomotor_data and _locomotor_data.decelerate and not _locomotor_data.accelerate:
+        _ramp_speed = move_speed
+    if not internal:
+        movement_started.emit()
+
+
 ## Move onto an occupied destination (e.g. infantry boarding a transport): the
 ## target is not relocated, the unit walks a straight final leg onto it, and
 ## arrival fires even though the destination cell is occupied.
@@ -1519,7 +1589,13 @@ func _scatter_blockers() -> void:
                 var scatter_targets: Array[MovementController] = []
                 for entry in SpatialHash.instance.get_entries(ncell, _surface_level):
                     var mc := entry.mc as MovementController
-                    if mc and mc != self and mc._state == State.IDLE and not _is_enemy_unit(mc):
+                    if (
+                        mc
+                        and mc != self
+                        and mc._state == State.IDLE
+                        and not DeployComponent.is_entity_transitioning(mc._parent)
+                        and not _is_enemy_unit(mc)
+                    ):
                         scatter_targets.append(mc)
                 if scatter_targets.is_empty():
                     continue
@@ -1549,7 +1625,7 @@ func nudge_from_cell(blocking_cell: Vector2i) -> bool:
     for entry in entries:
         var mc := entry.mc as MovementController
         if mc and mc._state == State.IDLE:
-            if _is_enemy_unit(mc):
+            if _is_enemy_unit(mc) or DeployComponent.is_entity_transitioning(mc._parent):
                 continue
             var free := _find_nearest_free_idle_cell(blocking_cell)
             mc.set_target_position(
