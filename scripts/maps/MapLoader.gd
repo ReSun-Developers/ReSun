@@ -21,6 +21,29 @@ const OVERRIDE_KEYS: PackedStringArray = [
     "bridge_piece_id",
 ]
 
+## Optional top-level scripting keys preserved on a map round-trip.
+const SCRIPTING_KEYS: PackedStringArray = ["triggers", "waypoints", "variables"]
+
+
+## Reads the optional scripting block from a map JSON file. Always returns a
+## dictionary with the three keys (empty defaults) so callers can arm blindly.
+static func read_scripting(path: String) -> Dictionary:
+    var out := {"triggers": [], "waypoints": {}, "variables": {}}
+    var file := FileAccess.open(path, FileAccess.READ)
+    if not file:
+        return out
+    var json := JSON.parse_string(file.get_as_text()) as Dictionary
+    file.close()
+    if json == null:
+        return out
+    if json.get("triggers") is Array:
+        out["triggers"] = json["triggers"]
+    if json.get("waypoints") is Dictionary:
+        out["waypoints"] = json["waypoints"]
+    if json.get("variables") is Dictionary:
+        out["variables"] = json["variables"]
+    return out
+
 
 static func load_map_into(path: String, parent: Node) -> Array[Dictionary]:
     var file := FileAccess.open(path, FileAccess.READ)

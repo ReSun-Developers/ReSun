@@ -110,6 +110,9 @@ func _on_entity_death(entity: Node3D, data: EntityData = null) -> void:
         AudioManager.play_voice(voice.voice_data.id, VoiceData.EVENT_DIE)
     elif data and not data.sound_die.is_empty():
         AudioManager.play_random(data.sound_die.split(",", false), entity.global_position)
+    TriggerEngine.notify_destroyed(
+        TriggerEngine.house_for_entity(entity), String(data.id) if data else "", entity
+    )
     GhostDepot.capture_entity(entity)
     entity.queue_free()
 
