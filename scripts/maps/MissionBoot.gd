@@ -35,6 +35,39 @@ func _on_mission_started(mission: Mission) -> void:
     _swap_world(gameplay, map)
     _show_match_session()
     PlayerManager.begin_mission(mission, map.find_child("MapConfig", true, false))
+    _arm_scripting(mission)
+
+
+## Resets per-match scripting state and arms the mission's triggers from its map
+## JSON. Safe to call with no scripting data (nothing arms).
+func _arm_scripting(mission: Mission) -> void:
+    MatchClock.reset()
+    ScenarioState.reset()
+    var scripting: Dictionary = MapLoader.read_scripting(mission.map_path)
+    var variables: Dictionary = scripting["variables"]
+    ScenarioState.declare_variables(
+        _as_array(variables.get("globals", [])), _as_array(variables.get("locals", []))
+    )
+    ScenarioState.load_waypoints(scripting["waypoints"])
+    TriggerEngine.reset()
+    TriggerEngine.arm(_as_array(scripting["triggers"]), _load_overlay(mission))
+
+
+## Loads an optional `<map_basename>_triggers.tres` TriggerSet overlay next to
+## the mission map. Absent returns an empty overlay.
+func _load_overlay(mission: Mission) -> Array:
+    var overlay_path: String = mission.map_path.get_basename() + "_triggers.tres"
+    if not ResourceLoader.exists(overlay_path):
+        return []
+    var trigger_set := load(overlay_path) as TriggerSet
+    return trigger_set.triggers if trigger_set != null else []
+
+
+## Coerces an untyped JSON value to an Array, so malformed imported content
+## (e.g. a string where an array is expected) declares nothing instead of
+## raising a type error.
+func _as_array(value: Variant) -> Array:
+    return value if value is Array else []
 
 
 ## Replaces any existing World root with a fresh one hosting `map`, and returns

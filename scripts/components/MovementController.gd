@@ -424,6 +424,12 @@ func is_airborne_jumpjet() -> bool:
     return _is_jumpjet and _vertical_state != VerticalState.GROUND
 
 
+## True for movers that should not produce ground cell-entry offers: aircraft
+## (fly locomotors) and airborne jumpjets.
+func is_flying_mover() -> bool:
+    return (_locomotor_data != null and _locomotor_data.is_fly) or is_airborne_jumpjet()
+
+
 func _num_segments() -> int:
     return maxi(0, _waypoints.size() - 1)
 
@@ -1184,6 +1190,8 @@ func _handle_moving_movement(delta: float) -> void:
             CellReservation.instance.release_all(_parent)
             if debug_show_path:
                 DebugVisualizer.clear_path(get_path())
+            if TriggerEngine.is_armed() and not is_flying_mover():
+                TriggerEngine.offer(1, {"cell": CellUtil.world_to_cell(_parent.global_position)})
             arrived.emit(_parent.global_position)
             # A subscriber may have detached or freed the mover (boarding a
             # transport detaches the passenger mid-callback); the cell-tracking
@@ -1282,6 +1290,8 @@ func _handle_wait(delta: float) -> void:
             CellReservation.instance.release_all(_parent)
             if debug_show_path:
                 DebugVisualizer.clear_path(get_path())
+            if TriggerEngine.is_armed() and not is_flying_mover():
+                TriggerEngine.offer(1, {"cell": CellUtil.world_to_cell(_parent.global_position)})
             arrived.emit(_parent.global_position)
         return
 

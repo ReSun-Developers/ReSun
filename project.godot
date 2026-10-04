@@ -48,6 +48,9 @@ AudioManager="*res://scripts/core/AudioManager.gd"
 ShroudSystem="*res://scripts/core/ShroudSystem.gd"
 FogRenderer="*res://scripts/core/FogRenderer.gd"
 FxSystem="*res://scripts/core/FxSystem.gd" ; Connects to ShroudSystem.state_changed in _ready — keep after ShroudSystem
+MatchClock="*res://scripts/core/MatchClock.gd" ; Fixed 30 Hz logic clock + deadline scheduler; no dependencies
+ScenarioState="*res://scripts/core/ScenarioState.gd" ; Mission flags/waypoints/timer; binds to MatchClock in _ready — keep after MatchClock
+TriggerEngine="*res://scripts/triggers/TriggerEngine.gd" ; Mission trigger runtime; binds to MatchClock + ScenarioState in _ready — keep after both
 
 [display]
 

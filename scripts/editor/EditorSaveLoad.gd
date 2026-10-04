@@ -6,6 +6,10 @@ var editor: Node3D = null
 ## re-save does not drop it (the editor does not author players yet).
 var _loaded_players: Array = []
 
+## Optional scripting block (`triggers` / `waypoints` / `variables`) preserved
+## from the last loaded map so an editor re-save does not drop it.
+var _loaded_scripting: Dictionary = {}
+
 var _save_dialog: FileDialog
 var _load_dialog: FileDialog
 
@@ -49,7 +53,19 @@ func _on_save_file_selected(path: String) -> void:
     }
     if not _loaded_players.is_empty():
         extra["players"] = _loaded_players
+    _merge_loaded_scripting(extra)
     TerrainSystem.export_to_json(path, extra)
+
+
+## Copies non-empty preserved scripting keys into the export payload so a
+## round-trip keeps `triggers`, `waypoints`, and `variables`.
+func _merge_loaded_scripting(extra: Dictionary) -> void:
+    for key in MapLoader.SCRIPTING_KEYS:
+        var value: Variant = _loaded_scripting.get(key)
+        if value is Array and not (value as Array).is_empty():
+            extra[key] = value
+        elif value is Dictionary and not (value as Dictionary).is_empty():
+            extra[key] = value
 
 
 ## Serializes one tracked-entity data dict into its JSON map entry. A `house_id`
@@ -113,6 +129,7 @@ func _on_load_file_selected(path: String) -> void:
     var loaded := MapLoader.load_map_into(path, editor)
     editor._player_start_tool.load_data(_read_start_locations(path))
     _loaded_players = _read_players(path)
+    _loaded_scripting = MapLoader.read_scripting(path)
     for entry in loaded:
         var key: String = entry.get("key", "")
         if key.is_empty():

@@ -257,6 +257,21 @@ Full dictionaries: scripts/data/*.gd. Only ambiguous pairs listed here.
 | current tech level | A player's live level (`PlayerData.tech_level`), resolved from the mission or the rules default; compared against `EntityData.tech_level` on the build list. | [tech-level](openspec/specs/tech-level/spec.md) |
 | `powered` vs `is_online` | Data-level "requires power to function" flag (`EntityData.powered`, copied to PowerComponent) vs runtime state (`PowerComponent.is_online`, driven by the grid). Deliberately different names — never write `is_powered()` for the runtime state. | scripts/data/EntityData.gd · [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) |
 
+## Mission Scripting
+
+| Term | Meaning | Where |
+|------|---------|-------|
+| match clock | The fixed 30 Hz logic tick that all simulation and mission scripting advance on; owns an integer frame counter and deadline scheduler. | [match-clock](openspec/specs/match-clock/spec.md) |
+| trigger | A data record (stable id, owner house, tags, events, actions, difficulty flags) that fires when all its events are satisfied. | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
+| tag | The attachment handle that carries a trigger onto a location (general list, owner house list, map cell, or object) and holds its persistence. A trigger with no tag is never armed. | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
+| event | A trigger condition: standing (checked every tick — credits, flags, build exists, elapsed time) or temporal (satisfied only by a matching occurrence — destroyed, attacked, cell entry). | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
+| action | A trigger effect (win/lose, reveal, message, spawn, camera, sound, set/clear flag, timer control, destroy, enable/disable/force trigger). Dispatched from a deferred journal at the tick boundary. | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
+| persistence | A tag's lifetime: `volatile` (fire once, then destroy), `semi-persistent` (fire on the last remaining holder), `persistent` (fire on every satisfying tick and remember satisfied temporal events). | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
+| waypoint | A named map cell (`id` → grid cell) used by trigger actions (camera, reveal, reinforcement, meteor). | [scenario-state](openspec/specs/scenario-state/spec.md) |
+| global flag | A mission-scoped named boolean visible to every house; set/clear actions and events. | [scenario-state](openspec/specs/scenario-state/spec.md) |
+| local flag | A mission-scoped named boolean scoped to one house; distinct from a global of the same name. | [scenario-state](openspec/specs/scenario-state/spec.md) |
+| mission timer | The mission's countdown clock, in whole logic seconds, driven by the match clock; expiry fires the timer-expired event. | [scenario-state](openspec/specs/scenario-state/spec.md) |
+
 ## Cross-Title Systems (unified-engine target)
 
 Terms surfacing in multi-title research (TS/FS/RA2/YR). No authoritative spec exists yet for
@@ -281,7 +296,7 @@ most; anchors point to the research set until an OpenSpec change lands.
 | gap generator / radar blackout | Bubble that hides friendly units from enemy radar/shroud and blacks out the enemy minimap in radius. | [ra2](docs/titles/red-alert-2.md) |
 | spy infiltration | Spy entering an enemy building for an effect (blackout, money steal, reveal, sabotage, promotion). Distinct from engineer capture. | [ra2](docs/titles/red-alert-2.md) |
 | crate | Pickup placed on the map granting money, heal, unit, reveal, firepower, armor, speed, or promotion. | [ts-firestorm](docs/research/_raw/ts-firestorm.md) |
-| trigger / event / action | Mission-scripting primitive: condition (time, cell entry, destroyed, global) → action (reinforce, reveal, message, win/lose, ownership change). | [capability-matrix](docs/capability-matrix.md) |
+| trigger / event / action | Mission-scripting primitive: condition (time, cell entry, destroyed, global) → action (reinforce, reveal, message, win/lose, ownership change). Engine shipped — see Mission Scripting above. | [trigger-engine](openspec/specs/trigger-engine/spec.md) |
 | taskforce / teamtype / scripttype | AI/scripted team definitions (members, behavior flags, action lists) used by campaigns and skirmish AI. | [capability-matrix](docs/capability-matrix.md) |
 | reinforcement | Trigger-driven spawn of units via land/sea/air/drop pod/paradrop entry. | [ts-firestorm](docs/research/_raw/ts-firestorm.md) |
 | ion storm | TS/FS dynamic weather: lightning damage, disables radar/superweapons while active, reveals map. | [ts-firestorm](docs/research/_raw/ts-firestorm.md) |

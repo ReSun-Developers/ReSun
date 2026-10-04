@@ -18,7 +18,7 @@ Canonical terms live in [`GLOSSARY.md`](GLOSSARY.md) — read it before writing 
 | Main scene | `scenes/MainScene.tscn` |
 | Viewport | 1920×1080, stretch mode = viewport |
 
-### Autoloads (31 singletons, all registered in `project.godot`)
+### Autoloads (34 singletons, all registered in `project.godot`)
 
 | Singleton | Script | Purpose |
 |-----------|--------|---------|
@@ -53,6 +53,9 @@ Canonical terms live in [`GLOSSARY.md`](GLOSSARY.md) — read it before writing 
 | `ShroudSystem` | `scripts/core/ShroudSystem.gd` | Per-player fog-of-war grid |
 | `FogRenderer` | `scripts/core/FogRenderer.gd` | Renders the fog-of-war overlay |
 | `FxSystem` | `scripts/core/FxSystem.gd` | Plays one-shot visual effects (`FxData`), fog-gated |
+| `MatchClock` | `scripts/core/MatchClock.gd` | Fixed 30 Hz logic clock and integer deadline scheduler |
+| `ScenarioState` | `scripts/core/ScenarioState.gd` | Mission globals/locals, waypoints, mission timer (binds to `MatchClock`) |
+| `TriggerEngine` | `scripts/triggers/TriggerEngine.gd` | Mission trigger/event/action runtime (binds to `MatchClock`/`ScenarioState`) |
 
 ## Folder Structure
 
@@ -62,6 +65,7 @@ Canonical terms live in [`GLOSSARY.md`](GLOSSARY.md) — read it before writing 
 | `scripts/core/` | Engine-level systems: SelectionManager, BoundsSystem, Pathfinder, SpatialHash, TerrainSystem, TerrainRenderer, CellUtil, CellSubPositions, ResourceGrowthSystem, PlayerManager, DebugVisualizer, EntityMaskManager, PixelArtManager, SplineUtil |
 | `scripts/data/` | Resource type definitions: EntityData, WeaponData, ArtData, AnimClipData, WarheadData, ProjectileData, ResourceType, GlobalRules, MapConfig, PlayerData, MapOverride |
 | `scripts/entities/` | EntityFactory autoload — creates entities from data resources |
+| `scripts/triggers/` | Mission scripting: TriggerCatalog, TriggerParser, TriggerEngine |
 | `scripts/buildings/` | BuildingManager — build mode, placement, preview system |
 | `scripts/economy/` | EconomyManager — per-player credit tracking |
 | `scripts/editor/` | Map editor tools: HeightPainter, MapEditor, Minimap |
@@ -211,7 +215,7 @@ Use typed `signal_name.emit(args)` — never `emit_signal("name", args)`.
 - **PR titles**: Conventional prefix + issue number in parentheses — `fix: building ignores moving entities (#59)`, `feat: async model loading (#60)`. The branch already has the number, but PR title must include it too.
 - **Naming**: PascalCase for classes/scenes, snake_case for vars/funcs. Scene files mirror script names (e.g., `HealthComponent.tscn` ↔ `scripts/components/HealthComponent.gd`).
 - **Scene composition**: Component scenes (`components/*.tscn`) are instantiated as children of entity scenes. Core systems have dedicated scene instances in the gameplay hierarchy.
-- **Autoloads**: 31 autoloads registered in `project.godot`; `GameContext` must stay **first** (consumers pull the active game in their own `_ready()`). Access autoloads by their registered identifier — never `get_node("/root/<Name>")` string paths (a missing dependency must fail loudly, not be skipped silently); nullable `tree.root.get_node_or_null("<Name>")` accessors in static helpers are a separate, intentional pattern. Keep the `[autoload]` ordering annotations true to real `_ready`/`_enter_tree` reads. Add new singletons via project settings, not hardcoded references. Guarded by `test/unit/test_autoload_access.gd`.
+- **Autoloads**: 34 autoloads registered in `project.godot`; `GameContext` must stay **first** (consumers pull the active game in their own `_ready()`). Access autoloads by their registered identifier — never `get_node("/root/<Name>")` string paths (a missing dependency must fail loudly, not be skipped silently); nullable `tree.root.get_node_or_null("<Name>")` accessors in static helpers are a separate, intentional pattern. Keep the `[autoload]` ordering annotations true to real `_ready`/`_enter_tree` reads. Add new singletons via project settings, not hardcoded references. Guarded by `test/unit/test_autoload_access.gd`.
 - **Input roles**: Right-click = deselect / cancel only (clears selection, exits modes, cancels production). Left-click = select / act (selects entities, issues orders, starts production). Never issue unit commands on right-click.
 - **UID files**: Redot generates `.uid` files (e.g., `MyScript.gd.uid`) alongside scripts and scenes. These are valid parts of the codebase and MUST be committed. Always `git add` both the script and its `.uid` file together.
 
