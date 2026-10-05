@@ -362,7 +362,7 @@ func _find_factories(player_id: int, factory_type: String) -> Dictionary:
             primary = f.get_parent() as Node3D
         elif not first_match:
             first_match = f.get_parent() as Node3D
-    return {"factory": primary if primary else first_match, "count": maxi(count, 1)}
+    return {"factory": primary if primary else first_match, "count": count}
 
 
 ## Returns a free cell near the factory to spawn a unit, or null if none is free
@@ -400,7 +400,11 @@ func _get_production_speed(queue_key: String) -> float:
     var rules := GlobalRules.get_current()
     if rules:
         multiple_factory = rules.multiple_factory
-    var speed: float = 1.0 + (result.count - 1) * multiple_factory
+    # Keep the historical one-factory baseline for callers that query speed
+    # without a live factory. The raw count remains available to lifecycle
+    # handling so zero factories can be distinguished from one.
+    var factory_count: int = maxi(int(result.count), 1)
+    var speed: float = 1.0 + (factory_count - 1) * multiple_factory
     # Low power slows (never halts) construction: multiply by the grid's
     # interpolated build rate.
     speed *= PowerGrid.get_build_rate(player_id)
@@ -418,6 +422,33 @@ func _connect_factory(factory: FactoryComponent) -> void:
 
 func _on_factories_changed() -> void:
     _speed_cache.clear()
+    var orphaned_keys: Array[String] = []
+    for queue_key_variant in _queues.keys():
+        var queue_key := String(queue_key_variant)
+        var player_id := int(queue_key.get_slice(":", 0))
+        var factory_type := queue_key.get_slice(":", 1)
+        if int(_find_factories(player_id, factory_type).count) == 0:
+            orphaned_keys.append(queue_key)
+
+    # Collect before mutating: cancel_production erases empty queue entries and
+    # emits signals whose listeners may query the remaining queues.
+    for queue_key in orphaned_keys:
+        _cancel_queue_after_factory_loss(queue_key)
+
+
+func _cancel_queue_after_factory_loss(queue_key: String) -> void:
+    if not _queues.has(queue_key):
+        return
+    var player_id := int(queue_key.get_slice(":", 0))
+    var original_size: int = (_queues[queue_key] as Array).size()
+    for _index in range(original_size):
+        if not _queues.has(queue_key):
+            break
+        var queue: Array = _queues[queue_key]
+        if queue.is_empty():
+            break
+        var item: ProductionQueue = queue[0] as ProductionQueue
+        cancel_production(player_id, queue_key, 0, item.count)
 
 
 func _get_build_speed() -> float:

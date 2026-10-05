@@ -76,10 +76,10 @@ func _cleanup_queue(pm: Node, queue_key: String) -> void:
 
 
 ## Create a real FactoryComponent in the scene tree so _ready joins the group.
-func _make_factory_node() -> FactoryComponent:
+func _make_factory_node(produces: Array[String] = ["InfantryType"]) -> FactoryComponent:
     var factory := FactoryComponent.new()
     factory.name = "TestFactory"
-    factory.produces = ["InfantryType"]
+    factory.produces = produces
     factory.player_id = PID
     _em.get_tree().root.add_child(factory)
     _test_factories.append(factory)
@@ -344,6 +344,160 @@ func test_set_primary_invalidates_speed_cache():
             "set_primary emits factories_changed and clears the speed cache",
         )
     )
+    _free_test_factories()
+
+
+# --- queue teardown when the final factory is lost (#342) ---
+
+
+func test_losing_last_factory_cancels_active_queue_and_refunds_paid_credits() -> void:
+    var pm := _get_pm()
+    if pm == null or _em == null:
+        TestHelper.fail("autoloads not available")
+        return
+    _ensure_factory()
+    var key: String = pm.get_queue_key(PID, "InfantryType")
+    _cleanup_queue(pm, key)
+    _make_factory_node()
+    var data := _make_infantry("test_factory_loss_active", 100)
+    _em.add(PID, 500, "test")
+    pm.start_production(PID, data)
+    pm._process(1.0)
+    var item: ProductionQueue = pm.get_queue_items(key)[0] as ProductionQueue
+    var paid: int = int(item.deducted)
+    var balance_before: int = _em.get_balance(PID)
+
+    (_test_factories[0] as FactoryComponent).free()
+
+    var queue_cancelled: bool = pm.get_queue_items(key).is_empty()
+    var refunded: bool = _em.get_balance(PID) == balance_before + paid
+    TestHelper.assert_true(
+        paid > 0 and queue_cancelled and refunded,
+        (
+            "losing the last factory cancels active production and refunds %d paid credits"
+            % paid
+        ),
+    )
+    _free_test_factories()
+    _cleanup_queue(pm, key)
+
+
+func test_losing_one_of_two_factories_keeps_queue_running() -> void:
+    var pm := _get_pm()
+    if pm == null or _em == null:
+        TestHelper.fail("autoloads not available")
+        return
+    _ensure_factory()
+    var key: String = pm.get_queue_key(PID, "InfantryType")
+    _cleanup_queue(pm, key)
+    _make_factory_node()
+    var factory_b := _make_factory_node()
+    var data := _make_infantry("test_factory_loss_one_of_two", 100)
+    _em.add(PID, 500, "test")
+    pm.start_production(PID, data)
+    pm._process(1.0)
+    var balance_before: int = _em.get_balance(PID)
+
+    factory_b.free()
+
+    var items: Array = pm.get_queue_items(key)
+    var kept: bool = items.size() == 1
+    var not_refunded: bool = _em.get_balance(PID) == balance_before
+    var speed_recomputed: bool = pm._get_production_speed(key) == _expected_speed(1)
+    TestHelper.assert_true(
+        kept and not_refunded and speed_recomputed,
+        "losing one of two factories keeps the queue and recomputes one-factory speed",
+    )
+    _cleanup_queue(pm, key)
+    _free_test_factories()
+
+
+func test_losing_last_factory_cancels_paused_queue() -> void:
+    var pm := _get_pm()
+    if pm == null or _em == null:
+        TestHelper.fail("autoloads not available")
+        return
+    _ensure_factory()
+    var key: String = pm.get_queue_key(PID, "InfantryType")
+    _cleanup_queue(pm, key)
+    _make_factory_node()
+    var data := _make_infantry("test_factory_loss_paused", 100)
+    _em.add(PID, 500, "test")
+    pm.start_production(PID, data)
+    pm._process(1.0)
+    pm.pause_production(key, 0)
+    var item: ProductionQueue = pm.get_queue_items(key)[0] as ProductionQueue
+    var paid: int = int(item.deducted)
+    var balance_before: int = _em.get_balance(PID)
+
+    (_test_factories[0] as FactoryComponent).free()
+
+    TestHelper.assert_true(
+        pm.get_queue_items(key).is_empty() and _em.get_balance(PID) == balance_before + paid,
+        "losing the last factory cancels and refunds paused production",
+    )
+    _free_test_factories()
+    _cleanup_queue(pm, key)
+
+
+func test_losing_factory_cancels_each_unsupported_queue_type() -> void:
+    var pm := _get_pm()
+    if pm == null or _em == null:
+        TestHelper.fail("autoloads not available")
+        return
+    var infantry_key: String = pm.get_queue_key(PID, "InfantryType")
+    var vehicle_key: String = pm.get_queue_key(PID, "VehicleType")
+    _cleanup_queue(pm, infantry_key)
+    _cleanup_queue(pm, vehicle_key)
+    _make_factory_node(["InfantryType", "VehicleType"])
+    var infantry := _make_infantry("test_factory_loss_infantry", 100)
+    var vehicle := _make_infantry("test_factory_loss_vehicle", 150)
+    vehicle.entity_type = EntityData.EntityType.VEHICLE
+    vehicle.buildable_queue = "VehicleType"
+    var infantry_item := ProductionQueue.new(infantry, 1)
+    var vehicle_item := ProductionQueue.new(vehicle, 1)
+    infantry_item.deducted = 30.0
+    vehicle_item.deducted = 45.0
+    pm._queues[infantry_key] = [infantry_item]
+    pm._queues[vehicle_key] = [vehicle_item]
+    pm._active_index[infantry_key] = 0
+    pm._active_index[vehicle_key] = 0
+    _em.deduct(PID, 75, "test_setup")
+    var balance_before: int = _em.get_balance(PID)
+
+    (_test_factories[0] as FactoryComponent).free()
+
+    TestHelper.assert_true(
+        (
+            pm.get_queue_items(infantry_key).is_empty()
+            and pm.get_queue_items(vehicle_key).is_empty()
+            and _em.get_balance(PID) == balance_before + 75
+        ),
+        "losing a multi-queue factory cancels and refunds every unsupported queue",
+    )
+    _free_test_factories()
+    _cleanup_queue(pm, infantry_key)
+    _cleanup_queue(pm, vehicle_key)
+
+
+func test_factory_loss_keeps_completed_building_ready_for_placement() -> void:
+    var pm := _get_pm()
+    if pm == null or _em == null:
+        TestHelper.fail("autoloads not available")
+        return
+    var data := _make_infantry("test_factory_loss_ready", 100)
+    data.entity_type = EntityData.EntityType.BUILDING
+    pm._add_ready_to_place(PID, data, 100.0)
+    _make_factory_node()
+    var balance_before: int = _em.get_balance(PID)
+
+    (_test_factories[0] as FactoryComponent).free()
+
+    TestHelper.assert_true(
+        pm.is_ready_to_place(PID, data.id) and _em.get_balance(PID) == balance_before,
+        "factory loss leaves an already completed building ready for placement",
+    )
+    pm._ready_to_place.erase(PID)
     _free_test_factories()
 
 
