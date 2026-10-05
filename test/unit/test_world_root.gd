@@ -59,3 +59,56 @@ func test_second_match_replaces_the_world_root():
 
     _drop(gameplay)
     boot.free()
+
+
+func test_accessor_rejects_detached_world():
+    var boot: Node = MISSION_BOOT_SCRIPT.new()
+    var gameplay := _gameplay()
+    var world: Node = boot._swap_world(gameplay, Node.new())
+
+    TestHelper.assert_true(World.get_active() == world, "the live World root is active")
+
+    world.queue_free()
+    gameplay.remove_child(world)
+    TestHelper.assert_true(World.get_active() == null, "a detached World root is no longer active")
+
+    _drop(gameplay)
+    boot.free()
+
+
+func test_spawn_container_prefers_the_live_world():
+    var boot: Node = MISSION_BOOT_SCRIPT.new()
+    var gameplay := _gameplay()
+    var world: Node = boot._swap_world(gameplay, Node.new())
+
+    var entity := Node3D.new()
+    var container: Node = World.spawn_container(World.Bucket.ENTITIES)
+    (
+        TestHelper
+        . assert_true(
+            container == world.get_node_or_null(World.ENTITIES_NAME),
+            "spawn container is the active World's Entities bucket",
+        )
+    )
+    container.add_child(entity)
+    TestHelper.assert_true(
+        world.is_ancestor_of(entity), "the spawned node is a descendant of the World root"
+    )
+
+    _drop(gameplay)
+    boot.free()
+
+
+func test_spawn_container_falls_back_without_world():
+    if World.get_active() != null:
+        TestHelper.fail("a World was left active by an earlier test")
+        return
+    var host := Node3D.new()
+    (Engine.get_main_loop() as SceneTree).root.add_child(host)
+
+    var container: Node = World.spawn_container(World.Bucket.ENTITIES, host)
+    TestHelper.assert_true(
+        container == host, "spawn container falls back to the explicit parent with no World"
+    )
+
+    host.free()

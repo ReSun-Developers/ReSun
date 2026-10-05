@@ -16,13 +16,11 @@ var building_types: Array[EntityData] = []
 
 var _preview: Node3D = null
 var _building_preview: Node3D = null
-var _buildings_parent: Node3D = null
 var _grid_overlay: PlacementGridOverlay = null
 
 
 func _ready() -> void:
     _load_building_types()
-    _find_buildings_parent()
     _create_preview()
     building_placed.connect(_on_building_placed)
 
@@ -300,21 +298,6 @@ func _is_cell_free(cell: Vector2i) -> bool:
     return FoundationComponent.is_cell_buildable(cell)
 
 
-func _find_buildings_parent() -> void:
-    var tree := get_tree()
-    if not tree:
-        return
-    var root := tree.current_scene
-    if not root:
-        return
-    _buildings_parent = root.get_node_or_null("Buildings")
-    if not _buildings_parent:
-        _buildings_parent = Node3D.new()
-        _buildings_parent.name = "Buildings"
-        root.add_child(_buildings_parent)
-        _buildings_parent.owner = root
-
-
 func _is_in_bounds(cell: Vector2i) -> bool:
     return BoundsSystem.is_in_map_bounds(cell)
 
@@ -323,10 +306,11 @@ func _is_in_play_area(cell: Vector2i) -> bool:
     return BoundsSystem.is_in_play_area_with_margin(cell)
 
 
+## Player-built structures parent to the match World root's Entities container,
+## resolved per call so nothing is cached across a match swap. With no World
+## (map editor, headless tests) the seam falls back to the current scene root.
 func _get_buildings_parent() -> Node3D:
-    if not _buildings_parent:
-        _find_buildings_parent()
-    return _buildings_parent
+    return World.spawn_container(World.Bucket.ENTITIES) as Node3D
 
 
 func _create_preview() -> void:

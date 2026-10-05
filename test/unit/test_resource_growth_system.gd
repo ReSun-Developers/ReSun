@@ -93,11 +93,12 @@ func test_tree_entity_has_no_resource_component():
 
 
 ## Builds the fixture, runs one tree spawn tick around a tree rooted at
-## TREE_CELL, and returns {spawned, parent, tree_root}. The tree is bare
+## TREE_CELL, and returns {spawned, world, tree_root}. The tree is bare
 ## (no ResourceComponent), matching a real tree after #168, so the root cell
-## is NOT pre-registered as a resource cell. The caller must free
-## parent/tree_root AFTER inspecting spawned — freeing earlier would crash the
-## caller's loop on freed nodes and silently skip the per-node assertions.
+## is NOT pre-registered as a resource cell. A World root is added so spawned
+## resources route through the spawn seam into its Entities container; the
+## caller must free world/tree_root AFTER inspecting spawned — freeing earlier
+## would crash the caller's loop on freed nodes and silently skip assertions.
 func _spawn_around_tree_root(radius: int) -> Dictionary:
     _ts.init_grid(GRID.x, GRID.y)
     _sh._building_cells.clear()
@@ -129,23 +130,24 @@ func _spawn_around_tree_root(radius: int) -> Dictionary:
     var scene_root: Window = (Engine.get_main_loop() as SceneTree).root
     scene_root.add_child(tree_root)
 
-    var parent := Node3D.new()
-    scene_root.add_child(parent)
+    # A World root makes the spawn seam resolve here, so spawned resources land
+    # in World/Entities (the real per-match container) instead of the tree root.
+    var world := World.new()
+    world.name = "ResourceGrowthTestWorld"
+    scene_root.add_child(world)
 
     # Run the spawn tick on the real ResourceGrowthSystem autoload — the same
-    # instance production uses — with the resource parent pointed at a
-    # dedicated node so spawned resources are easy to inspect.
+    # instance production uses.
     var growth: Node = scene_root.get_node("ResourceGrowthSystem")
-    var saved_parent: Node = growth._resource_parent
-    growth._resource_parent = parent
     growth._spawn_in_radius(tree_comp, TREE_CELL, radius, rules)
-    growth._resource_parent = saved_parent
 
     var spawned: Array[Node] = []
-    for child in parent.get_children():
-        if child.get_node_or_null("ResourceComponent"):
-            spawned.append(child)
-    return {"spawned": spawned, "parent": parent, "tree_root": tree_root}
+    var entities: Node = world.get_node_or_null(World.ENTITIES_NAME)
+    if entities:
+        for child in entities.get_children():
+            if child.get_node_or_null("ResourceComponent"):
+                spawned.append(child)
+    return {"spawned": spawned, "world": world, "tree_root": tree_root}
 
 
 func test_tree_root_cell_stays_clear_on_spawn():
@@ -185,7 +187,7 @@ func test_tree_root_cell_stays_clear_on_spawn():
             "tree root cell %s must not be registered as a resource cell" % TREE_CELL,
         )
     )
-    (result["parent"] as Node).free()
+    (result["world"] as Node).free()
     (result["tree_root"] as Node).free()
 
 
@@ -216,5 +218,32 @@ func test_spawned_cell_seeds_at_bale_scale_not_health_ratio():
                 ),
             )
         )
-    (result["parent"] as Node).free()
+    (result["world"] as Node).free()
     (result["tree_root"] as Node).free()
+
+
+## Regression for the cached-parent bug: after a World is released, growth must
+## resolve the *current* World root rather than a parent cached from the old one.
+func test_spawn_routes_to_current_world_after_replacement():
+    var first := _spawn_around_tree_root(SPAWN_RADIUS)
+    if first.is_empty():
+        return
+    (first["world"] as Node).free()
+    (first["tree_root"] as Node).free()
+
+    var second := _spawn_around_tree_root(SPAWN_RADIUS)
+    if second.is_empty():
+        return
+    var world: Node = second["world"]
+    var spawned: Array[Node] = second["spawned"]
+    TestHelper.assert_true(spawned.size() >= 1, "resources still spawn after a World replacement")
+    for node in spawned:
+        (
+            TestHelper
+            . assert_true(
+                world.is_ancestor_of(node),
+                "spawned resource belongs to the current World, not a released one",
+            )
+        )
+    (second["world"] as Node).free()
+    (second["tree_root"] as Node).free()

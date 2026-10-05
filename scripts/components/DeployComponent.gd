@@ -548,9 +548,9 @@ func _do_deploy(
     if buildings_parent:
         buildings_parent.add_child(target_entity)
     else:
-        var tree := get_tree()
-        if tree and tree.current_scene:
-            tree.current_scene.add_child(target_entity)
+        var fallback: Node = World.spawn_container(World.Bucket.ENTITIES)
+        if fallback:
+            fallback.add_child(target_entity)
     var cells: Array[Vector2i] = []
     for dx in target_data.foundation.x:
         for dz in target_data.foundation.y:
@@ -653,9 +653,9 @@ func _do_undeploy(
     if parent:
         parent.add_child(target_entity)
     else:
-        var tree := get_tree()
-        if tree and tree.current_scene:
-            tree.current_scene.add_child(target_entity)
+        var fallback: Node = World.spawn_container(World.Bucket.ENTITIES)
+        if fallback:
+            fallback.add_child(target_entity)
     _apply_snapshot(target_entity, snap)
     # Issue pending move command to the new entity after creation.
     if _has_pending_move:

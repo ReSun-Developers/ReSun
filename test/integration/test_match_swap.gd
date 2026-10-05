@@ -104,3 +104,78 @@ func test_second_mission_replaces_world_and_rebinds_camera() -> void:
         )
 
     _teardown(scene)
+
+
+# Runtime content spawned during match 1 (units, one-shot effects) must be a
+# descendant of the active World root and gone from the scene tree once match 2
+# starts. Spawns after the swap resolve to the incoming match.
+func test_runtime_content_is_released_on_match_swap() -> void:
+    if not _guard():
+        return
+    _gc.select_game("ts")
+    var scene := MAIN_SCENE.instantiate()
+    _tree().root.add_child(scene)
+
+    var gameplay := scene.get_node_or_null("Gameplay") as Node
+    TestHelper.assert_true(gameplay != null, "MainScene has a Gameplay node")
+    if gameplay == null:
+        _teardown(scene)
+        return
+
+    _gc.start_mission(MISSION_ID)
+    var first_world: Node = gameplay.get_node_or_null("World")
+    TestHelper.assert_true(first_world != null, "the first match created a World root")
+
+    var data := EntityFactory.get_entity_data("GDI_LIGHT_INFANTRY")
+    if data == null:
+        TestHelper.fail("GDI_LIGHT_INFANTRY fixture missing")
+        _teardown(scene)
+        return
+    var unit := EntityPlacer.place_entity(data, CellUtil.cell_to_world(Vector2i(10, 10)), 0)
+    TestHelper.assert_true(unit != null, "a unit spawned through the seam")
+    TestHelper.assert_true(
+        first_world.is_ancestor_of(unit), "the unit is under the first match World root"
+    )
+
+    var fx := FxData.new()
+    fx.id = "swap_test_fx"
+    fx.kind = FxData.Kind.SPRITE
+    fx.animation = &"default"
+    fx.sprite_frames = SpriteFrames.new()
+    var effect := FxSystem.play(fx, Transform3D.IDENTITY, true)
+    TestHelper.assert_true(effect != null, "an effect spawned through the seam")
+    if effect != null:
+        TestHelper.assert_true(
+            first_world.is_ancestor_of(effect), "the effect is under the first match World root"
+        )
+
+    _gc.start_mission(MISSION_ID)
+
+    TestHelper.assert_true(
+        first_world.is_queued_for_deletion(), "the outgoing World root is released"
+    )
+    if is_instance_valid(unit):
+        TestHelper.assert_true(not unit.is_inside_tree(), "the spawned unit left the scene tree")
+    if is_instance_valid(effect):
+        TestHelper.assert_true(
+            not effect.is_inside_tree(), "the spawned effect left the scene tree"
+        )
+
+    var second_world: Node = gameplay.get_node_or_null("World")
+    TestHelper.assert_true(second_world != null, "the second match created a World root")
+    TestHelper.assert_true(second_world != first_world, "a new World root is active")
+    (
+        TestHelper
+        . assert_true(
+            second_world.get_node_or_null("MissionMap") != null,
+            "the incoming World root still hosts the mission map",
+        )
+    )
+
+    var late := EntityPlacer.place_entity(data, CellUtil.cell_to_world(Vector2i(12, 12)), 0)
+    TestHelper.assert_true(late != null, "a spawn after the swap resolves")
+    TestHelper.assert_true(
+        second_world.is_ancestor_of(late), "the later unit belongs to the incoming World root"
+    )
+
+    _teardown(scene)
