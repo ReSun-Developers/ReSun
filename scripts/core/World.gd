@@ -61,12 +61,6 @@ static func spawn_container(bucket: Bucket, fallback: Node = null) -> Node:
     return tree.root
 
 
-## Parents `node` under this match's World in `bucket` and returns it.
-func spawn(node: Node, bucket: Bucket = Bucket.ENTITIES) -> Node:
-    _bucket(bucket).add_child(node)
-    return node
-
-
 ## The container node for `bucket`, created lazily on first use.
 func _bucket(bucket: Bucket) -> Node3D:
     var existing: Node = _buckets.get(bucket)

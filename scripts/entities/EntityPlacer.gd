@@ -72,7 +72,9 @@ func start_preview(entity_data: EntityData) -> void:
     _set_node_transparency(entity, 0.33)
     var host: Node = World.spawn_container(World.Bucket.ENTITIES)
     if host == null:
+        push_error("EntityPlacer: no scene root for preview of %s" % entity_data.id)
         entity.free()
+        exit_placing_mode()
         return
     host.add_child(entity)
     _preview = entity

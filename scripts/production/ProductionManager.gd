@@ -334,7 +334,12 @@ func _spawn_unit(entity_data: EntityData, player_id: int) -> void:
             _add_ready_to_spawn(entity_data, player_id, "")
             return
         var world_pos := CellUtil.cell_to_world(spawn_cell as Vector2i)
-        EntityPlacer.place_entity(entity_data, world_pos, player_id, result.factory)
+        var unit: Node3D = EntityPlacer.place_entity(
+            entity_data, world_pos, player_id, result.factory
+        )
+        if unit == null:
+            push_error("ProductionManager: no scene root to place produced %s" % entity_data.id)
+            _add_ready_to_spawn(entity_data, player_id, "")
 
 
 ## Single-pass factory search: returns best factory + count for speed bonus.

@@ -209,6 +209,11 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
     if not can_place(building_type, origin_cell):
         return false
 
+    var parent := _get_buildings_parent()
+    if parent == null:
+        push_error("[BuildingManager] no scene root for %s" % building_type.id)
+        return false
+
     # Deduct cost unless already paid via the production queue
     if not was_ready:
         var reason := "build:%s" % building_type.id
@@ -230,7 +235,7 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
     world_pos.y = max_height
 
     building.position = world_pos
-    _get_buildings_parent().add_child(building)
+    parent.add_child(building)
 
     var cells := FoundationComponent.occupied_cells(
         building_type.foundation, building_type.bib_cells, origin_cell
@@ -308,9 +313,10 @@ func _is_in_play_area(cell: Vector2i) -> bool:
 
 ## Player-built structures parent to the match World root's Entities container,
 ## resolved per call so nothing is cached across a match swap. With no World
-## (map editor, headless tests) the seam falls back to the current scene root.
-func _get_buildings_parent() -> Node3D:
-    return World.spawn_container(World.Bucket.ENTITIES) as Node3D
+## (map editor, headless tests) the seam falls back to the current scene root,
+## which may not be a Node3D, so callers treat the result as a plain Node.
+func _get_buildings_parent() -> Node:
+    return World.spawn_container(World.Bucket.ENTITIES)
 
 
 func _create_preview() -> void:

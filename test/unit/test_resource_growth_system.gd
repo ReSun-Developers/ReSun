@@ -132,7 +132,7 @@ func _spawn_around_tree_root(radius: int) -> Dictionary:
 
     # A World root makes the spawn seam resolve here, so spawned resources land
     # in World/Entities (the real per-match container) instead of the tree root.
-    var world := World.new()
+    var world: Node = World.new()
     world.name = "ResourceGrowthTestWorld"
     scene_root.add_child(world)
 

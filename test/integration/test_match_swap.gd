@@ -125,6 +125,9 @@ func test_runtime_content_is_released_on_match_swap() -> void:
     _gc.start_mission(MISSION_ID)
     var first_world: Node = gameplay.get_node_or_null("World")
     TestHelper.assert_true(first_world != null, "the first match created a World root")
+    if first_world == null:
+        _teardown(scene)
+        return
 
     var data := EntityFactory.get_entity_data("GDI_LIGHT_INFANTRY")
     if data == null:
@@ -149,6 +152,29 @@ func test_runtime_content_is_released_on_match_swap() -> void:
             first_world.is_ancestor_of(effect), "the effect is under the first match World root"
         )
 
+    var shooter := Node3D.new()
+    first_world.add_child(shooter)
+    var combat := CombatComponent.new()
+    shooter.add_child(combat)
+    var projectile_data := ProjectileData.new()
+    projectile_data.id = "swap_test_projectile"
+    var weapon := WeaponData.new()
+    weapon.id = "swap_test_weapon"
+    weapon.damage = 1
+    combat._spawn_projectile(projectile_data, weapon, unit, Vector3.ZERO)
+    var effects: Node = first_world.get_node_or_null(World.EFFECTS_NAME)
+    var projectile: Node = null
+    if effects != null and effects.get_child_count() > 0:
+        projectile = effects.get_child(0)
+    TestHelper.assert_true(projectile != null, "a fired projectile spawned through the seam")
+    (
+        TestHelper
+        . assert_true(
+            projectile != null and first_world.is_ancestor_of(projectile),
+            "the projectile is under the first match World root",
+        )
+    )
+
     _gc.start_mission(MISSION_ID)
 
     TestHelper.assert_true(
@@ -160,9 +186,17 @@ func test_runtime_content_is_released_on_match_swap() -> void:
         TestHelper.assert_true(
             not effect.is_inside_tree(), "the spawned effect left the scene tree"
         )
+    if is_instance_valid(projectile):
+        TestHelper.assert_true(
+            not projectile.is_inside_tree(), "the spawned projectile left the scene tree"
+        )
+    shooter.free()
 
     var second_world: Node = gameplay.get_node_or_null("World")
     TestHelper.assert_true(second_world != null, "the second match created a World root")
+    if second_world == null:
+        _teardown(scene)
+        return
     TestHelper.assert_true(second_world != first_world, "a new World root is active")
     (
         TestHelper
