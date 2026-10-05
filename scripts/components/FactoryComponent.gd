@@ -32,6 +32,10 @@ const KNOWN_FACTORY_TYPES: PackedStringArray = [
 
 
 func _ready() -> void:
+    # EntityPlacer/BuildingManager assign StatsComponent.player_id before the
+    # entity enters the tree. Sync before announcing the factory so listeners
+    # never observe a newly added factory with the sentinel owner -1.
+    _sync_player_id()
     add_to_group("factories")
     factories_changed.emit()
 
@@ -44,7 +48,6 @@ func _exit_tree() -> void:
 func configure(data: EntityData) -> void:
     if not data.factory.is_empty():
         produces = [data.factory]
-    call_deferred("_sync_player_id")
 
 
 func validate(data: EntityData) -> PackedStringArray:
