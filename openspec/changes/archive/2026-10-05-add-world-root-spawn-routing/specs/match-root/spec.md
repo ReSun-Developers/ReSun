@@ -1,13 +1,6 @@
-# match-root Specification
+# Spec Delta
 
-## Purpose
-Defines the per-match World root: a fresh container created for each match that
-owns all scene content produced for that match — the loaded map and content
-created during play (produced units, built structures, projectiles, effects, and
-resources grown at runtime) — giving match teardown a single explicit owner and
-preventing one match's content from surviving into the next.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: A match is hosted in a World root
 
@@ -53,6 +46,8 @@ the frame.
 - **WHEN** a match that produced units, built structures, spawned effects and
   projectiles, or grew resources is replaced by another match
 - **THEN** every such node is no longer in the scene tree after the swap
+
+## ADDED Requirements
 
 ### Requirement: Runtime content lives under the match World root
 

@@ -1,21 +1,32 @@
 ## Purpose
 
 Runtime projectile nodes close the gap between weapon dispatch and damage application: when a weapon's projectile id resolves through the GlobalRules registry, a `ProjectileController` node flies (or teleport-detonates) from the muzzle to the target and delivers its damage payload through the `HitboxComponent` → `HealthComponent` pipeline, replacing instant hitscan application for resolvable ids while preserving the legacy damage math. Flight behavior is data-driven from `ProjectileData` flags, mirroring how `MovementController` resolves locomotors.
+
 ## Requirements
+
 ### Requirement: Projectile node lifecycle
-The system SHALL provide a `Projectile.tscn` scene with a `ProjectileController` script. `CombatComponent` SHALL instantiate it when firing a weapon whose projectile id resolves, configure it with the projectile data, weapon, shooter, and target, and parent it to the gameplay root. The projectile SHALL free itself after detonation, after flying its maximum range, or after reaching the last known position of a target that died in flight. It SHALL emit `impacted(position: Vector3)` at the detonation point.
+
+The system SHALL provide a `Projectile.tscn` scene with a `ProjectileController` script. `CombatComponent` SHALL instantiate it when firing a weapon whose projectile id resolves, configure it with the projectile data, weapon, shooter, and target, and parent it to the match World root (falling back to the shooter's parent when no World root exists). The projectile SHALL free itself after detonation, after flying its maximum range, or after reaching the last known position of a target that died in flight. It SHALL emit `impacted(position: Vector3)` at the detonation point.
 
 #### Scenario: Spawn and self-free on detonation
+
 - **WHEN** a projectile detonates on a valid target
 - **THEN** damage flows through `HitboxComponent` to `HealthComponent`, `impacted` is emitted with the detonation position, and the node frees itself
 
 #### Scenario: Target dies in flight
+
 - **WHEN** the projectile's target dies before impact
 - **THEN** the projectile continues to the target's last known position, detonates or frees there, and never crashes on a freed reference
 
+#### Scenario: Projectile is parented under the match World root
+
+- **WHEN** a weapon fires a resolvable projectile during a match
+- **THEN** the projectile node is a descendant of the match World root
+
 #### Scenario: Map change cleans up
-- **WHEN** the gameplay scene is reloaded while projectiles are in flight
-- **THEN** the projectiles are freed with the scene and no orphan nodes remain
+
+- **WHEN** a match is replaced while projectiles are in flight
+- **THEN** the projectiles are released with the outgoing match's World root and no orphan nodes remain
 
 ### Requirement: Projectile damage payload
 A projectile SHALL implement `get_damage_info()` returning `{amount: int, type: String, source: Node3D, position: Vector3}`. `type` SHALL be the firing weapon's warhead id, `source` SHALL be the shooter node, and `position` SHALL be the detonation position. `amount` SHALL be computed at detonation as the weapon's base damage multiplied by the warhead armor multiplier for the victim's armor type, clamped to GlobalRules `[min_damage, max_damage]`, mirroring the existing hitscan damage math.
@@ -149,4 +160,3 @@ A projectile SHALL detect hits by casting a shape along each physics frame's ful
 
 - **WHEN** a non-guided projectile at the default speed is fired from behind a target receding at the fastest unit speed
 - **THEN** the projectile closes the gap and detonates on the target rather than fizzling at maximum range
-
