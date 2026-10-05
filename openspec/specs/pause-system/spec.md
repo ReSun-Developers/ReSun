@@ -3,15 +3,19 @@
 The pause system lets the player suspend an in-progress game: the ESC key toggles a global pause that freezes gameplay processing, a pause menu stays interactive while the rest of the tree is paused, and resuming with the mouse does not leak a gameplay command. ESC first belongs to active cancel-modes (build/sell/repair/debug-place).
 ## Requirements
 ### Requirement: Pause toggle via ESC
-The game SHALL provide a `pause` input action bound to the ESC key. Pressing ESC while gameplay is running SHALL pause the game and show the pause menu. Pressing ESC while already paused SHALL resume the game and hide the pause menu.
+The game SHALL provide a `pause` input action bound to the ESC key. Pressing ESC while gameplay is running SHALL pause the game and show the pause menu. Pressing ESC while already paused SHALL resume the game and hide the pause menu. When the Options view is open over the pause menu, ESC SHALL close the Options view and return to the pause menu without resuming the game.
 
 #### Scenario: ESC opens the pause menu
 - **WHEN** the player presses ESC during normal gameplay (no build/sell/repair/debug-place mode active)
 - **THEN** the pause menu becomes visible and `get_tree().paused` is `true`
 
 #### Scenario: ESC closes the pause menu
-- **WHEN** the player presses ESC while the pause menu is open
+- **WHEN** the player presses ESC while the pause menu is open and no Options view is open
 - **THEN** the pause menu becomes hidden and `get_tree().paused` is `false`
+
+#### Scenario: ESC closes the Options view without resuming
+- **WHEN** the player presses ESC while the Options view is open over the pause menu
+- **THEN** the Options view closes, the pause menu remains visible, and `get_tree().paused` remains `true`
 
 ### Requirement: Game simulation halts while paused
 While the pause menu is open, the game SHALL pause all gameplay processing: unit movement and combat, production timers, economy timers, and resource growth. Nodes with the default (pausable) process mode MUST stop processing.

@@ -13,6 +13,8 @@ extends Control
 # ponytail: picking always lands on whatever menu MainScene hosts (today
 # TS's MainMenu01); per-game menus arrive with the content packs too.
 
+const OptionsView := preload("res://scripts/ui/OptionsView.gd")
+
 const OPTIONS_LABEL: String = "Options"
 const QUIT_LABEL: String = "Quit"
 
@@ -46,7 +48,7 @@ func _build_rows() -> void:
     for def in GameContext.list_games():
         var label := def.display_name if not def.display_name.is_empty() else def.id
         _add_button(rows, label, def.id, false)
-    _add_button(rows, OPTIONS_LABEL, "", true)
+    _add_button(rows, OPTIONS_LABEL, "", false)
     _add_button(rows, QUIT_LABEL, "", false)
 
 
@@ -57,9 +59,16 @@ func _add_button(rows: VBoxContainer, label: String, game_id: String, disabled: 
     if not game_id.is_empty():
         button.set_meta("game_id", game_id)
         button.pressed.connect(_pick_game.bind(game_id))
+    elif label == OPTIONS_LABEL:
+        button.pressed.connect(_open_options)
     elif label == QUIT_LABEL:
         button.pressed.connect(_quit)
     rows.add_child(button)
+
+
+## Opens the Options view over the launcher (neutral theme, no per-game asset).
+func _open_options() -> void:
+    OptionsView.open(self, "graphics", null, true)
 
 
 ## Exits the app — shared by the Quit row and ESC.

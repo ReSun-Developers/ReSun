@@ -3,6 +3,8 @@ extends Control
 # Called when the node enters the scene tree for the first time.
 # Main menu controller – handles button clicks and exit logic
 
+const OptionsView := preload("res://scripts/ui/OptionsView.gd")
+
 @onready var _campaign_dialog: CampaignDialog = $CampaignDialog
 @onready var _background: TextureRect = $TextureRect
 
@@ -33,6 +35,10 @@ func _input(event):
     # screen — also needs this guard.
     if not visible:
         return
+    # The Options overlay owns input while open; otherwise clicks on its
+    # controls also hit the menu items behind it.
+    if get_tree().get_first_node_in_group("options_view") != null:
+        return
     if event is InputEventMouseButton and event.pressed:
         var mouse_pos = get_viewport().get_mouse_position()
         for item in _collect_menu_items(self):
@@ -61,6 +67,8 @@ func _handle_click(button_text: String) -> void:
                 _campaign_dialog.open()
             else:
                 push_error("MainMenu01: CampaignDialog node is missing")
+        "Options":
+            OptionsView.open(self, "graphics", GameContext.current, true)
         _:
             # Placeholder for other buttons – currently just log
             print("Clicked button: ", button_text)

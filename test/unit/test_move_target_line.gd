@@ -353,3 +353,44 @@ func test_move_line_timer_is_0_3s_and_fades():
             "move line timer is 0.3s and fades over the tail (alpha=%s)" % alpha,
         )
     )
+
+
+func test_move_target_line_toggle_gates_move_only():
+    # move_target_line off suppresses move-target data; rally lines are separate.
+    var tree := Engine.get_main_loop() as SceneTree
+    var gs := tree.root.get_node_or_null("GameSettings")
+    if gs == null:
+        TestHelper.fail("GameSettings not injected")
+        return
+    var scratch := "user://test_move_gate_scratch.cfg"
+    if FileAccess.file_exists(scratch):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(scratch))
+    var saved: String = gs._config_path
+    gs._config_path = scratch
+    gs._load("ts")
+
+    var parent := Node3D.new()
+    tree.root.add_child(parent)
+    var mc := MovementController.new()
+    mc.name = "MovementController"
+    parent.add_child(mc)
+    mc._state = MovementController.State.MOVING
+    mc._waypoints = PackedVector3Array([Vector3(5, 0, 0)])
+    var sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
+    parent.add_child(sc)
+    sc.set_is_selected(true)
+
+    gs.set_value("move_target_line", true)
+    var on: bool = not sc.get_line_render_data().is_empty()
+    gs.set_value("move_target_line", false)
+    var off: bool = sc.get_line_render_data().is_empty()
+
+    sc.set_is_selected(false)
+    parent.free()
+    gs._config_path = saved
+    gs._load("ts")
+    if FileAccess.file_exists(scratch):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(scratch))
+
+    TestHelper.assert_true(on, "move-target line data present when toggle on")
+    TestHelper.assert_true(off, "move-target line data absent when toggle off")

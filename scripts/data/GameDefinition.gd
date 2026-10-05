@@ -50,8 +50,18 @@ extends Resource
 ## default tab set.
 @export var sidebar_tabs: Array[Dictionary] = []
 
+## Input actions this game supports. Empty = no restriction (every action the
+## input system manages is supported). A non-empty list is an allow-list;
+## actions absent from it are unsupported for this game and cannot be bound.
+@export var supported_inputs: PackedStringArray = PackedStringArray()
+
 
 ## True when this game declares the feature and has it enabled. Unknown ids
 ## read as false.
 func has_feature(id: String) -> bool:
     return bool(features.get(id, false))
+
+
+## True when the game supports the input action (empty declaration = all).
+func supports_input(action: String) -> bool:
+    return supported_inputs.is_empty() or supported_inputs.has(action)

@@ -111,7 +111,6 @@ layout_mode = 2
 position = Vector2(0, -12)
 scale = Vector2(1.4, 1.4)
 text = "Options"
-is_disabled = true
 
 [node name="FpsCounter" parent="." instance=ExtResource("4_v2ccv")]
 layout_mode = 1
