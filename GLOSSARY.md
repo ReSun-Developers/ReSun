@@ -30,7 +30,9 @@ Entry form: term → one-line meaning → anchor.
 
 | Term | Meaning | Where |
 |------|---------|-------|
-| match root | The per-match container node under `MainScene/Gameplay` (`scenes/core/World.tscn`, node named `World`): owns the loaded map and the content loaded with it, and is the single teardown point when a match is replaced. Not the 3D game world/terrain and not the **World frame** coordinate frame; runtime-spawned content is not yet routed under it. | [match-root](openspec/specs/match-root/spec.md) · scripts/core/World.gd |
+| match root | The per-match container node under `MainScene/Gameplay` (`scenes/core/World.tscn`, node named `World`): owns the loaded map and all content produced for the match — including runtime-spawned units, structures, projectiles, effects, and grown resources — and is the single teardown point when a match is replaced. Not the 3D game world/terrain and not the **World frame** coordinate frame. | [match-root](openspec/specs/match-root/spec.md) · scripts/core/World.gd |
+| world root | Alias for **match root** — the `World` node under `MainScene/Gameplay` that hosts all per-match scene content. | [match-root](openspec/specs/match-root/spec.md) · scripts/core/World.gd |
+| spawn seam | The single access point runtime spawners use to parent content. `World.spawn_container(bucket, fallback)` resolves the active match root, or falls back to an explicit parent, the current scene, then the scene tree root. Buckets are `Entities` (units, structures, resources) and `Effects` (projectiles, one-shot effects). | [match-root](openspec/specs/match-root/spec.md) · scripts/core/World.gd |
 | session mode | The `SessionShell` selector (`Menu` or `Match`) that decides which GUI surface is mounted; exactly one at a time. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
 | UI session shell | The persistent `SessionShell` node under `MainScene` that mounts the menu surface (`MenuSurface`) or the match HUD surface (`HudSurface`) and outlives a match. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
 
