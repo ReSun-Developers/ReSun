@@ -12,8 +12,6 @@
 
 [node name="GroundPlane" parent="." instance=ExtResource("5_grndp")]
 
-[node name="Buildings" type="Node3D" parent="."]
-
 [node name="MouseHandler" parent="." node_paths=PackedStringArray("camera_controller") instance=ExtResource("2_cuur3")]
 camera_controller = NodePath("../Camera")
 

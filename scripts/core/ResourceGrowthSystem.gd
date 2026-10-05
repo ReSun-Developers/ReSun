@@ -20,7 +20,6 @@ var _resource_batch_offset: int = 0
 var _rebuild_timer: float = 0.0
 var _cached_trees: Array = []
 var _cached_resources: Array = []
-var _resource_parent: Node = null
 
 
 func _ready() -> void:
@@ -65,10 +64,6 @@ func _tree_regrowth_enabled() -> bool:
 func _rebuild_cache() -> void:
     _cached_trees = _get_trees()
     _cached_resources = _get_resources()
-    if not _resource_parent and not _cached_trees.is_empty():
-        var first_tree = _cached_trees[0]
-        if is_instance_valid(first_tree):
-            _resource_parent = (first_tree as Node3D).get_parent()
 
 
 func _reset_tree_timer() -> void:
@@ -258,10 +253,11 @@ func _spawn_at_cell(cell: Vector2i, tree_comp: ResourceTreeComponent, bales: flo
     # Set position before add_child so ResourceComponent._ready() sees the
     # correct global_position when it registers the cell in SpatialHash.
     entity.position = world_pos
-    if _resource_parent and is_instance_valid(_resource_parent):
-        _resource_parent.add_child(entity)
+    var container: Node = World.spawn_container(World.Bucket.ENTITIES)
+    if container:
+        container.add_child(entity)
     else:
-        push_warning("ResourceGrowthSystem: no resource parent for %s" % cell)
+        push_warning("ResourceGrowthSystem: no scene root for resource at %s" % cell)
 
 
 func _grow_entry(entry: Dictionary) -> void:

@@ -504,3 +504,40 @@ func test_target_death_continues_to_last_known_position_then_frees():
         p.free()
     shooter.free()
     _restore_rules()
+
+
+## A fired projectile parents under the match World root's Effects container
+## (not the current scene), so a match swap releases it.
+func test_projectile_parents_to_match_world_root():
+    _inject_test_rules()
+    var world: Node = World.new()
+    world.name = "ProjectileParentTestWorld"
+    _tree().root.add_child(world)
+
+    var shooter := _make_shooter()
+    var target := _make_entity(1, "none", Vector3(2, 0, 0))
+    var combat := shooter.get_node("CombatComponent") as CombatComponent
+    combat._spawn_projectile(_make_data(), _make_weapon(), target, Vector3.ZERO)
+
+    var effects: Node = world.get_node_or_null(World.EFFECTS_NAME)
+    TestHelper.assert_true(effects != null, "the World has an Effects container")
+    (
+        TestHelper
+        . assert_true(
+            effects != null and effects.get_child_count() >= 1,
+            "a fired projectile is parented under World/Effects",
+        )
+    )
+    if effects != null and effects.get_child_count() >= 1:
+        (
+            TestHelper
+            . assert_true(
+                world.is_ancestor_of(effects.get_child(0)),
+                "the projectile is a descendant of the World root",
+            )
+        )
+
+    world.free()
+    shooter.free()
+    target.free()
+    _restore_rules()

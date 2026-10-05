@@ -3,7 +3,9 @@
 ## Purpose
 
 Data-driven one-shot visual effects. `FxData` describes a single effect as a `.tres` — an animated billboard (`SPRITE`, via `SpriteFrames`) or a GPU particle system (`PARTICLES`, with embedded process/draw materials) — and the `FxSystem` autoload plays it, owns its deterministic lifetime, and gates it against fog of war. Weapons reference a muzzle effect (`WeaponData.muzzle_fx`) and warheads an impact effect (`WarheadData.impact_fx`) by direct `FxData` reference.
+
 ## Requirements
+
 ### Requirement: FxData resource class
 The system SHALL provide an `FxData` resource class (`scripts/data/FxData.gd`, `class_name FxData extends Resource`) describing a single one-shot visual effect. It SHALL expose `id: String`, `kind: Kind` with `enum Kind { SPRITE, PARTICLES }`, and `duration: float` (default `0`, meaning derive from the effect). Every field SHALL have a sensible default so unused properties can be ignored. SPRITE effects SHALL expose `sprite_frames: SpriteFrames`, `animation: StringName`, `pixel_size: float`, and `modulate: Color`. PARTICLES effects SHALL expose `process_material: ParticleProcessMaterial`, `draw_material: StandardMaterial3D`, `amount: int`, `lifetime: float`, `explosiveness: float`, `spawn_duration: float` (default `0`), and `local_coords: bool`. The effect SHALL carry no audio field; callers retain their existing sound fields (`WeaponData.sound_report`, `WarheadData.sound_impact`, `EntityData.sound_die`).
 
@@ -50,19 +52,28 @@ For SPRITE effects, `FxData` SHALL support animated texture data through `Sprite
 - **THEN** the returned array is empty
 
 ### Requirement: FxSystem autoload and playback
-The system SHALL provide an `FxSystem` autoload exposing `play(fx: FxData, global_transform: Transform3D) -> Node3D`. `play` SHALL instantiate the effect node, parent it to the gameplay root (`get_tree().current_scene`, falling back to the caller's scene root when absent), place it at `global_transform`, and return the node. A null `fx` or one that fails `validate()` SHALL log a warning and return `null` without adding a node.
+
+The system SHALL provide an `FxSystem` autoload exposing `play(fx: FxData, global_transform: Transform3D) -> Node3D`. `play` SHALL instantiate the effect node, parent it to the match World root (falling back to the caller's scene root when no World root exists, so headless tests and the map editor still get a valid parent), place it at `global_transform`, and return the node. A null `fx` or one that fails `validate()` SHALL log a warning and return `null` without adding a node.
 
 #### Scenario: Play adds a node
-- **WHEN** `play` is called with a valid `FxData` and a transform
-- **THEN** a node exists under the gameplay root at that transform and is returned
+
+- **WHEN** `play` is called with a valid `FxData` and a transform during a match
+- **THEN** a node exists under the match World root at that transform and is returned
 
 #### Scenario: Null effect is a no-op
+
 - **WHEN** `play` is called with `null`
 - **THEN** no node is added, a warning is logged, and `null` is returned
 
+#### Scenario: Play without a World root still spawns
+
+- **WHEN** `play` is called where no match World root exists
+- **THEN** the effect is parented to the available scene root and is returned, with no node dropped
+
 #### Scenario: Cleanup on map change
-- **WHEN** the gameplay scene changes while one-shot effects are alive
-- **THEN** those effects are freed with the scene and no orphan nodes remain
+
+- **WHEN** a match is replaced while one-shot effects are alive
+- **THEN** those effects are released with the outgoing match's World root and no orphan nodes remain
 
 ### Requirement: Effect kind selection and build
 `FxSystem.play` SHALL build different nodes per `FxData.kind`. For `Kind.SPRITE` it SHALL create an `AnimatedSprite3D`, assign `sprite_frames`, play `animation`, set `pixel_size` and `modulate`, enable billboard, and use nearest texture filtering. For `Kind.PARTICLES` it SHALL create a `GPUParticles3D`, assign `process_material` and `draw_material`, set `amount`, `lifetime`, `explosiveness`, and `local_coords`, set the node to one-shot when `spawn_duration` is `0` (looping it for the spawn window otherwise), connect the node's `finished` signal as an early-free, and start emitting after the hook is connected. A PARTICLES `draw_material` SHALL set `vertex_color_use_as_albedo` so the process material's `color` / color-ramp reaches the pixels.
@@ -188,4 +199,3 @@ leave existing particle effects unchanged.
 #### Scenario: Triangle shape builds a triangle
 - **WHEN** a PARTICLES effect sets `particle_shape = TRIANGLE`
 - **THEN** its draw pass is a single-surface `ArrayMesh` (one triangle) with the effect's draw material
-

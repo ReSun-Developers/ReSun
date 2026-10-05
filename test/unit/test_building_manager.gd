@@ -376,3 +376,34 @@ func test_get_camera_3d_resolves_nested_viewport_camera() -> void:
         resolved == camera, "BuildingManager resolves a map camera nested under another node"
     )
     host.free()
+
+
+## Player-built structures route through the match World root's Entities
+## container; no per-match `Main/Buildings` container is created.
+func test_buildings_parent_routes_to_world_entities() -> void:
+    if _bm == null:
+        TestHelper.fail("BuildingManager not injected")
+        return
+    var tree := Engine.get_main_loop() as SceneTree
+    var world: Node = World.new()
+    world.name = "BuildingManagerTestWorld"
+    tree.root.add_child(world)
+
+    var parent: Node = _bm._get_buildings_parent()
+    TestHelper.assert_true(parent != null, "the buildings parent resolves with a World active")
+    (
+        TestHelper
+        . assert_true(
+            parent == world.get_node_or_null(World.ENTITIES_NAME),
+            "the buildings parent is the World Entities container",
+        )
+    )
+    (
+        TestHelper
+        . assert_true(
+            tree.current_scene == null or tree.current_scene.get_node_or_null("Buildings") == null,
+            "no Main/Buildings container is created",
+        )
+    )
+
+    world.free()

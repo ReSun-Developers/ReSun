@@ -176,13 +176,11 @@ func _set_running(node: Node3D, running: bool) -> void:
         node.speed_scale = 1.0 if running else 0.0
 
 
+## Default parent for gameplay effects: the match World root's Effects container,
+## falling back to the current scene then the scene tree root when no World exists
+## (headless tests, pre-boot). The `play` `parent` argument still overrides this.
 func _effect_parent() -> Node:
-    var tree := get_tree()
-    if tree == null:
-        return null
-    if tree.current_scene != null:
-        return tree.current_scene
-    return tree.root
+    return World.spawn_container(World.Bucket.EFFECTS)
 
 
 func _build(fx: FxData) -> Node3D:

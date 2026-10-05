@@ -636,12 +636,7 @@ func _spawn_projectile(
         return
     projectile.setup(data, weapon, shooter, target, _engagement_pos())
     projectile.set_spawn_origin(muzzle_origin)
-    var container: Node = null
-    var tree := shooter.get_tree()
-    if tree:
-        container = tree.current_scene
-    if not container:
-        container = shooter.get_parent()
+    var container: Node = World.spawn_container(World.Bucket.EFFECTS, shooter.get_parent())
     if not container:
         push_error("CombatComponent: no container for projectile spawn — shot consumed")
         projectile.free()

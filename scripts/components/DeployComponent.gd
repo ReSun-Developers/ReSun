@@ -545,12 +545,13 @@ func _do_deploy(
     if deploy_stats:
         deploy_stats.player_id = snap["player_id"]
     var buildings_parent := _get_buildings_parent()
-    if buildings_parent:
-        buildings_parent.add_child(target_entity)
-    else:
-        var tree := get_tree()
-        if tree and tree.current_scene:
-            tree.current_scene.add_child(target_entity)
+    if buildings_parent == null:
+        push_error("[Deploy] no scene root for deployed structure: %s" % deploys_into)
+        target_entity.free()
+        source.queue_free()
+        _state = DeployState.IDLE
+        return
+    buildings_parent.add_child(target_entity)
     var cells: Array[Vector2i] = []
     for dx in target_data.foundation.x:
         for dz in target_data.foundation.y:
@@ -650,12 +651,13 @@ func _do_undeploy(
     if deploy_stats:
         deploy_stats.player_id = snap["player_id"]
     var parent := _get_buildings_parent()
-    if parent:
-        parent.add_child(target_entity)
-    else:
-        var tree := get_tree()
-        if tree and tree.current_scene:
-            tree.current_scene.add_child(target_entity)
+    if parent == null:
+        push_error("[Deploy] no scene root for undeployed entity: %s" % undeploys_into)
+        target_entity.free()
+        source.queue_free()
+        _state = DeployState.IDLE
+        return
+    parent.add_child(target_entity)
     _apply_snapshot(target_entity, snap)
     # Issue pending move command to the new entity after creation.
     if _has_pending_move:
@@ -747,7 +749,7 @@ func _unregister_building_cells(building_entity: Node3D) -> void:
 
 
 ## Get buildings parent node.
-func _get_buildings_parent() -> Node3D:
+func _get_buildings_parent() -> Node:
     return BuildingManager._get_buildings_parent()
 
 

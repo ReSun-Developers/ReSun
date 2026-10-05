@@ -16,13 +16,11 @@ var building_types: Array[EntityData] = []
 
 var _preview: Node3D = null
 var _building_preview: Node3D = null
-var _buildings_parent: Node3D = null
 var _grid_overlay: PlacementGridOverlay = null
 
 
 func _ready() -> void:
     _load_building_types()
-    _find_buildings_parent()
     _create_preview()
     building_placed.connect(_on_building_placed)
 
@@ -211,6 +209,11 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
     if not can_place(building_type, origin_cell):
         return false
 
+    var parent := _get_buildings_parent()
+    if parent == null:
+        push_error("[BuildingManager] no scene root for %s" % building_type.id)
+        return false
+
     # Deduct cost unless already paid via the production queue
     if not was_ready:
         var reason := "build:%s" % building_type.id
@@ -232,7 +235,7 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
     world_pos.y = max_height
 
     building.position = world_pos
-    _get_buildings_parent().add_child(building)
+    parent.add_child(building)
 
     var cells := FoundationComponent.occupied_cells(
         building_type.foundation, building_type.bib_cells, origin_cell
@@ -300,21 +303,6 @@ func _is_cell_free(cell: Vector2i) -> bool:
     return FoundationComponent.is_cell_buildable(cell)
 
 
-func _find_buildings_parent() -> void:
-    var tree := get_tree()
-    if not tree:
-        return
-    var root := tree.current_scene
-    if not root:
-        return
-    _buildings_parent = root.get_node_or_null("Buildings")
-    if not _buildings_parent:
-        _buildings_parent = Node3D.new()
-        _buildings_parent.name = "Buildings"
-        root.add_child(_buildings_parent)
-        _buildings_parent.owner = root
-
-
 func _is_in_bounds(cell: Vector2i) -> bool:
     return BoundsSystem.is_in_map_bounds(cell)
 
@@ -323,10 +311,12 @@ func _is_in_play_area(cell: Vector2i) -> bool:
     return BoundsSystem.is_in_play_area_with_margin(cell)
 
 
-func _get_buildings_parent() -> Node3D:
-    if not _buildings_parent:
-        _find_buildings_parent()
-    return _buildings_parent
+## Player-built structures parent to the match World root's Entities container,
+## resolved per call so nothing is cached across a match swap. With no World
+## (map editor, headless tests) the seam falls back to the current scene root,
+## which may not be a Node3D, so callers treat the result as a plain Node.
+func _get_buildings_parent() -> Node:
+    return World.spawn_container(World.Bucket.ENTITIES)
 
 
 func _create_preview() -> void:

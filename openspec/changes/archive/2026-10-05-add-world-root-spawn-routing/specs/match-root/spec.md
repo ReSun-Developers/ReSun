@@ -1,13 +1,6 @@
-# match-root Specification
+# Spec Delta
 
-## Purpose
-Defines the per-match World root: a fresh container created for each match that
-owns all scene content produced for that match — the loaded map and content
-created during play (produced units, built structures, projectiles, effects, and
-resources grown at runtime) — giving match teardown a single explicit owner and
-preventing one match's content from surviving into the next.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: A match is hosted in a World root
 
@@ -54,20 +47,20 @@ the frame.
   projectiles, or grew resources is replaced by another match
 - **THEN** every such node is no longer in the scene tree after the swap
 
+## ADDED Requirements
+
 ### Requirement: Runtime content lives under the match World root
 
 Scene content created during a match — produced units, player-built structures,
 projectiles, one-shot effects, and resources grown at runtime — SHALL be parented
 under the match World root, so releasing the World root releases all of it. A
-runtime spawner that does not choose its own parent SHALL resolve the match World
-root and parent its node there rather than to the current scene. A live match
-World root SHALL take precedence over a no-World fallback. When no World root
-exists (headless tests, the map editor), a spawn SHALL fall back to an explicit
-in-tree parent when one was supplied, otherwise to the current scene root and then
-to the scene tree root, and SHALL NOT be dropped. A spawner that itself adds its
-node to a fixed in-tree parent (for example a passenger returned to its transport)
-SHALL keep that parent. Once a match is replaced, spawns SHALL resolve to the
-incoming match's World root.
+runtime spawner that does not pass an explicit in-tree parent SHALL resolve the
+match World root and parent its node there rather than to the current scene. When
+no World root exists (headless tests, the map editor), a spawn SHALL fall back to
+the current scene root and then to the scene tree root, and SHALL NOT be dropped.
+A spawner that passes an explicit in-tree parent (for example a passenger returned
+to its transport) SHALL keep that parent. Once a match is replaced, spawns SHALL
+resolve to the incoming match's World root.
 
 #### Scenario: Produced unit is parented under the World root
 
@@ -86,12 +79,7 @@ incoming match's World root.
 - **THEN** the node is parented to the available current scene root and no spawn
   is dropped and no error is raised
 
-#### Scenario: Explicit parent is used only when no World root exists
+#### Scenario: Spawn with an explicit parent keeps it
 
-- **WHEN** a spawner supplies an explicit in-tree parent and no match World root exists
-- **THEN** the node is parented to that parent, not to the scene tree root
-
-#### Scenario: In-tree spawner keeps its fixed parent
-
-- **WHEN** a spawner itself adds its node to a fixed in-tree parent during a match
-- **THEN** the node is parented to that node
+- **WHEN** a spawner passes an explicit in-tree parent
+- **THEN** the node is parented to that node, not to the World root

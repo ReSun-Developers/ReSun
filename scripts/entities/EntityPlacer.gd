@@ -37,7 +37,11 @@ func place_entity(
     if stats:
         stats.player_id = player_id
     entity.position = world_pos
-    var target := parent if parent else get_tree().current_scene
+    var target: Node = parent if parent else World.spawn_container(World.Bucket.ENTITIES)
+    if target == null:
+        push_error("EntityPlacer: no scene root to place %s" % entity_data.id)
+        entity.free()
+        return null
     target.add_child(entity)
     var rules := GlobalRules.get_current()
     var lm: Locomotor = rules.get_locomotor(entity_data.locomotor) if rules else null
@@ -66,7 +70,13 @@ func start_preview(entity_data: EntityData) -> void:
     _store_and_disable_collision(entity)
     # Visual
     _set_node_transparency(entity, 0.33)
-    get_tree().current_scene.add_child(entity)
+    var host: Node = World.spawn_container(World.Bucket.ENTITIES)
+    if host == null:
+        push_error("EntityPlacer: no scene root for preview of %s" % entity_data.id)
+        entity.free()
+        exit_placing_mode()
+        return
+    host.add_child(entity)
     _preview = entity
     _preview_data = entity_data
 
