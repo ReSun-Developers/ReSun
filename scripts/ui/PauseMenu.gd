@@ -7,19 +7,27 @@ extends Control
 ## dialog connects to this; the pause menu never talks to the dialog directly.
 signal briefing_requested
 
+const OptionsView := preload("res://scripts/ui/OptionsView.gd")
+
 @onready var resume_button: Button = %ResumeButton
 @onready var briefing_button: Button = %BriefingButton
+@onready var options_button: Button = %OptionsButton
 @onready var quit_button: Button = %QuitButton
 
 
 func _ready() -> void:
     resume_button.pressed.connect(_on_resume_pressed)
     briefing_button.pressed.connect(_on_briefing_pressed)
+    options_button.pressed.connect(_on_options_pressed)
     quit_button.pressed.connect(_on_quit_pressed)
     _update_briefing_button()
 
 
 func _unhandled_input(event: InputEvent) -> void:
+    # While the Options overlay is open it owns ESC (closes the view without
+    # resuming the match); the pause menu must not also toggle pause.
+    if get_tree().get_first_node_in_group("options_view") != null:
+        return
     if event.is_action_pressed("pause"):
         if _esc_busy():
             return
@@ -53,6 +61,12 @@ func _update_briefing_button() -> void:
 
 func _on_briefing_pressed() -> void:
     briefing_requested.emit()
+
+
+## Opens the Options view over the still-paused match. Restart-only settings
+## are disabled here because a restart would end the session.
+func _on_options_pressed() -> void:
+    OptionsView.open(self, "graphics", GameContext.current, false)
 
 
 func _on_resume_pressed() -> void:

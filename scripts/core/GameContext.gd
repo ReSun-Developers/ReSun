@@ -11,6 +11,8 @@ extends Node
 signal game_changed(def: GameDefinition)
 signal mission_started(mission: Mission)
 
+const UserConfig := preload("res://scripts/core/UserConfig.gd")
+
 const GAMES_ROOT: String = "res://games"
 const DEFAULT_GAME_ID: String = "ts"
 const DEFAULT_CONFIG_PATH: String = "user://settings.cfg"
@@ -111,12 +113,7 @@ func start_mission(id: String) -> void:
 ## Persists the game choice to [game] id in the settings file, preserving all
 ## other sections and keys.
 func save_game_choice(id: String) -> void:
-    var cfg := ConfigFile.new()
-    cfg.load(_config_path)
-    cfg.set_value("game", "id", id)
-    var err := cfg.save(_config_path)
-    if err != OK:
-        push_warning("GameContext: failed to save game choice to %s" % _config_path)
+    UserConfig.set_value(_config_path, "game", "id", id)
 
 
 ## Extracts the value following a `--game` flag, or "" when absent.
@@ -248,10 +245,7 @@ func _scan_games_root(root: String) -> void:
 
 
 func _load_persisted_id() -> String:
-    var cfg := ConfigFile.new()
-    if cfg.load(_config_path) != OK:
-        return ""
-    return String(cfg.get_value("game", "id", ""))
+    return String(UserConfig.get_value(_config_path, "game", "id", ""))
 
 
 func _validate_rules(def: GameDefinition) -> bool:

@@ -16,7 +16,7 @@ Canonical terms live in [`GLOSSARY.md`](GLOSSARY.md) — read it before writing 
 |--------|-------|
 | Engine | Redot 26.2 LTS (Forward Plus renderer) |
 | Main scene | `scenes/MainScene.tscn` |
-| Viewport | 1920×1080, stretch mode = viewport |
+| Viewport | 1920×1080, stretch mode = canvas_items (3D renders at native window resolution; UI scales from the 1920×1080 base) |
 
 ### Autoloads (34 singletons, all registered in `project.godot`)
 

@@ -26,7 +26,7 @@ The system SHALL show a boot screen before the main menu on every launch without
 - **THEN** none of them point under `res://games/` (no per-game assets)
 
 ### Requirement: Selecting a game resolves and persists it
-The system SHALL treat activating a game row as: calling `GameContext.select_game(id)` (skipped when that id is already active), then `GameContext.save_game_choice(id)`, then hiding the boot screen and showing the main menu. The persisted choice SHALL NOT be written when the selection is refused.
+The system SHALL treat activating a game row as: calling `GameContext.select_game(id)` (skipped when that id is already active), then `GameContext.save_game_choice(id)`, then hiding the boot screen and showing the main menu. The persisted choice SHALL NOT be written when the selection is refused. The `Options` row SHALL NOT select a game; activating it SHALL open the Options view without selecting a game or changing the persisted choice.
 
 #### Scenario: Picking a different game
 - **WHEN** the player activates the row of a game whose id differs from the active one
@@ -40,9 +40,9 @@ The system SHALL treat activating a game row as: calling `GameContext.select_gam
 - **WHEN** the player activates the `Quit` row
 - **THEN** the application exits
 
-#### Scenario: Options row is a placeholder
+#### Scenario: Options row opens the options view
 - **WHEN** the player activates the `Options` row
-- **THEN** the active game is unchanged, the persisted choice is unchanged, and the boot screen remains visible
+- **THEN** the Options view opens over the boot screen and no game selection occurs
 
 ### Requirement: ESC exits the app from the boot screen
 The system SHALL exit the application when the player presses ESC while the boot screen is visible, equivalent to activating the Quit row. The ESC path SHALL NOT call `select_game` or `save_game_choice`. Right-clicks SHALL NOT trigger any boot-screen action.

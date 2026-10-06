@@ -11,6 +11,8 @@ enum Mode { MENU, MATCH }
 
 const MENU_SURFACE_SCENE: PackedScene = preload("res://scenes/ui/MenuSurface.tscn")
 const HUD_SURFACE_SCENE: PackedScene = preload("res://scenes/ui/HudSurface.tscn")
+const OptionsView := preload("res://scripts/ui/OptionsView.gd")
+const OptionsResume := preload("res://scripts/ui/OptionsResume.gd")
 
 var _mode: int = Mode.MENU
 var _surface: Node = null
@@ -18,6 +20,16 @@ var _surface: Node = null
 
 func _ready() -> void:
     show_menu()
+    _resume_options()
+
+
+## Reopens the Options view on the section a restart was requested from. Runs
+## outside BootScreen so it still fires when `--game` skipped the selector.
+func _resume_options() -> void:
+    var section := OptionsResume.consume(OptionsResume.CONFIG_PATH)
+    if section.is_empty():
+        return
+    OptionsView.open(self, section, GameContext.current, true)
 
 
 ## Mounts the menu surface (boot screen + main menu). No match or World root is

@@ -1,7 +1,7 @@
 extends Node
 
 # BootScreen tests — skip gate, occlusion, row building, pick/persist (with
-# same-id guard), exit reachability, and the Options placeholder. The runner
+# same-id guard), exit reachability, and the Options entry. The runner
 # runs suites OUTSIDE the scene tree and injects autoloads as members (`_gc`,
 # `_ef`), so nothing here relies on _ready, viewport, or absolute node paths.
 # Global state is snapshotted and restored around every mutating test so
@@ -152,7 +152,10 @@ func test_rows_match_listed_games_plus_options_and_quit():
     TestHelper.assert_true(options != null, "Options row present")
     TestHelper.assert_true(quit != null, "Quit row present")
     if options:
-        TestHelper.assert_true(options.get("disabled"), "Options is a disabled placeholder")
+        TestHelper.assert_true(not options.get("disabled"), "Options row is enabled")
+        TestHelper.assert_eq(
+            options.get("pressed").get_connections().size(), 1, "Options wired to a handler"
+        )
     if quit:
         TestHelper.assert_eq(quit.pressed.get_connections().size(), 1, "Quit wired to a handler")
     pair[2].free()
@@ -226,7 +229,7 @@ func test_empty_list_still_offers_quit():
 # --- options placeholder -----------------------------------------------------
 
 
-func test_options_placeholder_changes_nothing():
+func test_options_row_opens_view():
     var snap := TestHelper.snapshot_game_context(_gc)
     var saved_path := _redirect_config()
     var pair := _build_pair([])
@@ -234,7 +237,10 @@ func test_options_placeholder_changes_nothing():
     var options: Node = _row_by_label(boot, "Options")
     TestHelper.assert_true(options != null, "Options row present")
     if options:
-        TestHelper.assert_true(options.get("disabled"), "Options disabled — clicks skip it")
+        TestHelper.assert_true(not options.get("disabled"), "Options row is enabled")
+    var before := boot.get_child_count()
+    boot._open_options()
+    TestHelper.assert_eq(boot.get_child_count(), before + 1, "Options opens the options view")
     TestHelper.assert_eq(_gc.current.id, "ts", "active game unchanged")
     TestHelper.assert_eq(
         ConfigFile.new().load(SCRATCH_CONFIG), ERR_FILE_NOT_FOUND, "nothing persisted"

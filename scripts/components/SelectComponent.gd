@@ -461,7 +461,7 @@ func _on_move_line_timeout() -> void:
 
 
 func _show_move_line() -> void:
-    if not _move_line_timer:
+    if not _move_line_timer or not _move_target_line_enabled():
         return
     _register_line()
     _move_line_timer.start()
@@ -534,7 +534,20 @@ func _line_alpha() -> float:
 
 
 func _move_line_active() -> bool:
+    if not _move_target_line_enabled():
+        return false
     return _movement_controller != null and (_movement_controller.is_moving() or _is_engaged())
+
+
+## Per-game toggle; move-target lines only, rally lines are unaffected.
+func _move_target_line_enabled() -> bool:
+    var tree := get_tree()
+    if tree == null:
+        return true
+    var settings := tree.root.get_node_or_null("GameSettings")
+    if settings == null:
+        return true
+    return bool(settings.get_value("move_target_line"))
 
 
 func _rally_line_active() -> bool:

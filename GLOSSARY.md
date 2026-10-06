@@ -36,6 +36,19 @@ Entry form: term → one-line meaning → anchor.
 | session mode | The `SessionShell` selector (`Menu` or `Match`) that decides which GUI surface is mounted; exactly one at a time. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
 | UI session shell | The persistent `SessionShell` node under `MainScene` that mounts the menu surface (`MenuSurface`) or the match HUD surface (`HudSurface`) and outlives a match. | [ui-session-shell](openspec/specs/ui-session-shell/spec.md) · scripts/ui/SessionShell.gd |
 
+## Settings & Options
+
+| Term | Meaning | Where |
+|------|---------|-------|
+| options view | The single reusable options screen with Graphics, Display, Input, and Game sections, opened as a centered modal overlay from the boot selector, pre-match main menu, or in-match pause menu. Themed per opening surface. | [options-framework](openspec/changes/options-settings-framework/specs/options-framework/spec.md) |
+| settings authority | The one `user://settings.cfg` writer path: section-namespaced (per concern and per game id) with load-modify-save, so no concern clobbers another's keys. | [options-framework](openspec/changes/options-settings-framework/specs/options-framework/spec.md) · scripts/core/UserConfig.gd |
+| graphics settings | The global (all-games) rendering schema (AA, shadow quality, cloud shadows, GI mode, tone mapping, exposure, texture quality). Selectable as Low/Medium/High/Ultra presets. | [graphics-settings](openspec/changes/options-settings-framework/specs/graphics-settings/spec.md) |
+| display settings | The global window settings (`window_mode`, `resolution`); a distinct domain that quality presets never change and that applies live. | [graphics-settings](openspec/changes/options-settings-framework/specs/graphics-settings/spec.md) |
+| quality preset | A named atomic bundle (Low/Medium/High/Ultra) that sets every graphics setting at once; Low is the minimum-spec-safe preset. | [graphics-settings](openspec/changes/options-settings-framework/specs/graphics-settings/spec.md) |
+| custom preset | The preset-picker state shown when the graphics field values match no named preset, i.e. the player has overridden at least one field. | [graphics-settings](openspec/changes/options-settings-framework/specs/graphics-settings/spec.md) |
+| game settings | Per-game gameplay/interface toggles stored per game id (e.g. `move_target_line`), independent of the shared graphics settings. | [game-settings](openspec/changes/options-settings-framework/specs/game-settings/spec.md) |
+| input support matrix | A game's declaration of which input actions it supports (`GameDefinition.supported_inputs`); unsupported actions are unbound and their table cells disabled. | [input-settings](openspec/changes/options-settings-framework/specs/input-settings/spec.md) · scripts/data/GameDefinition.gd |
+
 ## Placement & Building
 
 | Term | Meaning | Where |

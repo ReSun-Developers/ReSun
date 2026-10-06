@@ -23,6 +23,8 @@ CampaignCatalog="*res://scripts/core/CampaignCatalog.gd"
 PlayerManager="*res://scripts/core/PlayerManager.gd"
 VeterancySystem="*res://scripts/core/VeterancySystem.gd"
 InputSettings="*res://scripts/core/InputSettings.gd"
+GraphicsSettings="*res://scripts/core/GraphicsSettings.gd" ; Global graphics schema + presets; applies to viewport/env/light; no dependencies
+GameSettings="*res://scripts/core/GameSettings.gd" ; Per-game gameplay/UI toggles; applies on GameContext.game_changed
 SelectionManager="*res://scripts/core/SelectionManager.gd"
 OrderSystem="*res://scripts/core/OrderSystem.gd"
 DebugVisualizer="*res://scripts/core/DebugVisualizer.gd"
@@ -56,7 +58,7 @@ TriggerEngine="*res://scripts/triggers/TriggerEngine.gd" ; Mission trigger runti
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
-window/stretch/mode="viewport"
+window/stretch/mode="canvas_items"
 
 [gdscript]
 
