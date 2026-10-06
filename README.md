@@ -36,26 +36,24 @@ This project is **not affiliated with or endorsed by EA**.
 
 ## Development
 
-### Prerequisites
+### Getting started
 
-- [Redot Engine 26.2 LTS](https://github.com/Redot-Engine/redot-engine/releases)
-- Python 3.x (for linting)
+1. Install [Redot Engine 26.2 LTS](https://github.com/Redot-Engine/redot-engine/releases) and Python 3.x.
+2. Clone the repo and open `project.godot` in Redot.
+3. Run the tests: `redot --headless -s test/run_tests.gd`
+4. Lint before pushing: `pip install gdtoolkit` then
+   `gdlint scripts/**/*.gd test/**/*.gd` and
+   `gdformat --check scripts/**/*.gd test/**/*.gd`
 
-### Running Tests
+Contributions go through [OpenSpec](https://openspec.dev) (propose, implement,
+archive before merge). We welcome AI-assisted development; `AGENTS.md` is the
+entry point for coding agents.
 
-```bash
-redot --headless -s test/run_tests.gd
-```
-
-### Linting
-
-```bash
-pip install gdtoolkit
-gdlint scripts/**/*.gd test/**/*.gd
-gdformat --check scripts/**/*.gd test/**/*.gd
-```
+Full setup, tooling, and workflow details are in the
+[Developer Guide](DEVELOPER_GUIDE.md).
 
 ### CI
 
-GitHub Actions runs lint, format check, and tests on every push and PR. See `.github/workflows/test.yml`.
+GitHub Actions runs lint, format check, the OpenSpec archive check, and tests
+on every push and PR. See `.github/workflows/test.yml`.
 
