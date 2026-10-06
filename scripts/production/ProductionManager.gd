@@ -103,7 +103,9 @@ func start_production(player_id: int, entity_data: EntityData, count: int = 1) -
     return true
 
 
-func cancel_production(player_id: int, queue_key: String, index: int, count: int = 1) -> void:
+func cancel_production(
+    player_id: int, queue_key: String, index: int, count: int = 1, notify: bool = true
+) -> void:
     if not _queues.has(queue_key):
         return
     var queue: Array = _queues[queue_key]
@@ -135,7 +137,8 @@ func cancel_production(player_id: int, queue_key: String, index: int, count: int
         _waiting_for_placement.erase(queue_key)
         _stalled.erase(queue_key)
 
-    production_cancelled.emit(queue_key)
+    if notify:
+        production_cancelled.emit(queue_key)
 
 
 func pause_production(queue_key: String, index: int) -> void:
@@ -187,6 +190,10 @@ func _process(delta: float) -> void:
     var debug_menu := get_tree().get_first_node_in_group("debug_menu")
     var no_build_time: bool = debug_menu != null and debug_menu.no_build_time
     for key in _queues.keys():
+        # Signal listeners can remove a factory and tear down this queue while
+        # another queue is being processed from the keys snapshot.
+        if not _queues.has(key):
+            continue
         # Don't produce next item while a building is waiting to be placed
         if _waiting_for_placement.get(key, false):
             continue
@@ -342,7 +349,9 @@ func _spawn_unit(entity_data: EntityData, player_id: int) -> void:
             _add_ready_to_spawn(entity_data, player_id, "")
 
 
-## Single-pass factory search: returns best factory + count for speed bonus.
+## Single-pass factory search: returns the best spawn factory and raw matching
+## factory count. Callers that need the historical one-factory speed baseline
+## clamp the count at the speed lookup boundary.
 func _find_factories(player_id: int, factory_type: String) -> Dictionary:
     var factories := get_tree().get_nodes_in_group("factories")
     var count := 0
@@ -362,7 +371,7 @@ func _find_factories(player_id: int, factory_type: String) -> Dictionary:
             primary = f.get_parent() as Node3D
         elif not first_match:
             first_match = f.get_parent() as Node3D
-    return {"factory": primary if primary else first_match, "count": maxi(count, 1)}
+    return {"factory": primary if primary else first_match, "count": count}
 
 
 ## Returns a free cell near the factory to spawn a unit, or null if none is free
@@ -400,7 +409,11 @@ func _get_production_speed(queue_key: String) -> float:
     var rules := GlobalRules.get_current()
     if rules:
         multiple_factory = rules.multiple_factory
-    var speed: float = 1.0 + (result.count - 1) * multiple_factory
+    # Keep the historical one-factory baseline for callers that query speed
+    # without a live factory. The raw count remains available to lifecycle
+    # handling so zero factories can be distinguished from one.
+    var factory_count: int = maxi(result.count, 1)
+    var speed: float = 1.0 + (factory_count - 1) * multiple_factory
     # Low power slows (never halts) construction: multiply by the grid's
     # interpolated build rate.
     speed *= PowerGrid.get_build_rate(player_id)
@@ -418,6 +431,82 @@ func _connect_factory(factory: FactoryComponent) -> void:
 
 func _on_factories_changed() -> void:
     _speed_cache.clear()
+    var orphaned_keys: Array[String] = []
+    var changed_keys: Dictionary = {}
+    for queue_key_variant in _queues.keys():
+        var queue_key := String(queue_key_variant)
+        var player_id := int(queue_key.get_slice(":", 0))
+        var factory_type := queue_key.get_slice(":", 1)
+        if int(_find_factories(player_id, factory_type).count) == 0:
+            orphaned_keys.append(queue_key)
+
+    # Collect before mutating: cancel_production erases empty queue entries and
+    # emits signals whose listeners may query the remaining queues.
+    for queue_key in orphaned_keys:
+        if _cancel_queue_after_factory_loss(queue_key):
+            changed_keys[queue_key] = true
+
+    # A fully paid unit may already be waiting for a formerly busy factory and
+    # therefore have no live queue entry. Treat it like the unsupported queue:
+    # cancel it and refund its full paid cost when the last matching factory is
+    # gone. Completed buildings remain in _ready_to_place by design.
+    var ready_keys: Dictionary = {}
+    for player_id_variant in _ready_to_spawn.keys():
+        var player_id := int(player_id_variant)
+        for entry_variant in (_ready_to_spawn[player_id] as Array):
+            var entry := entry_variant as Dictionary
+            var data := entry["entity_data"] as EntityData
+            if data and int(_find_factories(player_id, data.buildable_queue).count) == 0:
+                ready_keys[_queue_key(player_id, data.buildable_queue)] = true
+    for queue_key_variant in ready_keys.keys():
+        var queue_key := String(queue_key_variant)
+        if _cancel_ready_spawns_after_factory_loss(queue_key):
+            changed_keys[queue_key] = true
+
+    for queue_key_variant in changed_keys.keys():
+        production_cancelled.emit(String(queue_key_variant))
+
+
+## Cancels every item in an unsupported queue through the normal refund path.
+## Returns true when at least one item was removed so the caller can batch UI
+## refresh signals across queued and ready-to-spawn items of the same type.
+func _cancel_queue_after_factory_loss(queue_key: String) -> bool:
+    if not _queues.has(queue_key):
+        return false
+    var player_id := int(queue_key.get_slice(":", 0))
+    var original_size: int = (_queues[queue_key] as Array).size()
+    var cancelled := false
+    for _index in range(original_size):
+        if not _queues.has(queue_key):
+            break
+        var queue: Array = _queues[queue_key]
+        if queue.is_empty():
+            break
+        var item: ProductionQueue = queue[0] as ProductionQueue
+        cancel_production(player_id, queue_key, 0, item.count, false)
+        cancelled = true
+    return cancelled
+
+
+## Removes fully paid units waiting for a factory of the lost type, refunds
+## their complete cost, and reports whether the caller needs to refresh the UI.
+func _cancel_ready_spawns_after_factory_loss(queue_key: String) -> bool:
+    var player_id := int(queue_key.get_slice(":", 0))
+    var factory_type := queue_key.get_slice(":", 1)
+    if not _ready_to_spawn.has(player_id):
+        return false
+    var entries: Array = _ready_to_spawn[player_id]
+    var removed := false
+    for index in range(entries.size() - 1, -1, -1):
+        var entry := entries[index] as Dictionary
+        var data := entry["entity_data"] as EntityData
+        if data and data.buildable_queue == factory_type:
+            EconomyManager.add(player_id, data.cost, "factory_loss_ready:%s" % data.id)
+            entries.remove_at(index)
+            removed = true
+    if entries.is_empty():
+        _ready_to_spawn.erase(player_id)
+    return removed
 
 
 func _get_build_speed() -> float:
