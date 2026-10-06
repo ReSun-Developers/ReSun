@@ -371,12 +371,12 @@ func test_losing_last_factory_cancels_active_queue_and_refunds_paid_credits() ->
 
     var queue_cancelled: bool = pm.get_queue_items(key).is_empty()
     var refunded: bool = _em.get_balance(PID) == balance_before + paid
-    TestHelper.assert_true(
-        paid > 0 and queue_cancelled and refunded,
-        (
-            "losing the last factory cancels active production and refunds %d paid credits"
-            % paid
-        ),
+    (
+        TestHelper
+        . assert_true(
+            paid > 0 and queue_cancelled and refunded,
+            "losing the last factory cancels active production and refunds %d paid credits" % paid,
+        )
     )
     _free_test_factories()
     _cleanup_queue(pm, key)
@@ -404,9 +404,12 @@ func test_losing_one_of_two_factories_keeps_queue_running() -> void:
     var kept: bool = items.size() == 1
     var not_refunded: bool = _em.get_balance(PID) == balance_before
     var speed_recomputed: bool = pm._get_production_speed(key) == _expected_speed(1)
-    TestHelper.assert_true(
-        kept and not_refunded and speed_recomputed,
-        "losing one of two factories keeps the queue and recomputes one-factory speed",
+    (
+        TestHelper
+        . assert_true(
+            kept and not_refunded and speed_recomputed,
+            "losing one of two factories keeps the queue and recomputes one-factory speed",
+        )
     )
     _cleanup_queue(pm, key)
     _free_test_factories()
@@ -432,9 +435,12 @@ func test_losing_last_factory_cancels_paused_queue() -> void:
 
     (_test_factories[0] as FactoryComponent).free()
 
-    TestHelper.assert_true(
-        pm.get_queue_items(key).is_empty() and _em.get_balance(PID) == balance_before + paid,
-        "losing the last factory cancels and refunds paused production",
+    (
+        TestHelper
+        . assert_true(
+            pm.get_queue_items(key).is_empty() and _em.get_balance(PID) == balance_before + paid,
+            "losing the last factory cancels and refunds paused production",
+        )
     )
     _free_test_factories()
     _cleanup_queue(pm, key)
@@ -473,13 +479,16 @@ func test_losing_factory_cancels_each_unsupported_queue_type() -> void:
 
     (_test_factories[0] as FactoryComponent).free()
 
-    TestHelper.assert_true(
-        (
-            pm.get_queue_items(infantry_key).is_empty()
-            and pm.get_queue_items(vehicle_key).is_empty()
-            and _em.get_balance(PID) == balance_before + 75
-        ),
-        "losing a multi-queue factory cancels and refunds every unsupported queue",
+    (
+        TestHelper
+        . assert_true(
+            (
+                pm.get_queue_items(infantry_key).is_empty()
+                and pm.get_queue_items(vehicle_key).is_empty()
+                and _em.get_balance(PID) == balance_before + 75
+            ),
+            "losing a multi-queue factory cancels and refunds every unsupported queue",
+        )
     )
     _free_test_factories()
     _cleanup_queue(pm, infantry_key)
@@ -503,13 +512,16 @@ func test_factory_loss_keeps_completed_building_ready_for_placement() -> void:
 
     (_test_factories[0] as FactoryComponent).free()
 
-    TestHelper.assert_true(
-        (
-            pm.is_ready_to_place(PID, data.id)
-            and pm.get_queue_items(key).is_empty()
-            and _em.get_balance(PID) == balance_before
-        ),
-        "factory loss tears down its queue but keeps a completed building ready for placement",
+    (
+        TestHelper
+        . assert_true(
+            (
+                pm.is_ready_to_place(PID, data.id)
+                and pm.get_queue_items(key).is_empty()
+                and _em.get_balance(PID) == balance_before
+            ),
+            "factory loss tears down its queue but keeps a completed building ready for placement",
+        )
     )
     pm._ready_to_place.erase(PID)
     _cleanup_queue(pm, key)
@@ -548,14 +560,17 @@ func test_factory_loss_cancels_each_item_once_and_emits_one_refresh() -> void:
     (_test_factories[0] as FactoryComponent).free()
 
     pm.production_cancelled.disconnect(on_cancelled)
-    TestHelper.assert_true(
-        (
-            pm.get_queue_items(key).is_empty()
-            and not pm.is_ready_to_spawn(PID, ready.id)
-            and _em.get_balance(PID) == balance_before + 95
-            and refreshes[0] == 1
-        ),
-        "factory loss batches queued and ready refunds into one refresh",
+    (
+        TestHelper
+        . assert_true(
+            (
+                pm.get_queue_items(key).is_empty()
+                and not pm.is_ready_to_spawn(PID, ready.id)
+                and _em.get_balance(PID) == balance_before + 95
+                and refreshes[0] == 1
+            ),
+            "factory loss batches queued and ready refunds into one refresh",
+        )
     )
     _free_test_factories()
     _cleanup_queue(pm, key)
@@ -578,12 +593,15 @@ func test_factory_loss_refunds_completed_unit_waiting_to_spawn() -> void:
 
     (_test_factories[0] as FactoryComponent).free()
 
-    TestHelper.assert_true(
-        (
-            not pm.is_ready_to_spawn(PID, data.id)
-            and _em.get_balance(PID) == balance_before + data.cost
-        ),
-        "factory loss removes a completed waiting unit and refunds its full paid cost",
+    (
+        TestHelper
+        . assert_true(
+            (
+                not pm.is_ready_to_spawn(PID, data.id)
+                and _em.get_balance(PID) == balance_before + data.cost
+            ),
+            "factory loss removes a completed waiting unit and refunds its full paid cost",
+        )
     )
     pm._ready_to_spawn.erase(PID)
     _free_test_factories()
@@ -603,15 +621,17 @@ func test_factory_announces_owner_after_initial_sync() -> void:
     factory.produces = ["InfantryType"]
     parent.add_child(factory)
     var announced_owner := [-2]
-    var on_factories_changed := func() -> void:
-        announced_owner[0] = factory.player_id
+    var on_factories_changed := func() -> void: announced_owner[0] = factory.player_id
     factory.factories_changed.connect(on_factories_changed)
 
     _em.get_tree().root.add_child(parent)
 
-    TestHelper.assert_true(
-        factory.player_id == PID and announced_owner[0] == PID,
-        "the first factories_changed announcement exposes the synchronized owner",
+    (
+        TestHelper
+        . assert_true(
+            factory.player_id == PID and announced_owner[0] == PID,
+            "the first factories_changed announcement exposes the synchronized owner",
+        )
     )
     parent.free()
 

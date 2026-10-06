@@ -453,7 +453,7 @@ func _on_factories_changed() -> void:
     var ready_keys: Dictionary = {}
     for player_id_variant in _ready_to_spawn.keys():
         var player_id := int(player_id_variant)
-        for entry_variant in (_ready_to_spawn[player_id] as Array):
+        for entry_variant in _ready_to_spawn[player_id] as Array:
             var entry := entry_variant as Dictionary
             var data := entry["entity_data"] as EntityData
             if data and int(_find_factories(player_id, data.buildable_queue).count) == 0:
