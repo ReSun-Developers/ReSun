@@ -271,6 +271,7 @@ Full dictionaries: scripts/data/*.gd. Only ambiguous pairs listed here.
 | `pip_color` | Seat pip color for a passenger riding in a transport (per entity type, default white); harvesters' cargo pips are unaffected. | scripts/data/EntityData.gd |
 | `strength` | Max hit points (legacy rules.ini name — do not rename casually). | scripts/data/EntityData.gd |
 | `tech_level` | Per-type build gate; the house's current level must be at least this. `-1` = never buildable (original TS semantics). | scripts/data/EntityData.gd · [tech-level](openspec/specs/tech-level/spec.md) |
+| build gate | The single per-player decision on whether an entity type can be built now, and why not when it cannot: menu flag, `tech_level`, build limit, prerequisites, and owned producer. Affordability is feedback, never a gate. | [build-gate change](openspec/changes/add-build-gate-query/specs/build-gate/spec.md) |
 | current tech level | A player's live level (`PlayerData.tech_level`), resolved from the mission or the rules default; compared against `EntityData.tech_level` on the build list. | [tech-level](openspec/specs/tech-level/spec.md) |
 | `powered` vs `is_online` | Data-level "requires power to function" flag (`EntityData.powered`, copied to PowerComponent) vs runtime state (`PowerComponent.is_online`, driven by the grid). Deliberately different names — never write `is_powered()` for the runtime state. | scripts/data/EntityData.gd · [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) |
 

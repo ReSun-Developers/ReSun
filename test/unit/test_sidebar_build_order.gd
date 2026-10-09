@@ -5,7 +5,8 @@ extends Node
 # Requirement: build menu items SHALL sort by entity type group (in
 # Sidebar.TYPE_RANK order, mirroring TAB_ENTITY_TYPES — so aircraft in the
 # Vehicles tab appear after all ground vehicles), then by ascending
-# tech_level (-1 = always available sorts first), then display_name, then
+# tech_level (-1 = never buildable, sorted first for determinism), then
+# display_name, then
 # id. Deterministic tie-breaking prevents load-order flicker between
 # rebuilds. Sidebar order derives solely from data the entity already
 # carries; adding a new buildable entity requires no ordering metadata on

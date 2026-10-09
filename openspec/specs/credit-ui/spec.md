@@ -51,15 +51,34 @@ The credit counter SHALL play a tick sound on each displayed step while animatin
 - **THEN** no tick sound plays
 
 ### Requirement: Insufficient funds visual feedback
-The Label SHALL change color when the player's credit balance is below the cost of the cheapest buildable item.
+
+The Label SHALL change color when the local player's credit balance is below the cost of the
+cheapest item that player can currently build. The set used for the comparison SHALL be the
+same build gate the sidebar build list is drawn from, scoped to the local player and spanning
+every build-menu tab (not only the currently-visible page): an item that is not buildable for
+the local player SHALL NOT influence the warning, even if it is cheap. An item with zero or
+negative cost SHALL NOT influence the warning. When the player can build no costed item, no
+warning SHALL appear. When the `no_cost` cheat is active, the warning SHALL NOT appear.
 
 #### Scenario: Sufficient funds
-- **WHEN** `credits >= min(cost of all buildable items)`
+- **WHEN** the local balance is at or above the cost of the cheapest item the local player can build
 - **THEN** the Label color is white
 
 #### Scenario: Insufficient funds
-- **WHEN** `credits < min(cost of all buildable items)`
+- **WHEN** the local balance is below the cost of the cheapest item the local player can build
 - **THEN** the Label color turns red
+
+#### Scenario: Locked cheap item does not trigger the warning
+- **WHEN** a cheap item exists in the catalog but is not buildable by the local player (unmet gate), and the balance covers every item the player can build
+- **THEN** the Label color is white
+
+#### Scenario: No-cost cheat disables the warning
+- **WHEN** the `no_cost` cheat is active
+- **THEN** the Label color is white regardless of balance
+
+#### Scenario: Nothing buildable means no warning
+- **WHEN** the local player can build no costed item
+- **THEN** the Label color is white regardless of balance
 
 ### Requirement: Credit display resyncs when the player roster is rebuilt
 `PlayerManager` SHALL emit `players_changed` after it (re)builds its player roster. The credit counter SHALL resync — via the forced, non-animated display path — to the local player's balance whenever `players_changed` fires, so a mission's starting credits replace any pre-mission balance shown while the map was loading.

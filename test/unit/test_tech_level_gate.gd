@@ -37,6 +37,7 @@ func _data(tech: int) -> EntityData:
     data.id = "TECH_TEST"
     data.entity_type = EntityData.EntityType.INFANTRY
     data.tech_level = tech
+    data.buildable = true
     return data
 
 
@@ -92,6 +93,25 @@ func test_debug_override_bypasses_gate():
     _reset_players(1)
     Cheats.no_prereqs = true
     TestHelper.assert_true(_ps().can_build(0, _data(9)), "debug no_prereqs bypasses the tech gate")
+
+
+func test_type_outside_build_menu_is_rejected():
+    _reset_players(10)
+    var data := _data(5)
+    data.buildable = false
+    TestHelper.assert_true(
+        not _ps().can_build(0, data), "a type outside the build menu is rejected"
+    )
+
+
+func test_debug_override_bypasses_menu_flag():
+    _reset_players(1)
+    var data := _data(9)
+    data.buildable = false
+    Cheats.no_prereqs = true
+    TestHelper.assert_true(
+        _ps().can_build(0, data), "no_prereqs bypasses the menu flag as well as the tech gate"
+    )
 
 
 func test_begin_mission_writes_mission_level():
