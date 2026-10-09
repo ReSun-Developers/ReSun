@@ -305,7 +305,7 @@ func test_hover_self_returns_deploy_when_unloadable():
     (
         TestHelper
         . assert_eq(
-            t.get_cursor_for_target(apc, Vector2i.ZERO),
+            TestHelper.order_cursor(t, apc),
             CursorState.Type.DEPLOY,
             "hover-self on loaded stationary transport -> DEPLOY",
         )
@@ -320,7 +320,7 @@ func test_hover_self_default_when_empty():
     (
         TestHelper
         . assert_eq(
-            t.get_cursor_for_target(apc, Vector2i.ZERO),
+            TestHelper.order_cursor(t, apc),
             CursorState.Type.DEFAULT,
             "hover-self on empty transport -> DEFAULT",
         )
@@ -337,7 +337,7 @@ func test_hover_self_default_when_moving():
     (
         TestHelper
         . assert_eq(
-            t.get_cursor_for_target(apc, Vector2i.ZERO),
+            TestHelper.order_cursor(t, apc),
             CursorState.Type.DEFAULT,
             "hover-self on moving transport -> DEFAULT",
         )
@@ -354,7 +354,7 @@ func test_hover_other_target_returns_default():
     (
         TestHelper
         . assert_eq(
-            t.get_cursor_for_target(other, Vector2i.ZERO),
+            TestHelper.order_cursor(t, other),
             CursorState.Type.DEFAULT,
             "hovering another unit -> DEFAULT",
         )
@@ -390,7 +390,7 @@ func test_unload_order_blocked_with_mixed_selection():
     (
         TestHelper
         . assert_eq(
-            t.get_cursor_for_target(apc, Vector2i.ZERO),
+            TestHelper.order_cursor(t, apc),
             CursorState.Type.DEFAULT,
             "mixed selection cursor -> DEFAULT",
         )
@@ -458,7 +458,7 @@ func test_passenger_cursor_enter_for_transport():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(apc, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, apc),
             CursorState.Type.ENTER,
             "friendly stationary transport with seats -> ENTER",
         )
@@ -481,7 +481,7 @@ func test_passenger_cursor_gates():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(apc_full, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, apc_full),
             CursorState.Type.DEFAULT,
             "full transport -> DEFAULT",
         )
@@ -489,7 +489,7 @@ func test_passenger_cursor_gates():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(apc_moving, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, apc_moving),
             CursorState.Type.DEFAULT,
             "moving transport -> DEFAULT",
         )
@@ -497,7 +497,7 @@ func test_passenger_cursor_gates():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(enemy, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, enemy),
             CursorState.Type.DEFAULT,
             "enemy entity -> DEFAULT",
         )
@@ -505,7 +505,7 @@ func test_passenger_cursor_gates():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(trooper, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, trooper),
             CursorState.Type.DEFAULT,
             "self target -> DEFAULT",
         )
@@ -513,7 +513,7 @@ func test_passenger_cursor_gates():
     (
         TestHelper
         . assert_eq(
-            pcomp.get_cursor_for_target(null, Vector2i.ZERO),
+            TestHelper.order_cursor(pcomp, null),
             CursorState.Type.DEFAULT,
             "null target -> DEFAULT",
         )

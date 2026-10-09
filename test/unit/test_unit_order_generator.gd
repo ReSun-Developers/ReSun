@@ -590,43 +590,6 @@ func test_is_local_entity_true_for_negative_player_id():
     entity.free()
 
 
-func test_is_enemy_true_for_different_team():
-    var pm := get_node_or_null("/root/PlayerManager")
-    var local_id: int = pm.get_local_player_id() if pm else 0
-    var entity := _make_target(local_id + 1)
-    var gen := _get_generator()
-    var result := gen._is_enemy(entity)
-    TestHelper.assert_true(result, "_is_enemy returns true for different team")
-    entity.free()
-
-
-func test_is_enemy_false_for_same_team():
-    var pm := get_node_or_null("/root/PlayerManager")
-    var local_id: int = pm.get_local_player_id() if pm else 0
-    var entity := _make_target(local_id)
-    var gen := _get_generator()
-    var result := gen._is_enemy(entity)
-    TestHelper.assert_true(not result, "_is_enemy returns false for same team")
-    entity.free()
-
-
-func test_is_enemy_false_for_no_stats():
-    var entity := Node3D.new()
-    entity.name = "NoStatsEntity"
-    var gen := _get_generator()
-    var result := gen._is_enemy(entity)
-    TestHelper.assert_true(not result, "_is_enemy returns false for entity without StatsComponent")
-    entity.free()
-
-
-func test_is_enemy_false_for_negative_player_id():
-    var entity := _make_target(-1)
-    var gen := _get_generator()
-    var result := gen._is_enemy(entity)
-    TestHelper.assert_true(not result, "_is_enemy returns false for player_id=-1")
-    entity.free()
-
-
 func test_has_movable_true_with_movement_controller():
     if _sm == null:
         TestHelper.fail("SelectionManager not injected")
@@ -840,3 +803,161 @@ func test_local_undeployable_building_remains_commandable():
         orders.size() >= 1, "local undeployable building still produces an undeploy order"
     )
     _teardown_selection([building])
+
+
+# --- resolve(): unified cursor + orders ---
+
+
+func test_resolve_projects_cursor_and_orders():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var pm := get_node_or_null("/root/PlayerManager")
+    var local_id: int = pm.get_local_player_id() if pm else 0
+    var entity := _make_combat_entity(local_id)
+    _setup_selection([entity])
+    var target := _make_target(local_id + 1)
+    var gen := _get_generator()
+    var resolution := gen.resolve(target, Vector2i.ZERO, Vector3.ZERO, {})
+    (
+        TestHelper
+        . assert_eq(
+            gen.get_cursor(target, Vector2i.ZERO, Vector3.ZERO, {}),
+            resolution.cursor,
+            "get_cursor projects resolve().cursor",
+        )
+    )
+    (
+        TestHelper
+        . assert_eq(
+            gen.get_orders(target, Vector2i.ZERO, Vector3.ZERO, {}).size(),
+            resolution.orders.size(),
+            "get_orders projects resolve().orders",
+        )
+    )
+    TestHelper.assert_eq(
+        resolution.cursor, CursorState.Type.ATTACK, "combat vs enemy -> ATTACK cursor"
+    )
+    _teardown_selection([entity])
+    target.free()
+
+
+func test_resolve_empty_selection_select_affordance():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _sm.deselect_all()
+    var target := _make_target(0, true)
+    var gen := _get_generator()
+    var resolution := gen.resolve(target, Vector2i.ZERO, Vector3.ZERO, {})
+    TestHelper.assert_eq(
+        resolution.cursor, CursorState.Type.SELECT, "empty selection + selectable -> SELECT"
+    )
+    TestHelper.assert_eq(resolution.orders.size(), 0, "empty selection -> no orders")
+    target.free()
+
+
+func test_resolve_force_fire_ground_attacks():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var pm := get_node_or_null("/root/PlayerManager")
+    var local_id: int = pm.get_local_player_id() if pm else 0
+    var entity := _make_combat_entity(local_id)
+    _setup_selection([entity])
+    var gen := _get_generator()
+    var modifiers := {OrderResult.MOD_FORCE_ATTACK: true}
+    var resolution := gen.resolve(null, Vector2i.ZERO, Vector3(5.0, 0.0, 5.0), modifiers)
+    TestHelper.assert_eq(resolution.cursor, CursorState.Type.ATTACK, "force-fire ground -> ATTACK")
+    TestHelper.assert_eq(resolution.orders.size(), 1, "force-fire ground -> 1 attack order")
+    _teardown_selection([entity])
+
+
+func test_resolve_force_move_over_enemy_yields_move():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var pm := get_node_or_null("/root/PlayerManager")
+    var local_id: int = pm.get_local_player_id() if pm else 0
+    var entity := _make_combat_entity(local_id)
+    _setup_selection([entity])
+    var target := _make_target(local_id + 1)
+    var gen := _get_generator()
+    var modifiers := {OrderResult.MOD_FORCE_MOVE: true}
+    var resolution := gen.resolve(target, Vector2i.ZERO, target.global_position, modifiers)
+    TestHelper.assert_eq(
+        resolution.cursor, CursorState.Type.MOVE, "ALT force-move over enemy -> MOVE cursor"
+    )
+    TestHelper.assert_eq(resolution.orders.size(), 1, "ALT force-move over enemy -> 1 MOVE order")
+    TestHelper.assert_eq(
+        resolution.orders[0].cursor, CursorState.Type.MOVE, "the order is a MOVE, not an ATTACK"
+    )
+    _teardown_selection([entity])
+    target.free()
+
+
+func test_resolve_force_move_ground_yields_move():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var pm := get_node_or_null("/root/PlayerManager")
+    var local_id: int = pm.get_local_player_id() if pm else 0
+    var entity := _make_combat_entity(local_id)
+    _setup_selection([entity])
+    var gen := _get_generator()
+    var modifiers := {OrderResult.MOD_FORCE_MOVE: true}
+    var resolution := gen.resolve(null, Vector2i.ZERO, Vector3(7.0, 0.0, 3.0), modifiers)
+    TestHelper.assert_eq(resolution.cursor, CursorState.Type.MOVE, "force-move ground -> MOVE")
+    TestHelper.assert_eq(resolution.orders.size(), 1, "force-move ground -> 1 move order")
+    _teardown_selection([entity])
+
+
+func test_resolve_ctrl_alt_falls_back_to_force_move():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var pm := get_node_or_null("/root/PlayerManager")
+    var local_id: int = pm.get_local_player_id() if pm else 0
+    var entity := _make_combat_entity(local_id)
+    _setup_selection([entity])
+    var target := _make_target(local_id + 1)
+    var gen := _get_generator()
+    # Ctrl+Alt+Click is Guard Area in the original (not implemented); the held
+    # Alt currently yields force-move rather than firing.
+    var modifiers := {OrderResult.MOD_FORCE_ATTACK: true, OrderResult.MOD_FORCE_MOVE: true}
+    var resolution := gen.resolve(target, Vector2i.ZERO, target.global_position, modifiers)
+    TestHelper.assert_eq(
+        resolution.cursor, CursorState.Type.MOVE, "Ctrl+Alt -> MOVE fallback, not ATTACK"
+    )
+    _teardown_selection([entity])
+    target.free()
+
+
+# --- OrderSystem.issue(): dispatch ---
+
+
+func test_issue_empty_is_noop():
+    var orders: Array[OrderResult] = []
+    TestHelper.assert_true(not OrderSystem.issue(orders), "empty batch -> false")
+
+
+func test_issue_executes_every_order():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _sm.deselect_all()
+    var ran := [0]
+    var orders: Array[OrderResult] = []
+    for _i in 3:
+        orders.append(
+            OrderResult.new(
+                CursorState.Type.MOVE,
+                5,
+                null,
+                Vector3.ZERO,
+                false,
+                func() -> void: ran[0] += 1,
+            )
+        )
+    TestHelper.assert_true(OrderSystem.issue(orders), "non-empty batch -> true")
+    TestHelper.assert_eq(ran[0], 3, "every order in the batch executed")

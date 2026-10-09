@@ -50,13 +50,13 @@ func _make_target_of_type(player_id: int, entity_type: int) -> Node3D:
     return entity
 
 
-# --- get_cursor_for_target tests ---
+# --- order-cursor tests (derived from get_order_for_target) ---
 
 
 func test_cursor_null_target_returns_default():
     var entity := _make_combat_entity(true, 0)
     var cc := entity.get_node("CombatComponent") as CombatComponent
-    var cursor := cc.get_cursor_for_target(null, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, null)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "null target -> DEFAULT")
     entity.free()
 
@@ -65,7 +65,7 @@ func test_cursor_empty_weapons_returns_default():
     var entity := _make_combat_entity(false, 0)
     var cc := entity.get_node("CombatComponent") as CombatComponent
     var target := _make_target(1)
-    var cursor := cc.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, target)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "no weapons -> DEFAULT")
     entity.free()
     target.free()
@@ -77,7 +77,7 @@ func test_cursor_enemy_returns_attack():
     var entity := _make_combat_entity(true, local_id)
     var cc := entity.get_node("CombatComponent") as CombatComponent
     var target := _make_target(local_id + 1)
-    var cursor := cc.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, target)
     TestHelper.assert_eq(cursor, CursorState.Type.ATTACK, "enemy -> ATTACK")
     entity.free()
     target.free()
@@ -89,7 +89,7 @@ func test_cursor_friendly_returns_default():
     var entity := _make_combat_entity(true, local_id)
     var cc := entity.get_node("CombatComponent") as CombatComponent
     var target := _make_target(local_id)
-    var cursor := cc.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, target)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "friendly -> DEFAULT")
     entity.free()
     target.free()
@@ -99,7 +99,7 @@ func test_cursor_neutral_target_returns_default():
     var entity := _make_combat_entity(true, 0)
     var cc := entity.get_node("CombatComponent") as CombatComponent
     var target := _make_target(-1)
-    var cursor := cc.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, target)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "neutral (player_id=-1) -> DEFAULT")
     entity.free()
     target.free()
@@ -110,7 +110,7 @@ func test_cursor_target_without_stats_returns_default():
     var cc := entity.get_node("CombatComponent") as CombatComponent
     var target := Node3D.new()
     target.name = "NoStatsTarget"
-    var cursor := cc.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(cc, target)
     TestHelper.assert_eq(
         cursor, CursorState.Type.DEFAULT, "target without StatsComponent -> DEFAULT"
     )

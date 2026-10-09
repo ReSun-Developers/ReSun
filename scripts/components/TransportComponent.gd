@@ -312,13 +312,6 @@ func _fallback_position() -> Vector3:
 # --- Order targeting ---
 
 
-func get_cursor_for_target(target: Node3D, _target_cell: Vector2i) -> CursorState.Type:
-    var entity := get_parent() as Node3D
-    if target and target == entity and can_unload() and _is_sole_selected():
-        return CursorState.Type.DEPLOY
-    return CursorState.Type.DEFAULT
-
-
 func get_order_for_target(
     target: Node3D,
     _target_cell: Vector2i,

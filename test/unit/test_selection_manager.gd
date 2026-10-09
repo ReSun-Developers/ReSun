@@ -1238,3 +1238,23 @@ func test_hotkey_stop_clears_engagement():
     TestHelper.assert_true(entity_cleared, "Stop ends an entity fire mission")
     TestHelper.assert_true(ground_before, "ground engagement active before Stop")
     TestHelper.assert_true(ground_cleared, "Stop ends a ground engagement")
+
+
+func test_has_rally_receiver_requires_rally_component():
+    _bounds_setup()
+    var with_rally := _make_bounds_entity(Vector2i(3, 3))
+    var rally := RallyPointComponent.new()
+    rally.name = "RallyPointComponent"
+    with_rally.add_child(rally)
+    var without_rally := _make_bounds_entity(Vector2i(4, 3))
+    _sm.add_entity(_select_comp_of(without_rally))
+    TestHelper.assert_true(not _sm.has_rally_receiver(), "no rally component -> false")
+    _sm.deselect_all()
+    _sm.add_entity(_select_comp_of(with_rally))
+    TestHelper.assert_true(_sm.has_rally_receiver(), "selected rally receiver -> true")
+    _sm.deselect_all()
+    _sm.remove_child(with_rally)
+    with_rally.free()
+    _sm.remove_child(without_rally)
+    without_rally.free()
+    _bounds_teardown()

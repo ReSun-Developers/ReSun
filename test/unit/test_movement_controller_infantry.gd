@@ -117,7 +117,7 @@ func test_crush_does_not_affect_non_crushable():
     enemy.free()
 
 
-# --- get_cursor_for_target tests ---
+# --- order-cursor tests (derived from get_order_for_target) ---
 
 
 func test_arrival_detach_skips_post_emit_tail():
@@ -244,19 +244,48 @@ func test_scatter_fires_when_fully_boxed_in():
     blocker.free()
 
 
-func test_cursor_always_returns_move():
+func test_order_cursor_ground_move_valid():
     var mc := MovementController.new()
     mc.name = "MovementController"
     var entity := Node3D.new()
     entity.add_child(mc)
 
-    var cursor := mc.get_cursor_for_target(null, Vector2i.ZERO)
-    TestHelper.assert_eq(cursor, CursorState.Type.MOVE, "null target -> MOVE")
+    var cursor := TestHelper.order_cursor(mc, null)
+    TestHelper.assert_eq(cursor, CursorState.Type.MOVE, "ground target -> MOVE")
+
+    entity.queue_free()
+
+
+func test_order_cursor_entity_default_without_force_move():
+    var mc := MovementController.new()
+    mc.name = "MovementController"
+    var entity := Node3D.new()
+    entity.add_child(mc)
 
     var target := Node3D.new()
     target.name = "SomeTarget"
-    cursor = mc.get_cursor_for_target(target, Vector2i.ZERO)
-    TestHelper.assert_eq(cursor, CursorState.Type.MOVE, "any target -> MOVE")
+    var cursor := TestHelper.order_cursor(mc, target)
+    TestHelper.assert_eq(
+        cursor, CursorState.Type.DEFAULT, "entity target without force-move -> DEFAULT"
+    )
+
+    entity.queue_free()
+    target.queue_free()
+
+
+func test_order_cursor_entity_move_with_force_move():
+    var mc := MovementController.new()
+    mc.name = "MovementController"
+    var entity := Node3D.new()
+    entity.add_child(mc)
+
+    var target := Node3D.new()
+    target.name = "SomeTarget"
+    var order := mc.get_order_for_target(
+        target, Vector2i.ZERO, Vector3.ZERO, {OrderResult.MOD_FORCE_MOVE: true}
+    )
+    TestHelper.assert_true(order != null, "force-move over entity -> order not null")
+    TestHelper.assert_eq(order.cursor, CursorState.Type.MOVE, "force-move over entity -> MOVE")
 
     entity.queue_free()
     target.queue_free()

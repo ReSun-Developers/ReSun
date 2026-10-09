@@ -1760,17 +1760,15 @@ func _apply_zone_desire(desired: VerticalState) -> void:
             )
 
 
-func get_cursor_for_target(_target: Node3D, _target_cell: Vector2i) -> CursorState.Type:
-    return CursorState.Type.MOVE
-
-
 func get_order_for_target(
     target: Node3D,
     _target_cell: Vector2i,
     target_pos: Vector3,
     modifiers: Dictionary,
 ) -> OrderResult:
-    if target:
+    # An entity target only yields a move under ALT force-move; otherwise the
+    # click is a selection/targeting concern and this component stays silent.
+    if target and not modifiers.get(OrderResult.MOD_FORCE_MOVE, false):
         return null
     var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
     return OrderResult.new(

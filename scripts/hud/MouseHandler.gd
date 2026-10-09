@@ -115,7 +115,7 @@ func apply_selection_hotkey(is_stop: bool) -> void:
     # Deploy/stop are non-attack orders: acknowledge with the move voice, once
     # from the NW-most unit that can voice it (matching the order funnel).
     if acted:
-        play_ack_voice(selection_manager, VoiceData.EVENT_MOVE)
+        OrderSystem.play_ack_voice(selection_manager, VoiceData.EVENT_MOVE)
 
 
 # Poll input directly (like CameraController.gd) instead of using _input().
@@ -266,10 +266,15 @@ func _handle_single_click(mouse_pos: Vector2, shift_pressed: bool):
     if not camera or not camera.is_current():
         return
 
-    # Alt + Left Click → set rally point on selected building
-    if Input.is_key_pressed(KEY_ALT):
+    # Alt + Left Click → rally point when a selected building can hold one;
+    # otherwise fall through so Alt acts as force-move (OrdersSystem modifier).
+    if (
+        Input.is_key_pressed(KEY_ALT)
+        and selection_manager
+        and selection_manager.has_rally_receiver()
+    ):
         var ground_pos := _get_ground_position_at_mouse()
-        if ground_pos != Vector3.INF and selection_manager:
+        if ground_pos != Vector3.INF:
             selection_manager.request_set_rally_point(ground_pos)
     else:
         _handle_left_click_normal(camera, mouse_pos, shift_pressed)
@@ -282,7 +287,7 @@ func _handle_left_click_normal(camera: Camera3D, mouse_pos: Vector2, shift_press
     var query := PhysicsRayQueryParameters3D.create(from, from + dir * raycast_distance)
     query.collide_with_areas = true
 
-    var modifiers := build_modifiers(shift_pressed)
+    var modifiers := OrderSystem.build_modifiers(shift_pressed)
 
     # Pass 1: layer 16 — SelectComponent (units, buildings).
     query.collision_mask = 1 << 15
@@ -335,108 +340,15 @@ func _handle_left_click_normal(camera: Camera3D, mouse_pos: Vector2, shift_press
             # Carry the picked surface level so a move onto a bridge deck targets
             # the deck; ground picks stay at level 0.
             modifiers[OrderResult.MOD_TARGET_LEVEL] = int(pick["level"])
-            var orders := OrderSystem.get_orders(
-                null, Vector2i.ZERO, pick["position"] as Vector3, modifiers
+            OrderSystem.issue(
+                OrderSystem.get_orders(null, Vector2i.ZERO, pick["position"] as Vector3, modifiers)
             )
-            play_order_voices(orders, selection_manager)
-            for order in orders:
-                order.execute.call()
-            if not orders.is_empty():
-                acknowledge_target_lines(selection_manager)
 
 
 func _try_execute_orders(
     target: Node, target_cell: Vector2i, target_pos: Vector3, modifiers: Dictionary
 ) -> bool:
-    var orders := OrderSystem.get_orders(target, target_cell, target_pos, modifiers)
-    if orders.is_empty():
-        return false
-    play_order_voices(orders, selection_manager)
-    for order in orders:
-        order.execute.call()
-    acknowledge_target_lines(selection_manager)
-    return true
-
-
-## Flashes the move/attack target line for the selection when the player issues
-## an order. Called only from the player order paths (world click, minimap), so
-## automatic moves and guard auto-acquisition never surface the line on their own.
-static func acknowledge_target_lines(selection_manager: SelectionManager) -> void:
-    if selection_manager == null:
-        return
-    for sc in selection_manager.selected_entities:
-        if is_instance_valid(sc):
-            sc.acknowledge_order()
-
-
-## Shared order-confirmation voice playback, used by both the world click path
-## and the minimap. One voice per order event, from the NW-most selected local
-## unit that can actually voice the event — never one per unit (would stack on
-## large selections). The voice event is chosen by the order-producing component
-## and carried on the OrderResult.
-static func play_order_voices(
-    orders: Array[OrderResult], selection_manager: SelectionManager
-) -> void:
-    if orders.is_empty() or selection_manager == null:
-        return
-    var event := _voice_event_for_orders(orders)
-    if event.is_empty():
-        return
-    play_ack_voice(selection_manager, event)
-
-
-## Play one acknowledgment line of `event` from the selection: the NW-most local
-## selected unit whose voice set has a variant for that event. A unit without a
-## variant is skipped, so a mixed selection never lands on a speaker that would
-## silently no-op. Used by the order funnel and the deploy/stop hotkeys.
-static func play_ack_voice(selection_manager: SelectionManager, event: String) -> void:
-    if selection_manager == null or event.is_empty():
-        return
-    var candidates: Array[SelectComponent] = []
-    for sc in selection_manager.selected_entities:
-        if not is_instance_valid(sc):
-            continue
-        var entity := sc.get_parent() as Node3D
-        if not is_instance_valid(entity):
-            continue
-        if not selection_manager._is_local_entity_node(entity):
-            continue
-        var voice := entity.get_node_or_null("VoiceComponent") as VoiceComponent
-        if not voice or not voice.voice_data or voice.voice_data.get_event(event).is_empty():
-            continue
-        candidates.append(sc)
-    var chosen := selection_manager.get_northwest_most(candidates) as SelectComponent
-    if not chosen:
-        return
-    var speaker := chosen.get_parent() as Node3D
-    var speaker_voice := speaker.get_node_or_null("VoiceComponent") as VoiceComponent
-    if not speaker_voice or not speaker_voice.voice_data:
-        return
-    AudioManager.play_voice(speaker_voice.voice_data.id, event)
-
-
-## Voice event for an order batch: the event of the highest-priority resolved
-## order (ties keep the earlier order), matching how the cursor is resolved — an
-## attack in a mixed selection acknowledges with the attack voice, not whichever
-## entity happened to be selected first.
-static func _voice_event_for_orders(orders: Array[OrderResult]) -> String:
-    var best: OrderResult = null
-    for order in orders:
-        if order == null:
-            continue
-        if best == null or order.priority > best.priority:
-            best = order
-    return best.voice_event if best else ""
-
-
-## Shared click-modifier snapshot (Ctrl = force-attack, Alt = force-move,
-## Shift = queue); used by the world click path and the minimap.
-static func build_modifiers(shift_pressed: bool) -> Dictionary:
-    return {
-        OrderResult.MOD_FORCE_ATTACK: Input.is_key_pressed(KEY_CTRL),
-        OrderResult.MOD_FORCE_MOVE: Input.is_key_pressed(KEY_ALT),
-        OrderResult.MOD_QUEUED: shift_pressed,
-    }
+    return OrderSystem.issue(OrderSystem.get_orders(target, target_cell, target_pos, modifiers))
 
 
 ## Box-select: select entities whose projection falls inside the drag rectangle.
@@ -629,17 +541,8 @@ func _update_cursor() -> void:
             else:
                 target = null
                 target_pos = _get_ground_position_at_mouse()
-            var modifiers := build_modifiers(false)
-            var order_cursor := OrderSystem.get_cursor(target, target_cell, target_pos, modifiers)
-            # OpenRA pattern: SELECT only when selection is empty + hovering selectable entity
-            var no_selection := selection_manager.selected_entities.is_empty()
-            if order_cursor == CursorState.Type.DEFAULT and no_selection:
-                if target and target.is_in_group("selectable"):
-                    cursor_type = CursorState.Type.SELECT
-                else:
-                    cursor_type = CursorState.Type.DEFAULT
-            else:
-                cursor_type = order_cursor
+            var modifiers := OrderSystem.build_modifiers(false)
+            cursor_type = OrderSystem.resolve(target, target_cell, target_pos, modifiers).cursor
 
     _apply_cursor(cursor_type)
 

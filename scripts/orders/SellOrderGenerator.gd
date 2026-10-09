@@ -1,27 +1,14 @@
 class_name SellOrderGenerator extends OrderGenerator
 
 
-func get_cursor(
+func resolve(
     target: Node3D,
     _target_cell: Vector2i,
     _target_pos: Vector3,
     _modifiers: Dictionary,
-) -> CursorState.Type:
-    if not target:
-        return CursorState.Type.SELL_BLOCKED
-    if not _is_sellable_building(target):
-        return CursorState.Type.SELL_BLOCKED
-    return CursorState.Type.SELL
-
-
-func get_orders(
-    target: Node3D,
-    _target_cell: Vector2i,
-    _target_pos: Vector3,
-    _modifiers: Dictionary,
-) -> Array[OrderResult]:
+) -> OrderResolution:
     if not target or not _is_sellable_building(target):
-        return []
+        return OrderResolution.new(CursorState.Type.SELL_BLOCKED, [])
     var building := target
     var result := OrderResult.new(
         CursorState.Type.SELL,
@@ -29,10 +16,10 @@ func get_orders(
         building,
         Vector3.ZERO,
         false,
-        func(): _sell(building),
+        func() -> void: _sell(building),
         "",
     )
-    return [result]
+    return OrderResolution.new(CursorState.Type.SELL, [result])
 
 
 func cancel() -> void:

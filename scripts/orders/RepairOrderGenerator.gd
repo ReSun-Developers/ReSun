@@ -1,27 +1,14 @@
 class_name RepairOrderGenerator extends OrderGenerator
 
 
-func get_cursor(
+func resolve(
     target: Node3D,
     _target_cell: Vector2i,
     _target_pos: Vector3,
     _modifiers: Dictionary,
-) -> CursorState.Type:
-    if not target:
-        return CursorState.Type.REPAIR_BLOCKED
-    if not _is_damaged_building(target):
-        return CursorState.Type.REPAIR_BLOCKED
-    return CursorState.Type.REPAIR
-
-
-func get_orders(
-    target: Node3D,
-    _target_cell: Vector2i,
-    _target_pos: Vector3,
-    _modifiers: Dictionary,
-) -> Array[OrderResult]:
+) -> OrderResolution:
     if not target or not _is_damaged_building(target):
-        return []
+        return OrderResolution.new(CursorState.Type.REPAIR_BLOCKED, [])
     var building := target
     var result := OrderResult.new(
         CursorState.Type.REPAIR,
@@ -29,10 +16,10 @@ func get_orders(
         building,
         Vector3.ZERO,
         false,
-        func(): _repair(building),
+        func() -> void: _repair(building),
         "",
     )
-    return [result]
+    return OrderResolution.new(CursorState.Type.REPAIR, [result])
 
 
 func cancel() -> void:
