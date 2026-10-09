@@ -87,17 +87,6 @@ func _paused(pm: Node) -> bool:
     return false if items.is_empty() else (items[0] as ProductionQueue).is_paused
 
 
-func _make_real_factory_node() -> FactoryComponent:
-    # has_factory_for scans the "factories" group for FactoryComponent nodes;
-    # a PrerequisiteSystem registration alone is not a factory node.
-    var factory := FactoryComponent.new()
-    factory.name = "TestClickFactory"
-    factory.produces = ["InfantryType"]
-    factory.player_id = PID
-    _em.get_tree().root.add_child(factory)
-    return factory
-
-
 func test_left_click_starts_production() -> void:
     var pm := _pm()
     if not pm:
@@ -350,13 +339,43 @@ func test_factory_present_starts_production_instead() -> void:
         return
     _cleanup_queue(pm)
     _ensure_factory()
-    var factory_node := _make_real_factory_node()
     Cheats.no_prereqs = true
     var placer := _em.get_node_or_null("/root/EntityPlacer")
     placer.exit_placing_mode()
     pm.handle_cameo_click(PID, _make_infantry(), MOUSE_BUTTON_LEFT, false)
     TestHelper.assert_true(not placer.is_placing(), "factory present → no direct deploy")
     TestHelper.assert_eq(_count(pm), 1, "factory present → production starts")
-    factory_node.free()
     _cleanup_queue(pm)
     _cleanup_factory()
+
+
+func test_direct_deploy_when_only_other_player_owns_producer() -> void:
+    var pm := _pm()
+    if not pm:
+        return
+    _cleanup_queue(pm)
+    var ps := _em.get_node_or_null("/root/PrerequisiteSystem")
+    var ef := _em.get_node_or_null("/root/EntityFactory")
+    var factory_data := _make_factory()
+    var other_pid: int = PID + 1
+    if ef:
+        ef._entity_cache[FACTORY_ID] = factory_data
+    if ps:
+        ps.register_building(other_pid, factory_data)
+    Cheats.no_prereqs = true
+    var placer := _em.get_node_or_null("/root/EntityPlacer")
+    placer.exit_placing_mode()
+    pm.handle_cameo_click(PID, _make_infantry(), MOUSE_BUTTON_LEFT, false)
+    TestHelper.assert_true(
+        placer.is_placing(), "another player's producer does not satisfy this player's fallback"
+    )
+    TestHelper.assert_true(
+        (pm.get_queue_items(_queue_key(pm)) as Array).is_empty(),
+        "the other player's producer does not start production for this player"
+    )
+    placer.exit_placing_mode()
+    if ps and factory_data:
+        ps.unregister_building(other_pid, factory_data)
+    if ef:
+        ef._entity_cache.erase(FACTORY_ID)
+    _cleanup_queue(pm)

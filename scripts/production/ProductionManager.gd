@@ -646,15 +646,6 @@ func get_item_progress(player_id: int, data: EntityData) -> float:
     return 0.0
 
 
-## Whether any factory building on the map produces this queue type.
-func has_factory_for(queue_type: String) -> bool:
-    for f in get_tree().get_nodes_in_group("factories"):
-        var fc := f as FactoryComponent
-        if fc and queue_type in fc.produces:
-            return true
-    return false
-
-
 ## Left-click cameo routing (production policy; the Sidebar holds no policy).
 func handle_cameo_left_click(player_id: int, data: EntityData, shift: bool) -> void:
     # Building ready to place → enter build mode
@@ -679,7 +670,7 @@ func handle_cameo_left_click(player_id: int, data: EntityData, shift: bool) -> v
     # No prerequisites cheat + no factory → direct deploy fallback (named
     # session entry on EntityPlacer; spec'd under debug-menu, not a UI concern).
     if Cheats.no_prereqs and not data.buildable_queue.is_empty():
-        if not has_factory_for(data.buildable_queue):
+        if not PrerequisiteSystem.evaluate_build(player_id, data).owned_factory:
             EntityPlacer.start_direct_deploy(data)
             return
 

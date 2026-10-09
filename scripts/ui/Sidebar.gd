@@ -244,12 +244,11 @@ func _get_current_entities() -> Array[EntityData]:
     if _current_tab >= 0 and _current_tab < _tabs.size():
         types = _tabs[_current_tab]["entity_types"]
     var result: Array[EntityData] = []
+    var player_id := PlayerManager.get_local_player_id()
     for etype in types:
         var all := EntityFactory.get_all_by_type(etype as EntityData.EntityType)
         for data in all:
-            if not data.buildable:
-                continue
-            if PrerequisiteSystem.can_build(PlayerManager.get_local_player_id(), data):
+            if PrerequisiteSystem.evaluate_build(player_id, data)["enabled"]:
                 result.append(data)
     return sort_buildables(result, _tab_types)
 
@@ -399,14 +398,6 @@ func _create_cameo(data: EntityData) -> Button:
     progress_rect.visible = false
     btn.add_child(progress_rect)
     _cameo_progress[btn] = progress_rect
-
-    # Check build limit
-    if data.build_limit > 0:
-        var count: int = PrerequisiteSystem.get_build_count(
-            PlayerManager.get_local_player_id(), data.id
-        )
-        if count >= data.build_limit:
-            btn.modulate = Color(0.4, 0.4, 0.4, 0.6)
 
     btn.gui_input.connect(_on_cameo_gui_input.bind(data))
     btn.set_meta("entity_id", data.id)

@@ -38,6 +38,7 @@ func _ready() -> void:
     EconomyManager.credits_changed.connect(_on_credits_changed)
     PlayerManager.players_changed.connect(_on_players_changed)
     PrerequisiteSystem.prerequisites_changed.connect(_on_prerequisites_changed)
+    GameContext.game_changed.connect(_on_game_changed)
     _cheapest_cost = _compute_cheapest_cost()
     _resync()
 
@@ -51,10 +52,19 @@ func _resync() -> void:
 
 
 func _on_players_changed() -> void:
+    _cheapest_cost = _compute_cheapest_cost()
     _resync()
 
 
 func _on_prerequisites_changed(_player_id: int) -> void:
+    _cheapest_cost = _compute_cheapest_cost()
+    _update_credits_color()
+
+
+## `GameContext.game_changed` may not reach `prerequisites_changed` when the
+## registry is empty, so refresh the cached cheapest directly on a game switch.
+func _on_game_changed(_def: GameDefinition) -> void:
+    _cheapest_cost = _compute_cheapest_cost()
     _update_credits_color()
 
 
@@ -77,11 +87,14 @@ func _on_credits_changed(
     _target_credits = new_balance
 
 
-## Cheapest positive cost among all buildable entities, or -1 when none exist.
-## Zero-cost buildables are ignored so a free item can't disable the warning.
+## Cheapest positive cost among the types the local player can build, or -1 when
+## none exist. Player-scoped (the same build gate the sidebar draws from), so a
+## cheap type locked for this player cannot trigger the warning. Zero-cost
+## buildables are ignored so a free item can't disable the warning.
 func _compute_cheapest_cost() -> int:
     if _ef == null:
         return -1
+    var player_id := PlayerManager.get_local_player_id()
     var cheapest := -1
     for etype in [
         EntityData.EntityType.INFANTRY,
@@ -90,7 +103,9 @@ func _compute_cheapest_cost() -> int:
         EntityData.EntityType.AIRCRAFT,
     ]:
         for data: EntityData in _ef.get_all_by_type(etype):
-            if not data.buildable or data.cost <= 0:
+            if data.cost <= 0:
+                continue
+            if not PrerequisiteSystem.evaluate_build(player_id, data)["enabled"]:
                 continue
             if cheapest < 0 or data.cost < cheapest:
                 cheapest = data.cost
@@ -98,9 +113,15 @@ func _compute_cheapest_cost() -> int:
 
 
 ## White while the local balance covers the cheapest buildable item, red below.
+## Affordability feedback only — never a production gate.
 func _update_credits_color() -> void:
-    var balance: int = _em.get_balance(PlayerManager.get_local_player_id()) if _em else 0
-    var insufficient := _cheapest_cost > 0 and balance < _cheapest_cost
+    var player_id := PlayerManager.get_local_player_id()
+    var insufficient: bool = (
+        _cheapest_cost > 0
+        and not Cheats.no_cost
+        and _em != null
+        and not _em.can_afford(player_id, _cheapest_cost)
+    )
     add_theme_color_override("font_color", COLOR_INSUFFICIENT if insufficient else COLOR_SUFFICIENT)
 
 
