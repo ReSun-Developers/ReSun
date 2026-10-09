@@ -3,7 +3,7 @@
 Reusable entity behavior components and the contracts they expose to the rest of the engine.
 ## Requirements
 ### Requirement: Components declare order targeters
-Each component that can issue player-initiated orders SHALL implement `get_order_for_target(target: Node3D, target_cell: Vector2i, target_pos: Vector3, modifiers: Dictionary) -> OrderResult`. The method SHALL return null if the component cannot act on the given target. Components without this method SHALL be silently skipped during order resolution.
+Each component that can issue player-initiated orders SHALL implement `get_order_for_target(target: Node3D, target_cell: Vector2i, target_pos: Vector3, modifiers: Dictionary) -> OrderResult`. The method SHALL return null if the component cannot act on the given target. The returned `OrderResult` SHALL carry the cursor for that order; a component SHALL NOT expose a separate cursor-only method (`get_cursor_for_target`) — cursor behavior is provided solely by the targeter. Components without this method SHALL be silently skipped during order resolution.
 
 #### Scenario: Component with no targeter
 - **WHEN** a component does not implement `get_order_for_target()`
@@ -16,6 +16,10 @@ Each component that can issue player-initiated orders SHALL implement `get_order
 #### Scenario: Component returns OrderResult
 - **WHEN** `get_order_for_target()` returns a non-null OrderResult
 - **THEN** OrderResolver SHALL consider it for priority comparison
+
+#### Scenario: No separate cursor method
+- **WHEN** an order-capable component is inspected
+- **THEN** it SHALL provide cursor information only through `get_order_for_target()` and SHALL NOT define `get_cursor_for_target()`
 
 ### Requirement: CombatComponent fires weapons at targets
 CombatComponent SHALL implement a `_physics_process(delta)` loop that: (1) validates target, (2) checks range, (3) issues move if out of range, (4) fires hitscan damage when in range and cooldown elapsed.

@@ -441,7 +441,7 @@ func test_harvest_order_plays_move_voice_not_attack():
     _sm.add_entity(sc)
     var before_move: int = _am.get_active_count("TEST_VOICE_MOV")
     var before_atk: int = _am.get_active_count("TEST_VOICE_ATK")
-    MouseHandler.play_order_voices(
+    OrderSystem.play_order_voices(
         [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
     )
     TestHelper.assert_eq(
@@ -464,7 +464,7 @@ func test_attack_order_plays_attack_voice_not_move():
     _sm.add_entity(sc)
     var before_move: int = _am.get_active_count("TEST_VOICE_MOV")
     var before_atk: int = _am.get_active_count("TEST_VOICE_ATK")
-    MouseHandler.play_order_voices(
+    OrderSystem.play_order_voices(
         [_order(VoiceData.EVENT_ATTACK, CursorState.Type.ATTACK)] as Array[OrderResult], _sm
     )
     TestHelper.assert_eq(
@@ -489,7 +489,7 @@ func test_order_voice_event_uses_highest_priority():
     (
         TestHelper
         . assert_eq(
-            MouseHandler._voice_event_for_orders([move_order, attack_order] as Array[OrderResult]),
+            OrderSystem._voice_event_for_orders([move_order, attack_order] as Array[OrderResult]),
             VoiceData.EVENT_ATTACK,
             "attack (priority 30) wins over an earlier move (priority 15)",
         )
@@ -497,7 +497,7 @@ func test_order_voice_event_uses_highest_priority():
     (
         TestHelper
         . assert_eq(
-            MouseHandler._voice_event_for_orders([attack_order, move_order] as Array[OrderResult]),
+            OrderSystem._voice_event_for_orders([attack_order, move_order] as Array[OrderResult]),
             VoiceData.EVENT_ATTACK,
             "result does not depend on batch order",
         )
@@ -524,7 +524,7 @@ func test_ack_voice_skips_speaker_without_event():
     _sm.add_entity(sc_v)
     _sm.add_entity(sc_s)
     var before: int = _am.get_active_count("TEST_VOICE_ATK")
-    MouseHandler.play_ack_voice(_sm, VoiceData.EVENT_ATTACK)
+    OrderSystem.play_ack_voice(_sm, VoiceData.EVENT_ATTACK)
     (
         TestHelper
         . assert_eq(
@@ -548,7 +548,7 @@ func test_empty_voice_event_order_is_silent():
     var sc := unit.get_node_or_null("SelectComponent") as SelectComponent
     _sm.add_entity(sc)
     var before := _am.get_child_count()
-    MouseHandler.play_order_voices([_order("", CursorState.Type.MOVE)] as Array[OrderResult], _sm)
+    OrderSystem.play_order_voices([_order("", CursorState.Type.MOVE)] as Array[OrderResult], _sm)
     TestHelper.assert_eq(_am.get_child_count(), before, "empty voice event plays nothing")
     _sm.remove_entity(sc)
     unit.queue_free()
@@ -580,7 +580,7 @@ func test_order_after_window_cancels_playing_select():
     TestHelper.assert_eq(
         _am.get_active_count("TEST_VOICE_SEL"), before_sel + 1, "select is playing"
     )
-    MouseHandler.play_order_voices(
+    OrderSystem.play_order_voices(
         [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
     )
     TestHelper.assert_eq(
@@ -617,7 +617,7 @@ func test_select_then_order_yields_one_voice_line():
     var before_sel: int = _am.get_active_count("TEST_VOICE_SEL")
     var before_mov: int = _am.get_active_count("TEST_VOICE_MOV")
     _sm.select_entity(sc)
-    MouseHandler.play_order_voices(
+    OrderSystem.play_order_voices(
         [_order(VoiceData.EVENT_MOVE, CursorState.Type.HARVEST)] as Array[OrderResult], _sm
     )
     # Flush the debounce window: a surviving select would play here and overlap.
@@ -633,3 +633,39 @@ func test_select_then_order_yields_one_voice_line():
     rules.shroud_enabled = saved_shroud
     rules.fog_of_war = saved_fog
     _restore_bounds()
+
+
+## OrderSystem.issue() is the single dispatch tail: one voice per batch, every
+## order executed. issue()-level counterpart to the play_order_voices tests.
+func test_issue_plays_one_voice_for_a_batch():
+    TestHelper.assert_true(_am != null, "AudioManager autoload present")
+    var unit_a := _make_distinct_unit(0)
+    var unit_b := _make_distinct_unit(0)
+    var sc_a := unit_a.get_node_or_null("SelectComponent") as SelectComponent
+    var sc_b := unit_b.get_node_or_null("SelectComponent") as SelectComponent
+    _sm.add_entity(sc_a)
+    _sm.add_entity(sc_b)
+    var before: int = _am.get_active_count("TEST_VOICE_MOV")
+    var ran := [0]
+    var orders: Array[OrderResult] = []
+    for _i in 2:
+        orders.append(
+            OrderResult.new(
+                CursorState.Type.MOVE,
+                5,
+                null,
+                Vector3.ZERO,
+                false,
+                func() -> void: ran[0] += 1,
+                VoiceData.EVENT_MOVE,
+            )
+        )
+    TestHelper.assert_true(OrderSystem.issue(orders), "issue executes the batch")
+    TestHelper.assert_eq(ran[0], 2, "every order executed")
+    TestHelper.assert_eq(
+        _am.get_active_count("TEST_VOICE_MOV"), before + 1, "issue plays exactly one voice line"
+    )
+    _sm.remove_entity(sc_a)
+    _sm.remove_entity(sc_b)
+    unit_a.queue_free()
+    unit_b.queue_free()

@@ -487,6 +487,20 @@ func _bounded_player_target(world: Vector3) -> Vector3:
     return BoundsSystem.clamp_to_visible_diamond(world, BoundsSystem.ORDER_EDGE_INSET)
 
 
+## Whether any selected local entity owns a RallyPointComponent, i.e. Alt+click
+## can actually set a rally point. When false, Alt falls through to force-move.
+func has_rally_receiver() -> bool:
+    for ent in selected_entities:
+        if not is_instance_valid(ent):
+            continue
+        if not _is_local_entity(ent):
+            continue
+        var parent := ent.get_parent() as Node3D
+        if is_instance_valid(parent) and parent.get_node_or_null("RallyPointComponent"):
+            return true
+    return false
+
+
 func request_set_rally_point(target_position: Vector3) -> void:
     var clamped := BoundsSystem.clamp_to_visible_diamond(
         target_position, BoundsSystem.ORDER_EDGE_INSET

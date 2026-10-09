@@ -124,7 +124,7 @@ func test_get_cargo_value():
     )
 
 
-# --- get_cursor_for_target tests ---
+# --- order-cursor tests (derived from get_order_for_target) ---
 # The pre-passenger ENTER stub (selected transport -> click loadable unit) was
 # replaced by self-hover DEPLOY unload orders — see
 # openspec/changes/add-transport-passengers/specs/transport-passengers/spec.md.
@@ -139,7 +139,7 @@ func test_cursor_self_hover_unloadable_returns_deploy():
     entity.add_child(transport)
     _select_sole(entity)
 
-    var cursor := transport.get_cursor_for_target(entity, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, entity)
     TestHelper.assert_eq(cursor, CursorState.Type.DEPLOY, "hover-self unloadable -> DEPLOY")
 
     _clear_selection()
@@ -161,7 +161,7 @@ func test_cursor_self_hover_mixed_selection_returns_default():
     other_sc.is_selected = true
     _sm.selected_entities.append(other_sc)
 
-    var cursor := transport.get_cursor_for_target(entity, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, entity)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "mixed selection -> DEFAULT")
 
     _clear_selection()
@@ -180,7 +180,7 @@ func test_cursor_self_hover_not_selected_returns_default():
     # Deselect the transport itself: nothing left selected.
     _sm.selected_entities.clear()
 
-    var cursor := transport.get_cursor_for_target(entity, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, entity)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "unselected transport -> DEFAULT")
 
     _clear_selection()
@@ -196,7 +196,7 @@ func test_cursor_no_passengers_returns_default():
 
     var target := Node3D.new()
     target.name = "TargetUnit"
-    var cursor := transport.get_cursor_for_target(entity, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, entity)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "no passengers -> DEFAULT")
 
     entity.queue_free()
@@ -210,7 +210,7 @@ func test_cursor_null_target_returns_default():
     entity.name = "TransportEntity"
     entity.add_child(transport)
 
-    var cursor := transport.get_cursor_for_target(null, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, null)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "null target -> DEFAULT")
 
     entity.queue_free()
@@ -229,7 +229,7 @@ func test_cursor_enemy_returns_default():
     var target_sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
     target.add_child(target_sc)
 
-    var cursor := transport.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, target)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "enemy -> DEFAULT")
 
     entity.queue_free()
@@ -249,7 +249,7 @@ func test_cursor_target_without_transport_returns_default():
     var target_sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
     target.add_child(target_sc)
 
-    var cursor := transport.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, target)
     TestHelper.assert_eq(
         cursor, CursorState.Type.DEFAULT, "target without TransportComponent -> DEFAULT"
     )
@@ -275,7 +275,7 @@ func test_cursor_target_zero_passengers_returns_default():
     target_transport.passengers = 0
     target.add_child(target_transport)
 
-    var cursor := transport.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, target)
     TestHelper.assert_eq(cursor, CursorState.Type.DEFAULT, "target with 0 passengers -> DEFAULT")
 
     entity.queue_free()
@@ -292,7 +292,7 @@ func test_cursor_no_select_component_returns_default():
     var target := Node3D.new()
     target.name = "TargetUnit"
 
-    var cursor := transport.get_cursor_for_target(target, Vector2i.ZERO)
+    var cursor := TestHelper.order_cursor(transport, target)
     TestHelper.assert_eq(
         cursor, CursorState.Type.DEFAULT, "target without SelectComponent -> DEFAULT"
     )

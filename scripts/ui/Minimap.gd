@@ -764,17 +764,13 @@ func _handle_click(cell: Vector2i) -> void:
     var target: Node3D = _cell_targets.get(cell) as Node3D
     var target_level := _top_surface_level(cell)
     var world := _ground_order_pos(cell, target_level)
-    var modifiers := MouseHandler.build_modifiers(Input.is_key_pressed(KEY_SHIFT))
+    var modifiers := OrderSystem.build_modifiers(Input.is_key_pressed(KEY_SHIFT))
     modifiers[OrderResult.MOD_TARGET_LEVEL] = target_level
-    var orders := OrderSystem.get_orders(target, cell, world, modifiers)
-    if orders.is_empty():
+    var resolution := OrderSystem.resolve(target, cell, world, modifiers)
+    if resolution.orders.is_empty():
         BoundsSystem.center_camera_on_cell(cell)
         return
-    var selection := SelectionManager
-    MouseHandler.play_order_voices(orders, selection)
-    for order in orders:
-        order.execute.call()
-    MouseHandler.acknowledge_target_lines(selection)
+    OrderSystem.issue(resolution.orders)
 
 
 ## Top walkable surface level on a cell (0 when no deck covers it).

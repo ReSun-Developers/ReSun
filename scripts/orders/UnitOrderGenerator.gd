@@ -14,121 +14,150 @@ static func get_instance() -> UnitOrderGenerator:
     return _singleton
 
 
-func get_cursor(
+## One decision per input: the cursor and the orders come from the same branches,
+## so a change to one cannot silently drift from the other. The cursor is the
+## highest-priority order's cursor, or a selection affordance (SELECT / MOVE /
+## GENERIC_BLOCKED / DEFAULT) when no order is produced.
+func resolve(
     target: Node3D,
     target_cell: Vector2i,
     target_pos: Vector3,
     modifiers: Dictionary,
-) -> CursorState.Type:
-    var cursor := CursorState.Type.DEFAULT
+) -> OrderResolution:
     var sm := _get_selection_manager()
-    if sm and not sm.selected_entities.is_empty():
-        # Non-local (enemy) selections are viewing-only: no command cursors and no
+    if not sm:
+        return OrderResolution.new()
+    # An empty selection can only offer the SELECT affordance over an unselected
+    # selectable entity — a decision previously re-derived in MouseHandler.
+    if sm.selected_entities.is_empty():
+        return OrderResolution.new(_select_affordance(target, sm), [])
+    var locals := _local_selection(sm)
+    if locals.is_empty():
+        # Non-local (enemy) selections are viewing-only: no command cursor and no
         # orders. A selectable, not-yet-selected target still shows SELECT so the
         # player can click to re-select (TS ACTION_SELECT on a hovered selectable);
-        # everything else (ground, the selected enemy itself) is DEFAULT.
-        var locals := _local_selection(sm)
-        if locals.is_empty():
-            if target and target.is_in_group("selectable") and not _is_already_selected(target, sm):
-                return CursorState.Type.SELECT
-            return CursorState.Type.DEFAULT
-        if not target:
-            # Force-fire turns a bare cell into a fire target: resolve the same
-            # way the entity branch does so the cursor mirrors the order that
-            # would actually be issued. Without the modifier this stays on the
-            # untouched MOVE/undeploy path below.
-            if modifiers.get(OrderResult.MOD_FORCE_ATTACK, false):
-                var forced := OrderResolver.resolve_single(
-                    locals, target, target_cell, target_pos, modifiers
-                )
-                if forced and forced.priority > GROUND_MOVE_PRIORITY:
-                    return forced.cursor
-            if _has_undeployable(sm):
-                var result := OrderResolver.resolve_single(
-                    locals, target, target_cell, target_pos, modifiers
-                )
-                cursor = result.cursor if result else CursorState.Type.MOVE
-            elif _has_movable(sm):
-                cursor = CursorState.Type.MOVE
-        else:
-            var result: OrderResult = OrderResolver.resolve_single(
-                locals, target, target_cell, target_pos, modifiers
+        # everything else is DEFAULT.
+        return OrderResolution.new(_select_affordance(target, sm), [])
+
+    var orders: Array[OrderResult] = []
+    var target_level: int = int(modifiers.get(OrderResult.MOD_TARGET_LEVEL, 0))
+
+    # ALT force-move: reposition regardless of the target, deliberately bypassing
+    # every component targeter (attack/harvest/enter/deploy) so nothing can
+    # outrank the move. Ctrl+Alt+Click is the original's Guard Area (unimplemented
+    # here), so while both modifiers are held it falls back to force-move.
+    if modifiers.get(OrderResult.MOD_FORCE_MOVE, false):
+        if _has_movable(sm):
+            var forced_move := _synthesized_move(
+                sm, null, target_pos, modifiers, target_level, false
             )
-            if result:
-                cursor = result.cursor
-            elif _is_already_selected(target, sm):
-                if target.get_node_or_null("MovementController"):
-                    cursor = CursorState.Type.MOVE
-                else:
-                    cursor = CursorState.Type.GENERIC_BLOCKED
-            elif target.is_in_group("selectable"):
-                cursor = CursorState.Type.SELECT
+            return OrderResolution.new(CursorState.Type.MOVE, [forced_move])
+        return OrderResolution.new(_fallback_cursor(target, sm), [])
+
+    if not target:
+        if modifiers.get(OrderResult.MOD_FORCE_ATTACK, false):
+            orders = _force_fire_attacks(locals, target_cell, target_pos, modifiers)
+        if orders.is_empty():
+            if _has_undeployable(sm):
+                orders = OrderResolver.resolve_all(
+                    locals, target, target_cell, target_pos, modifiers
+                )
             elif _has_movable(sm):
-                cursor = CursorState.Type.MOVE
-            elif _has_undeployable(sm):
-                cursor = CursorState.Type.MOVE
-    return cursor
+                orders = [_synthesized_move(sm, null, target_pos, modifiers, target_level, false)]
+    else:
+        orders = OrderResolver.resolve_all(locals, target, target_cell, target_pos, modifiers)
+        if orders.is_empty() and _is_already_selected(target, sm):
+            if target.get_node_or_null("MovementController"):
+                orders = [_synthesized_move(sm, target, target_pos, modifiers, target_level, true)]
+
+    return OrderResolution.new(_resolve_cursor(orders, sm, target), orders)
 
 
-func get_orders(
-    target: Node3D,
+## Force-fire ground resolution: let components answer for the cell instead of
+## unconditionally synthesizing a move. Only orders above the plain movement
+## priority are kept — a component's own MOVE would bypass formation, queued and
+## target-level handling in request_move().
+func _force_fire_attacks(
+    locals: Array[SelectComponent],
     target_cell: Vector2i,
     target_pos: Vector3,
     modifiers: Dictionary,
 ) -> Array[OrderResult]:
-    var sm := _get_selection_manager()
-    if not sm or sm.selected_entities.is_empty():
-        return []
-    var locals := _local_selection(sm)
-    if locals.is_empty():
-        return []
-    var result: Array[OrderResult] = []
-    var target_level: int = int(modifiers.get(OrderResult.MOD_TARGET_LEVEL, 0))
+    var attacks: Array[OrderResult] = []
+    for order in OrderResolver.resolve_all(locals, null, target_cell, target_pos, modifiers):
+        if order.priority > GROUND_MOVE_PRIORITY:
+            attacks.append(order)
+    return attacks
+
+
+## The request_move()-based MOVE used for plain ground moves and re-clicks on an
+## already-selected movable entity; it carries formation, queue and level handling
+## that a component's own MOVE would bypass.
+func _synthesized_move(
+    sm: SelectionManager,
+    target: Node3D,
+    target_pos: Vector3,
+    modifiers: Dictionary,
+    target_level: int,
+    as_entity: bool,
+) -> OrderResult:
+    var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
+    var move_order := OrderResult.new(
+        CursorState.Type.MOVE,
+        GROUND_MOVE_PRIORITY,
+        target,
+        target_pos,
+        queued,
+        func() -> void: sm.request_move(target_pos, as_entity, target_level),
+    )
+    move_order.target_level = target_level
+    return move_order
+
+
+func _resolve_cursor(
+    orders: Array[OrderResult], sm: SelectionManager, target: Node3D
+) -> CursorState.Type:
+    if not orders.is_empty():
+        return _best_order(orders).cursor
+    return _fallback_cursor(target, sm)
+
+
+## Highest-priority order; ties keep the earlier order (matching resolve_single).
+func _best_order(orders: Array[OrderResult]) -> OrderResult:
+    var best: OrderResult = null
+    for order in orders:
+        if order == null:
+            continue
+        if best == null or order.priority > best.priority:
+            best = order
+    return best
+
+
+## Cursor when no command was produced: SELECT over an unselected selectable
+## entity, MOVE when the selection can be repositioned, GENERIC_BLOCKED over an
+## already-selected immovable one, otherwise DEFAULT.
+func _fallback_cursor(target: Node3D, sm: SelectionManager) -> CursorState.Type:
     if not target:
-        # Force-fire: let components answer for the cell instead of
-        # unconditionally synthesizing a move. Only orders above the plain
-        # movement priority are kept — a component's own MOVE would bypass
-        # formation, queued and target-level handling in request_move().
-        if modifiers.get(OrderResult.MOD_FORCE_ATTACK, false):
-            var forced := OrderResolver.resolve_all(
-                locals, target, target_cell, target_pos, modifiers
-            )
-            var attacks: Array[OrderResult] = []
-            for order in forced:
-                if order.priority > GROUND_MOVE_PRIORITY:
-                    attacks.append(order)
-            if not attacks.is_empty():
-                return attacks
-        if _has_undeployable(sm):
-            result = OrderResolver.resolve_all(locals, target, target_cell, target_pos, modifiers)
-        elif _has_movable(sm):
-            var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
-            var move_order := OrderResult.new(
-                CursorState.Type.MOVE,
-                5,
-                null,
-                target_pos,
-                queued,
-                func(): sm.request_move(target_pos, false, target_level),
-            )
-            move_order.target_level = target_level
-            result = [move_order]
-    else:
-        result = OrderResolver.resolve_all(locals, target, target_cell, target_pos, modifiers)
-        if result.is_empty() and _is_already_selected(target, sm):
-            if target.get_node_or_null("MovementController"):
-                var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
-                var move_order := OrderResult.new(
-                    CursorState.Type.MOVE,
-                    5,
-                    target,
-                    target_pos,
-                    queued,
-                    func(): sm.request_move(target_pos, true, target_level),
-                )
-                move_order.target_level = target_level
-                result = [move_order]
-    return result
+        if _has_undeployable(sm) or _has_movable(sm):
+            return CursorState.Type.MOVE
+        return CursorState.Type.DEFAULT
+    if _is_already_selected(target, sm):
+        return (
+            CursorState.Type.MOVE
+            if target.get_node_or_null("MovementController")
+            else CursorState.Type.GENERIC_BLOCKED
+        )
+    if target.is_in_group("selectable"):
+        return CursorState.Type.SELECT
+    if _has_movable(sm) or _has_undeployable(sm):
+        return CursorState.Type.MOVE
+    return CursorState.Type.DEFAULT
+
+
+func _select_affordance(target: Node3D, sm: SelectionManager) -> CursorState.Type:
+    if target and target.is_in_group("selectable") and not _is_already_selected(target, sm):
+        return CursorState.Type.SELECT
+    return CursorState.Type.DEFAULT
 
 
 ## Selected entities owned by the local player (missing StatsComponent or
@@ -179,13 +208,6 @@ func _has_movable(sm: SelectionManager) -> bool:
 
 func _is_local_entity(entity: Node3D) -> bool:
     return PlayerManager.is_entity_local(entity, PlayerManager.get_local_player_id())
-
-
-func _is_enemy(target: Node3D) -> bool:
-    var stats := target.get_node_or_null("StatsComponent") as StatsComponent
-    if not stats or stats.player_id < 0:
-        return false
-    return PlayerManager.is_enemy(stats.player_id, PlayerManager.get_local_player_id())
 
 
 func _is_already_selected(target: Node3D, sm: SelectionManager) -> bool:

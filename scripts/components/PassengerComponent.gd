@@ -23,12 +23,6 @@ func _exit_tree() -> void:
     _clear_pending()
 
 
-func get_cursor_for_target(target: Node3D, _target_cell: Vector2i) -> CursorState.Type:
-    if not _can_board_target(target):
-        return CursorState.Type.DEFAULT
-    return CursorState.Type.ENTER
-
-
 func get_order_for_target(
     target: Node3D,
     _target_cell: Vector2i,

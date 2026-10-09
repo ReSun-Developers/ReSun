@@ -33,6 +33,14 @@ static func fail(msg: String) -> void:
     _errors.append(msg)
 
 
+## The cursor an order targeter would show for `target`: the targeter's order
+## cursor, or DEFAULT when it produces no order. Replaces the removed
+## component-level `get_cursor_for_target()`.
+static func order_cursor(component: Node, target: Node3D) -> CursorState.Type:
+    var order: OrderResult = component.get_order_for_target(target, Vector2i.ZERO, Vector3.ZERO, {})
+    return order.cursor if order else CursorState.Type.DEFAULT
+
+
 static func reset() -> void:
     _passed = 0
     _failed = 0

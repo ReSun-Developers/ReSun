@@ -284,23 +284,15 @@ func validate(data: EntityData) -> PackedStringArray:
     return errors
 
 
-func get_cursor_for_target(target: Node3D, _target_cell: Vector2i) -> CursorState.Type:
-    if not target or weapons.is_empty():
-        return CursorState.Type.DEFAULT
-    var stats := target.get_node_or_null("StatsComponent") as StatsComponent
-    if stats and stats.player_id >= 0:
-        if PlayerManager.is_enemy(stats.player_id, PlayerManager.get_local_player_id()):
-            return CursorState.Type.ATTACK
-    return CursorState.Type.DEFAULT
-
-
 func get_order_for_target(
     target: Node3D,
     _target_cell: Vector2i,
     target_pos: Vector3,
     modifiers: Dictionary,
 ) -> OrderResult:
-    if weapons.is_empty():
+    if weapons.is_empty() or modifiers.get(OrderResult.MOD_FORCE_MOVE, false):
+        # No weapons cannot act; ALT force-move yields to MovementController so
+        # the click repositions the unit instead of engaging.
         return null
     var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
     # Force-fire bypasses both the "is there a target at all" test and the

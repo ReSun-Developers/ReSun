@@ -218,6 +218,7 @@ are 45°-rotated rectangles, i.e. diamonds.
 |------|---------|-------|
 | order targeter | Component interface: each component declares which click targets it handles. | [order-system](openspec/specs/order-system/spec.md) · [entity-components](openspec/specs/entity-components/spec.md) |
 | `OrderResult` | Funnel output data class mapping an input to per-entity orders. | [order-system](openspec/specs/order-system/spec.md) |
+| `OrderResolution` | Single result of order intake: the cursor plus the `orders` to execute, decided together so they cannot drift. `OrderSystem.resolve()` produces it; `get_cursor()`/`get_orders()` project it. | [order-system](openspec/specs/order-system/spec.md) · scripts/orders/OrderResolution.gd |
 | docker | Unit docking at a building (e.g. harvester unloading); host rejects foreign dockers. | [dock-host-client](openspec/specs/dock-host-client/spec.md) |
 | deploy / undeploy | Vehicle↔building transformation via `deploys_into` / `undeploys_into`. | [deploy-undeploy](openspec/specs/deploy-undeploy/spec.md) |
 | stop command | Halts all selected units' activity; overridden by any later order. | [stop-command](openspec/specs/stop-command/spec.md) |
