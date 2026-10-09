@@ -599,8 +599,7 @@ func _on_cameo_gui_input(event: InputEvent, data: EntityData) -> void:
 
     # Place-anywhere cheat: the cameo arms a free-placement session directly,
     # bypassing production routing entirely.
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    if debug_menu and debug_menu.place_anywhere:
+    if Cheats.place_anywhere:
         EntityPlacer.start_placing(data)
         get_viewport().set_input_as_handled()
         return

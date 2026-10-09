@@ -162,18 +162,6 @@ func test_direct_deploy_is_a_named_start_path() -> void:
     _drop_infantry_data()
 
 
-class FakeDebugMenu:
-    extends Node
-
-    # All four cheat flags: group consumers read any of them via duck typing
-    # (BuildingManager.can_place reads place_anywhere, EconomyManager.deduct
-    # reads no_cost), so a partial fake breaks them.
-    var no_prereqs: bool = false
-    var no_cost: bool = false
-    var no_build_time: bool = false
-    var place_anywhere: bool = false
-
-
 const BUILDING_ID: String = "test_placing_bldg"
 
 
@@ -190,11 +178,6 @@ func _make_building_data() -> EntityData:
 
 func _drop_building_data() -> void:
     EntityFactory._entity_cache.erase(BUILDING_ID)
-
-
-func _drop_fake_menu(fake_menu: Node) -> void:
-    fake_menu.remove_from_group("debug_menu")
-    fake_menu.free()
 
 
 # World↔cell mapping comes from the terrain fixture grid (oracle: CellUtil +
@@ -237,11 +220,8 @@ func test_building_commit_routes_through_building_manager() -> void:
         return
     placer.exit_placing_mode()
     var data := _make_building_data()
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.place_anywhere = true
-    fake_menu.no_cost = true
-    _ts.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.place_anywhere = true
+    Cheats.no_cost = true
     var scene_root := _mount_camera_scene(Vector3(2.0, 20.0, 2.0), Vector3(2.0, 0.0, 2.0))
     placer.start_placing(data)
     var registry_before: int = (bm.get_all_buildings() as Array).size()
@@ -266,7 +246,6 @@ func test_building_commit_routes_through_building_manager() -> void:
         placer.exit_placing_mode()
         _unmount_camera_scene(scene_root)
         _drop_building_data()
-        _drop_fake_menu(fake_menu)
         return
     var ground := CellUtil.cell_to_world(origin + Vector2i(1, 1), gc)
     placer._commit_building(data, ground)
@@ -286,7 +265,6 @@ func test_building_commit_routes_through_building_manager() -> void:
         (bm as Node)._buildings.pop_back()
     _unmount_camera_scene(scene_root)
     _drop_building_data()
-    _drop_fake_menu(fake_menu)
 
 
 func test_place_anywhere_commit_charges() -> void:
@@ -301,11 +279,8 @@ func test_place_anywhere_commit_charges() -> void:
         return
     placer.exit_placing_mode()
     var data := _make_building_data()
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.place_anywhere = true
-    fake_menu.no_cost = false
-    _ts.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.place_anywhere = true
+    Cheats.no_cost = false
     var scene_root := _mount_camera_scene(Vector3(2.0, 20.0, 2.0), Vector3(2.0, 0.0, 2.0))
     var pid: int = pmgr.get_local_player_id()
     em.add(pid, data.cost, "test")
@@ -331,7 +306,6 @@ func test_place_anywhere_commit_charges() -> void:
         placer.exit_placing_mode()
         _unmount_camera_scene(scene_root)
         _drop_building_data()
-        _drop_fake_menu(fake_menu)
         return
     var ground := CellUtil.cell_to_world(origin + Vector2i(1, 1), gc)
     placer._commit_building(data, ground)
@@ -349,7 +323,6 @@ func test_place_anywhere_commit_charges() -> void:
         (bm as Node)._buildings.pop_back()
     _unmount_camera_scene(scene_root)
     _drop_building_data()
-    _drop_fake_menu(fake_menu)
 
 
 func test_cheat_commit_of_paid_building_does_not_double_charge() -> void:
@@ -365,11 +338,8 @@ func test_cheat_commit_of_paid_building_does_not_double_charge() -> void:
         return
     placer.exit_placing_mode()
     var data := _make_building_data()
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.place_anywhere = true
-    fake_menu.no_cost = false
-    _ts.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.place_anywhere = true
+    Cheats.no_cost = false
     var scene_root := _mount_camera_scene(Vector3(2.0, 20.0, 2.0), Vector3(2.0, 0.0, 2.0))
     var pid: int = pmgr.get_local_player_id()
     pm._add_ready_to_place(pid, data, data.cost)
@@ -395,7 +365,6 @@ func test_cheat_commit_of_paid_building_does_not_double_charge() -> void:
         pm.cancel_ready_building(pid, BUILDING_ID)
         _unmount_camera_scene(scene_root)
         _drop_building_data()
-        _drop_fake_menu(fake_menu)
         return
     placer.start_placing(data)
     var registry_before: int = (bm.get_all_buildings() as Array).size()
@@ -418,7 +387,6 @@ func test_cheat_commit_of_paid_building_does_not_double_charge() -> void:
         (bm as Node)._buildings.pop_back()
     _unmount_camera_scene(scene_root)
     _drop_building_data()
-    _drop_fake_menu(fake_menu)
 
 
 func test_building_commit_refusal_keeps_session_armed() -> void:
@@ -429,11 +397,8 @@ func test_building_commit_refusal_keeps_session_armed() -> void:
         return
     placer.exit_placing_mode()
     var data := _make_building_data()
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.place_anywhere = true
-    fake_menu.no_cost = true
-    _ts.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.place_anywhere = true
+    Cheats.no_cost = true
     var scene_root := _mount_camera_scene(Vector3(2.0, 20.0, 2.0), Vector3(2.0, 0.0, 2.0))
     placer.start_placing(data)
     # Far outside the terrain grid: even the place-anywhere bounds check refuses.
@@ -446,4 +411,3 @@ func test_building_commit_refusal_keeps_session_armed() -> void:
     placer.exit_placing_mode()
     _unmount_camera_scene(scene_root)
     _drop_building_data()
-    _drop_fake_menu(fake_menu)

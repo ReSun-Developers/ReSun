@@ -48,6 +48,7 @@ Entry form: term → one-line meaning → anchor.
 | custom preset | The preset-picker state shown when the graphics field values match no named preset, i.e. the player has overridden at least one field. | [graphics-settings](openspec/changes/options-settings-framework/specs/graphics-settings/spec.md) |
 | game settings | Per-game gameplay/interface toggles stored per game id (e.g. `move_target_line`), independent of the shared graphics settings. | [game-settings](openspec/changes/options-settings-framework/specs/game-settings/spec.md) |
 | input support matrix | A game's declaration of which input actions it supports (`GameDefinition.supported_inputs`); unsupported actions are unbound and their table cells disabled. | [input-settings](openspec/changes/options-settings-framework/specs/input-settings/spec.md) · scripts/data/GameDefinition.gd |
+| Cheats | Shared node-free debug cheat-flag state (`class_name Cheats`, static fields): `no_prereqs`, `no_build_time`, `no_cost`, `place_anywhere`. False by default; written only by the debug panel, read directly by gameplay/UI with no panel present. | [cheats](openspec/specs/cheats/spec.md) · scripts/core/Cheats.gd |
 
 ## Placement & Building
 
