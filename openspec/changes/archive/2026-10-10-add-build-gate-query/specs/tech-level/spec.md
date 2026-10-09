@@ -1,22 +1,6 @@
-# tech-level Specification
+# Spec Delta
 
-## Purpose
-TBD - created by archiving change add-veterancy-and-tech-gating. Update Purpose after archive.
-## Requirements
-### Requirement: Current tech level per player
-`PlayerData` SHALL carry `tech_level: int`, resolved when a match or mission begins. Resolution SHALL prefer a mission override, then the active `GlobalRules` default. Every playing house in a non-campaign session SHALL receive the same session value. The value SHALL be readable per player for the build-list gate.
-
-#### Scenario: Mission override wins
-- **WHEN** a mission sets `tech_level = 3` and the rules default is 10
-- **THEN** the player's `PlayerData.tech_level` is 3
-
-#### Scenario: Rules default applied
-- **WHEN** a session starts with no mission override
-- **THEN** every player's `PlayerData.tech_level` equals the `GlobalRules` default
-
-#### Scenario: Read per player
-- **WHEN** two players have different assigned levels
-- **THEN** each player's `tech_level` reports its own value
+## MODIFIED Requirements
 
 ### Requirement: Tech level gates the build list
 
@@ -47,15 +31,3 @@ TBD - created by archiving change add-veterancy-and-tech-gating. Update Purpose 
 #### Scenario: Debug override bypasses the gate
 - **WHEN** the debug `no_prereqs` override is active
 - **THEN** `can_build` returns true regardless of tech level or menu flag
-
-### Requirement: Tech level data sources
-`Mission` SHALL expose `tech_level: int = -1`, using `-1` as the inherit sentinel consistent with `starting_credits`. `GlobalRules` SHALL expose a default tech level (default `10`, matching the OpenTS non-campaign default) used when no mission override is present.
-
-#### Scenario: Inherit sentinel defers to rules
-- **WHEN** `Mission.tech_level` is `-1`
-- **THEN** the resolved level comes from `GlobalRules`
-
-#### Scenario: Explicit mission level is used
-- **WHEN** `Mission.tech_level` is `4`
-- **THEN** the resolved level is 4
-
