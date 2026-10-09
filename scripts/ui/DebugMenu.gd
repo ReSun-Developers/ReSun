@@ -1,12 +1,6 @@
 extends Control
 class_name DebugMenu
 
-## Cheat flags — read by other systems via group reference
-var no_prereqs: bool = false
-var no_build_time: bool = false
-var no_cost: bool = false
-var place_anywhere: bool = false
-
 ## Panel state
 var _is_open: bool = false
 var _sidebar: Control = null
@@ -96,8 +90,8 @@ func _ready() -> void:
 
     # Connect cheat checkboxes
     cb_no_prereqs.toggled.connect(_on_no_prereqs_toggled)
-    cb_no_build_time.toggled.connect(func(v: bool) -> void: no_build_time = v)
-    cb_no_cost.toggled.connect(func(v: bool) -> void: no_cost = v)
+    cb_no_build_time.toggled.connect(func(v: bool) -> void: Cheats.no_build_time = v)
+    cb_no_cost.toggled.connect(func(v: bool) -> void: Cheats.no_cost = v)
     cb_place_anywhere.toggled.connect(_on_place_anywhere_toggled)
     cb_force_radar.toggled.connect(_on_force_radar_toggled)
 
@@ -403,7 +397,7 @@ func _connect_lighting_slider(
 
 
 func _on_no_prereqs_toggled(v: bool) -> void:
-    no_prereqs = v
+    Cheats.no_prereqs = v
     if _sidebar and _sidebar.has_method("_refresh_grid"):
         _sidebar._refresh_grid()
 
@@ -416,10 +410,7 @@ func _on_force_radar_toggled(v: bool) -> void:
 
 
 func reset_state() -> void:
-    no_prereqs = false
-    no_build_time = false
-    no_cost = false
-    place_anywhere = false
+    Cheats.reset()
     cb_no_prereqs.button_pressed = false
     cb_no_build_time.button_pressed = false
     cb_no_cost.button_pressed = false
@@ -446,7 +437,7 @@ func reset_state() -> void:
 
 
 func _on_place_anywhere_toggled(v: bool) -> void:
-    place_anywhere = v
+    Cheats.place_anywhere = v
     if v:
         EntityPlacer.enter_placing_mode()
     else:

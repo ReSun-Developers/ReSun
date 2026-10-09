@@ -79,8 +79,7 @@ func _ready() -> void:
 func _on_production_stalled(queue_key: String) -> void:
     if int(queue_key.get_slice(":", 0)) != PlayerManager.get_local_player_id():
         return
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    if debug_menu and debug_menu.no_cost:
+    if Cheats.no_cost:
         return
     if get_audio_data(EVA_INSUFFICIENT_FUNDS) == null:
         return

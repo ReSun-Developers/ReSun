@@ -94,8 +94,7 @@ func exit_build_mode() -> void:
 ## The place-anywhere cheat bypasses placement validity only (bounds-only in
 ## can_place); the charge still applies unless the item was production-paid.
 func _place_anywhere_active() -> bool:
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    return debug_menu != null and debug_menu.place_anywhere
+    return Cheats.place_anywhere
 
 
 func can_place(building_type: EntityData, origin_cell: Vector2i) -> bool:

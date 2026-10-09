@@ -3,12 +3,6 @@ extends Node
 # Tech-level gate tests — PrerequisiteSystem.can_build against PlayerData.tech_level.
 
 
-class FakeDebugMenu:
-    extends Node
-
-    var no_prereqs: bool = false
-
-
 class FakePlayerConfig:
     extends RefCounted
 
@@ -96,13 +90,8 @@ func test_rules_fallback_resolves():
 
 func test_debug_override_bypasses_gate():
     _reset_players(1)
-    var fake := FakeDebugMenu.new()
-    fake.no_prereqs = true
-    Engine.get_main_loop().root.add_child(fake)
-    fake.add_to_group("debug_menu")
+    Cheats.no_prereqs = true
     TestHelper.assert_true(_ps().can_build(0, _data(9)), "debug no_prereqs bypasses the tech gate")
-    fake.remove_from_group("debug_menu")
-    fake.free()
 
 
 func test_begin_mission_writes_mission_level():

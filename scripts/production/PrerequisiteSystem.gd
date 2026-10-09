@@ -45,8 +45,7 @@ func unregister_building(player_id: int, entity_data: EntityData) -> void:
 
 func can_build(player_id: int, entity_data: EntityData) -> bool:
     # Cheat mode: bypass all checks
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    if debug_menu and debug_menu.no_prereqs:
+    if Cheats.no_prereqs:
         return true
 
     var result := true

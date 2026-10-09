@@ -45,6 +45,9 @@ static func reset() -> void:
     _passed = 0
     _failed = 0
     _errors.clear()
+    # Process-global cheat statics must not leak between tests (the runner runs
+    # all suites in one process and calls this before every test method).
+    Cheats.reset()
 
 
 ## Snapshots GameContext selection state for tests that switch games.

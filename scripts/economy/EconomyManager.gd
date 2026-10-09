@@ -37,8 +37,7 @@ func deduct(player_id: int, cost: int, reason: String, category: String = "") ->
     if category.is_empty():
         category = get_default_category()
     # Cheat mode: no cost
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    if debug_menu and debug_menu.no_cost:
+    if Cheats.no_cost:
         return true
 
     var data := _get_player_data(player_id)

@@ -13,17 +13,6 @@ const FACTORY_ID: String = "test_click_barracks"
 var _em: Node = null
 
 
-class FakeDebugMenu:
-    extends Node
-
-    # All four cheat flags: group consumers read any of them via duck typing
-    # (EconomyManager.deduct reads no_cost), so a partial fake breaks them.
-    var no_prereqs: bool = false
-    var no_cost: bool = false
-    var no_build_time: bool = false
-    var place_anywhere: bool = false
-
-
 func _pm() -> Node:
     var pm: Node = _em.get_node_or_null("/root/ProductionManager") if _em else null
     if not pm:
@@ -96,13 +85,6 @@ func _count(pm: Node) -> int:
 func _paused(pm: Node) -> bool:
     var items: Array = pm.get_queue_items(_queue_key(pm))
     return false if items.is_empty() else (items[0] as ProductionQueue).is_paused
-
-
-func _drop_fake_menu(fake_menu: Node) -> void:
-    # free() immediately (queue_free never lands without a real frame) and
-    # leave the group before freeing so later suites see no debug_menu.
-    fake_menu.remove_from_group("debug_menu")
-    fake_menu.free()
 
 
 func _make_real_factory_node() -> FactoryComponent:
@@ -348,10 +330,7 @@ func test_direct_deploy_fallback_without_factory() -> void:
     if not pm:
         return
     _cleanup_queue(pm)
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.no_prereqs = true
-    _em.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.no_prereqs = true
     var placer := _em.get_node_or_null("/root/EntityPlacer")
     placer.exit_placing_mode()
     # No factory registered → the cameo click arms a direct-deploy session.
@@ -362,7 +341,6 @@ func test_direct_deploy_fallback_without_factory() -> void:
         "direct deploy does not start production"
     )
     placer.exit_placing_mode()
-    _drop_fake_menu(fake_menu)
     _cleanup_queue(pm)
 
 
@@ -373,16 +351,12 @@ func test_factory_present_starts_production_instead() -> void:
     _cleanup_queue(pm)
     _ensure_factory()
     var factory_node := _make_real_factory_node()
-    var fake_menu := FakeDebugMenu.new()
-    fake_menu.no_prereqs = true
-    _em.get_tree().root.add_child(fake_menu)
-    fake_menu.add_to_group("debug_menu")
+    Cheats.no_prereqs = true
     var placer := _em.get_node_or_null("/root/EntityPlacer")
     placer.exit_placing_mode()
     pm.handle_cameo_click(PID, _make_infantry(), MOUSE_BUTTON_LEFT, false)
     TestHelper.assert_true(not placer.is_placing(), "factory present → no direct deploy")
     TestHelper.assert_eq(_count(pm), 1, "factory present → production starts")
-    _drop_fake_menu(fake_menu)
     factory_node.free()
     _cleanup_queue(pm)
     _cleanup_factory()

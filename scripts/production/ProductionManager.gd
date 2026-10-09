@@ -187,8 +187,7 @@ func get_queue_key(player_id: int, factory_type: String) -> String:
 
 
 func _process(delta: float) -> void:
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    var no_build_time: bool = debug_menu != null and debug_menu.no_build_time
+    var no_build_time: bool = Cheats.no_build_time
     for key in _queues.keys():
         # Signal listeners can remove a factory and tear down this queue while
         # another queue is being processed from the keys snapshot.
@@ -679,8 +678,7 @@ func handle_cameo_left_click(player_id: int, data: EntityData, shift: bool) -> v
 
     # No prerequisites cheat + no factory → direct deploy fallback (named
     # session entry on EntityPlacer; spec'd under debug-menu, not a UI concern).
-    var debug_menu := get_tree().get_first_node_in_group("debug_menu")
-    if debug_menu and debug_menu.no_prereqs and not data.buildable_queue.is_empty():
+    if Cheats.no_prereqs and not data.buildable_queue.is_empty():
         if not has_factory_for(data.buildable_queue):
             EntityPlacer.start_direct_deploy(data)
             return

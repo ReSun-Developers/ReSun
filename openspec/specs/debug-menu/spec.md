@@ -1,4 +1,9 @@
-## ADDED Requirements
+## Purpose
+
+Provide an in-game debug overlay panel for development builds: debug overlays, lighting
+controls, cheat toggles, and live entity inspection, all absent from release builds.
+
+## Requirements
 
 ### Requirement: Debug panel toggle
 The system SHALL provide a debug panel toggled with the backtick key (KEY_QUOTELEFT). The panel SHALL appear as a dropdown from the top-left corner of the viewport.
@@ -113,7 +118,8 @@ The system SHALL provide sliders in the Lighting section of the debug panel for 
 - **THEN** sliders show values derived from the scene's actual light pivot rotation and environment settings
 
 ### Requirement: Cheat toggles
-The system SHALL provide 5 independent cheat toggles in the Cheats section: No prerequisites, No build time, No cost, Place anywhere, Force radar online. Each toggle SHALL persist its state across panel open/close cycles. Cheat flags are stored on the DebugMenu node and read by other systems via group reference. The Force radar online toggle SHALL set `RadarSystem.force_online` (the single source of truth for the override), and resetting it SHALL restore normal radar availability.
+
+The system SHALL provide 5 independent cheat toggles in the Cheats section: No prerequisites, No build time, No cost, Place anywhere, Force radar online. Each toggle SHALL persist its state across panel open/close cycles. Cheat flags are stored on the shared `Cheats` value, which the debug panel writes and other systems read directly by identifier — the panel holds no cheat state and consumers do not read it via group reference. The Force radar online toggle SHALL set `RadarSystem.force_online` (the single source of truth for the override), and resetting it SHALL restore normal radar availability.
 
 #### Scenario: No prerequisites toggle
 - **WHEN** the "No prerequisites" toggle is enabled
