@@ -1,3 +1,9 @@
+## Purpose
+
+Manage the player's structure build-mode lifecycle: enter and exit build mode, render and
+footprint-snap a placement preview, validate a footprint against map bounds, occupancy, terrain
+height, and adjacency, and place, sell, and repair buildings.
+
 ## Requirements
 
 ### Requirement: BuildingManager manages build mode lifecycle
@@ -17,6 +23,7 @@
 - **THEN** `is_build_mode` becomes false, preview is freed, `build_mode_changed(false)` emits
 
 ### Requirement: Placement validation
+
 `can_place(building_type, origin_cell)` SHALL check every foundation cell for map bounds and play-area bounds, SHALL delegate cell availability and terrain height variation to `FoundationComponent.footprint_buildable(building_type.foundation, origin_cell)`, and SHALL enforce the adjacency requirement `building_type.adjacent`. The adjacency requirement SHALL measure the number of empty cells between the new footprint and existing friendly footprints (Chebyshev, nearest cells): a building with `adjacent = N > 0` SHALL be placeable when and only when some friendly occupied cell lies within Chebyshev distance `N + 1` of some footprint cell (gap `<= N`). This diverges from Tiberian Sun, where `Adjacent = 0` means must-touch and negative values disable placement — in this remake `adjacent <= 0` SHALL mean no requirement (relied on by construction yard placement). Under debug place-anywhere mode only the map-bounds check applies.
 
 #### Scenario: Valid placement
@@ -54,7 +61,7 @@
 - **THEN** the adjacency check always passes
 
 #### Scenario: Debug place-anywhere mode
-- **WHEN** `debug_menu.place_anywhere == true`
+- **WHEN** `Cheats.place_anywhere == true`
 - **THEN** only bounds check is enforced, cell/height/adjacency checks are skipped
 
 ### Requirement: Building placement

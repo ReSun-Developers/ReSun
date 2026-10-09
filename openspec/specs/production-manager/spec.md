@@ -6,7 +6,9 @@ Manage per-player production queues keyed by `player_id:factory_type`: start, st
 cancel items; fund builds gradually as they progress (stalling and resuming on insufficient
 funds); scale speed with factory count and power; route completed buildings to placement and
 completed units to a free factory.
+
 ## Requirements
+
 ### Requirement: ProductionManager manages per-player production queues
 `ProductionManager` SHALL be an autoload singleton managing production queues keyed by `player_id:factory_type`. It emits `production_started`, `production_progress`, `production_completed`, `production_cancelled`, and `production_paused` signals.
 
@@ -152,10 +154,11 @@ When a unit completes, ProductionManager SHALL find a free factory via `_find_fa
 - **THEN** full cost is refunded
 
 ### Requirement: Debug instant-build mode
-When `debug_menu.no_build_time == true`, production SHALL complete instantly in one frame.
+
+When `Cheats.no_build_time == true`, production SHALL complete instantly in one frame.
 
 #### Scenario: Debug mode active
-- **WHEN** `no_build_time` is true
+- **WHEN** `Cheats.no_build_time` is true
 - **THEN** production completes immediately, no timer advancement
 
 ### Requirement: Zero build time handling
