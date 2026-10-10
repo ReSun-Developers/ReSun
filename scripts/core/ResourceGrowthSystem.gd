@@ -188,6 +188,13 @@ func _process_resource(res_node: Node3D, rules: GlobalRules) -> void:
 
 func _try_spread_from(res_node: Node3D, res_comp: ResourceComponent, rules: GlobalRules) -> void:
     var res_cell := CellUtil.world_to_cell(res_node.global_position)
+    # Source-side freeze: a unit standing on this tiberium cell stops it seeding
+    # neighbours (matches TS Can_Tiberium_Spread rejecting an occupied source).
+    # Growth/thickening of the covered patch still runs via _process_resource.
+    if SpatialHash.instance == null:
+        return
+    if not SpatialHash.instance.get_cell_occupancy(res_cell).units.is_empty():
+        return
     var neighbor: Vector2i = SPREAD_NEIGHBORS[randi() % SPREAD_NEIGHBORS.size()]
     var target_cell := res_cell + neighbor
 
@@ -295,14 +302,7 @@ func _is_in_bounds(cell: Vector2i) -> bool:
 func _is_cell_blocked_for_resource(cell: Vector2i) -> bool:
     if not SpatialHash.instance:
         return false
-    var key: int = CellUtil.cell_key(cell)
-    if SpatialHash.instance._building_cells.has(key):
-        return true
-    if SpatialHash.instance._bib_cells.has(key):
-        return true
-    if SpatialHash.instance.is_cell_blocked(cell):
-        return true
-    return false
+    return not SpatialHash.instance.is_cell_free_for_resource(cell)
 
 
 func _get_trees() -> Array:

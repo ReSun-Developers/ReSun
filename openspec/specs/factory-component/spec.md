@@ -1,4 +1,12 @@
-## ADDED Requirements
+# factory-component Specification
+
+## Purpose
+
+FactoryComponent declares which production queues a building serves, registers it in the live
+factory group, orchestrates the exit of produced units (via an ExitComponent when present),
+and exposes primary-building selection.
+
+## Requirements
 
 ### Requirement: FactoryComponent declares queue types
 FactoryComponent SHALL have `produces: Array[String]` field listing queue types this building handles (e.g., `["infantry"]`, `["vehicle"]`). FactoryComponent SHALL read this from EntityData.factory at configure time.
@@ -24,11 +32,20 @@ FactoryComponent SHALL add itself to the `"factories"` group on `_ready()`. Prod
 - **THEN** ProductionManager SHALL filter by `produces` containing "infantry" and matching `player_id`
 
 ### Requirement: FactoryComponent orchestrates exit process
-FactoryComponent SHALL have `on_unit_produced(entity_data: EntityData, player_id: int)` method. When called, FactoryComponent SHALL:
+
+FactoryComponent SHALL have `on_unit_produced(entity_data: EntityData, player_id: int)` method.
+When called, FactoryComponent SHALL:
+
 1. Create the unit via EntityFactory
 2. If ExitComponent exists, call `ExitComponent.on_unit_produced(unit)`
-3. Else, find nearest free cell and spawn unit there
+3. Else, find the nearest cell the shared unit-exit occupancy intent
+   (`SpatialHash.is_cell_free_for_unit_exit`) reports free, and spawn the unit there
 4. Emit `exit_in_progress` signal
+
+The nearest-free-cell search SHALL NOT use a private occupancy predicate; it SHALL share the
+exit intent with `ExitComponent.on_unit_produced` and `ProductionManager`'s fallback spawner, so
+all spawn paths agree on what blocks a cell. The existing fallback when no cell is free (the
+building's own cell) is unchanged by this change.
 
 #### Scenario: Unit exits via ExitComponent
 - **WHEN** FactoryComponent.on_unit_produced() is called on building with ExitComponent
@@ -39,10 +56,14 @@ FactoryComponent SHALL have `on_unit_produced(entity_data: EntityData, player_id
 #### Scenario: Unit exits without ExitComponent
 - **WHEN** FactoryComponent.on_unit_produced() is called on building without ExitComponent
 - **THEN** FactoryComponent SHALL create the unit
-- **THEN** FactoryComponent SHALL find nearest free cell
-- **THEN** FactoryComponent SHALL spawn unit at that cell
+- **THEN** FactoryComponent SHALL find the nearest cell the shared exit intent reports free
+- **THEN** FactoryComponent SHALL spawn the unit at that cell
 - **THEN** FactoryComponent SHALL emit `exit_in_progress`
 - **THEN** a warning SHALL be logged
+
+#### Scenario: No private availability predicate
+- **WHEN** the FactoryComponent exit path is inspected
+- **THEN** it does not define its own cell-availability predicate and delegates to the shared exit intent
 
 ### Requirement: FactoryComponent dead code removed
 FactoryComponent SHALL NOT have `free_unit` field or `can_produce()` method. These are dead code.

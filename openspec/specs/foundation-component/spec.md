@@ -1,7 +1,9 @@
 ## Purpose
 
 `FoundationComponent` is the canonical source for a building footprint's geometry: its cell set, buildability predicates, and world-space queries derived from the foundation rectangle.
+
 ## Requirements
+
 ### Requirement: Canonical footprint cell queries
 `FoundationComponent` SHALL be the canonical source for a building footprint's cell set. It SHALL expose `get_foundation_cells(origin_cell)` returning every cell in the `foundation` rectangle, and `get_occupied_cells(origin_cell)` returning the foundation cells minus `bib_cells` (the cells that are registered as solid building cells in `SpatialHash`).
 
@@ -18,15 +20,30 @@
 - **THEN** `get_occupied_cells(origin)` equals `get_foundation_cells(origin)`
 
 ### Requirement: Single-cell buildability predicate
-`FoundationComponent` SHALL expose a static `is_cell_buildable(cell)` returning `false` when the cell is occupied by a building cell, a bib cell, a blocked cell, an entity with a `MovementController`, or a resource, or when its terrain type is neither `""` nor `"clear"`; otherwise `true`. This predicate SHALL be the single implementation reused by placement validation and preview rendering.
+
+`FoundationComponent` SHALL expose a static `is_cell_buildable(cell)` that delegates to the
+shared build-intent occupancy query (`SpatialHash.is_cell_free_for_build`), returning its
+result. The predicate SHALL NOT enumerate spatial registries or inline the `""`/`"clear"`
+terrain comparison itself; those live in the composite query and the `TerrainSystem`
+buildability predicate respectively. This predicate remains the single implementation reused by
+placement validation and preview rendering, so `BuildingManager.can_place` and
+`_resolve_highlight_cell_state` agree by construction.
 
 #### Scenario: Free clear cell is buildable
-- **WHEN** a cell has no buildings, entities, or resources and its terrain type is `"clear"`
+- **WHEN** a cell has no buildings, entities, resources, or reservation and its terrain type is `"clear"`
 - **THEN** `is_cell_buildable(cell)` returns `true`
 
 #### Scenario: Building cell is not buildable
 - **WHEN** a cell is registered as a building cell in `SpatialHash`
 - **THEN** `is_cell_buildable(cell)` returns `false`
+
+#### Scenario: Predicate delegates to the shared query
+- **WHEN** `is_cell_buildable(cell)` is called
+- **THEN** it returns `SpatialHash.is_cell_free_for_build(cell)`
+
+#### Scenario: No private registry access
+- **WHEN** the buildability path is inspected
+- **THEN** it reads no `SpatialHash` private field directly
 
 ### Requirement: Per-footprint buildability
 `FoundationComponent` SHALL expose `is_buildable(origin_cell)` returning `true` only when every foundation cell is `is_cell_buildable` AND the terrain height variation across the footprint (max cell height − min cell height) is at most `TerrainSystem.HEIGHT_STEP`.
@@ -85,4 +102,3 @@ A building's footprint cells SHALL be registered in `SpatialHash` exactly once w
 #### Scenario: Non-building with a StatsComponent does not register
 - **WHEN** an entity whose `StatsComponent.entity_type` is not BUILDING enters the world with a FoundationComponent
 - **THEN** it registers no building cells
-

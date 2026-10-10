@@ -9,11 +9,7 @@ func _setup_2x2_terrain(origin: Vector2i) -> void:
     TerrainSystem.init_grid(64, 64)
     for dx in 2:
         for dz in 2:
-            var cell := origin + Vector2i(dx, dz)
-            var key := "%d,%d" % [cell.x, cell.y]
-            TerrainSystem._cells[key] = {
-                "height": 0, "type": "clear", "variant": 1, "direction": "", "rotation": 0.0
-            }
+            TerrainSystem.set_cell_type(origin + Vector2i(dx, dz), "clear")
 
 
 func _make_2x2_building() -> EntityData:
@@ -127,7 +123,15 @@ func test_can_place_rejects_moving_unit() -> void:
     var unit_key: int = CellUtil.cell_key(unit_cell)
     var fake_mc := MovementController.new()
     fake_mc._state = MovementController.State.MOVING
-    SpatialHash.instance._grid[unit_key] = [{"node": Node3D.new(), "mc": fake_mc}]
+    SpatialHash.instance._grid[unit_key] = [
+        {
+            "node": Node3D.new(),
+            "mc": fake_mc,
+            "state": MovementController.State.MOVING,
+            "shares": false,
+            "level": 0,
+        }
+    ]
     var result: bool = _bm.can_place(building_type, origin)
     SpatialHash.instance._grid.erase(unit_key)
     SpatialHash.instance._building_cells.clear()

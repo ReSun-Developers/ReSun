@@ -113,10 +113,20 @@ func test_configure_from_entity_data():
 
 
 func test_is_cell_available_clear():
+    _reset_nudge_fixture()
     var exit := _make_exit()
     add_child(exit)
-    # A cell far from any building should be available
-    var cell := Vector2i(999, 999)
+    # An in-bounds clear cell with no occupant should be available. (An
+    # out-of-bounds cell is NOT buildable terrain and must be refused.)
+    var cell := Vector2i(30, 30)
+    TerrainSystem.set_cell_type(cell, "clear")
+    (
+        TestHelper
+        . assert_true(
+            TerrainSystem.get_cell_type(cell) == "clear",
+            "test_is_cell_available_clear fixture: seeded type not observed",
+        )
+    )
     (
         TestHelper
         . assert_true(
@@ -131,9 +141,14 @@ func test_is_cell_available_clear():
 
 
 func test_find_free_near_returns_input_when_available():
+    _reset_nudge_fixture()
     var exit := _make_exit()
     add_child(exit)
-    var cell := Vector2i(999, 999)
+    var cell := Vector2i(30, 30)
+    TerrainSystem.set_cell_type(cell, "clear")
+    TestHelper.assert_true(
+        TerrainSystem.get_cell_type(cell) == "clear", "fixture: seeded clear type not observed"
+    )
     var result: Vector2i = exit._find_free_near(cell)
     (
         TestHelper
@@ -198,7 +213,15 @@ func _make_nudge_blocker(player: int, cell: Vector2i) -> Array:
     add_child(entity)
     entity.global_position = CellUtil.cell_to_world(cell)
     var key := CellUtil.cell_key(cell)
-    SpatialHash.instance._grid[key] = [{"node": entity, "mc": mc}]
+    SpatialHash.instance._grid[key] = [
+        {
+            "node": entity,
+            "mc": mc,
+            "state": MovementController.State.IDLE,
+            "shares": false,
+            "level": 0,
+        }
+    ]
     SpatialHash.instance._blocked_cells[key] = true
     return [entity, mc]
 
@@ -253,3 +276,84 @@ func test_nudge_blocker_leaves_enemy_unit():
     var untouched: bool = mc._state == MovementController.State.IDLE and mc._waypoints.is_empty()
     _cleanup_nudge(building, blocker)
     TestHelper.assert_true(untouched, "exit nudge must not move an enemy blocker")
+
+
+# --- Shared exit-intent tests ---
+# The exit predicate now routes through SpatialHash.is_cell_free_for_unit_exit:
+# a moving unit and an idle non-sharer refuse a cell; idle sharers below capacity
+# and tiberium cells are accepted; non-buildable terrain is refused.
+
+
+func _make_exit_occupant(cell: Vector2i, shares: bool, state: int) -> Node3D:
+    var entity := Node3D.new()
+    entity.name = "ExitOccupant"
+    entity.global_position = CellUtil.cell_to_world(cell)
+    entity.add_to_group("entities")
+    var stats := StatsComponent.new()
+    stats.name = "StatsComponent"
+    stats.entity_type = EntityData.EntityType.INFANTRY
+    stats.player_id = 0
+    entity.add_child(stats)
+    var mc := MovementController.new()
+    mc.name = "MovementController"
+    entity.add_child(mc)
+    mc._shares_cell = shares
+    mc._state = state
+    SpatialHash.instance.add_child(entity)
+    return entity
+
+
+func test_exit_cell_refuses_moving_unit():
+    _reset_nudge_fixture()
+    var exit := _make_exit()
+    add_child(exit)
+    var cell := Vector2i(30, 30)
+    var unit := _make_exit_occupant(cell, false, MovementController.State.MOVING)
+    SpatialHash.instance.rebuild()
+    var refused: bool = not exit._is_cell_available(cell)
+    SpatialHash.instance.remove_child(unit)
+    unit.free()
+    remove_child(exit)
+    TestHelper.assert_true(refused, "exit cell refused with a moving unit")
+
+
+func test_exit_cell_allows_idle_sharer_below_capacity():
+    _reset_nudge_fixture()
+    var exit := _make_exit()
+    add_child(exit)
+    var cell := Vector2i(30, 30)
+    var unit := _make_exit_occupant(cell, true, MovementController.State.IDLE)
+    SpatialHash.instance.rebuild()
+    var allowed: bool = exit._is_cell_available(cell)
+    SpatialHash.instance.remove_child(unit)
+    unit.free()
+    remove_child(exit)
+    TestHelper.assert_true(allowed, "exit cell allows an idle sharer below capacity")
+
+
+func test_exit_cell_allows_tiberium():
+    _reset_nudge_fixture()
+    var exit := _make_exit()
+    add_child(exit)
+    var cell := Vector2i(30, 30)
+    SpatialHash.instance.register_resource_cell(cell)
+    var registered: bool = SpatialHash.instance.get_cell_occupancy(cell).resource
+    var allowed: bool = exit._is_cell_available(cell)
+    SpatialHash.instance.unregister_resource_cell(cell)
+    remove_child(exit)
+    TestHelper.assert_true(registered, "tiberium fixture: resource fact not observed")
+    TestHelper.assert_true(allowed, "exit cell allows a tiberium cell (driveable)")
+
+
+func test_exit_cell_allows_walkable_slope():
+    _reset_nudge_fixture()
+    var exit := _make_exit()
+    add_child(exit)
+    var cell := Vector2i(30, 30)
+    TerrainSystem.set_cell_type(cell, "slope")
+    var observed: bool = TerrainSystem.get_cell_type(cell) == "slope"
+    var allowed: bool = exit._is_cell_available(cell)
+    TerrainSystem.set_cell_type(cell, "clear")
+    remove_child(exit)
+    TestHelper.assert_true(observed, "slope fixture: seeded type not observed")
+    TestHelper.assert_true(allowed, "exit cell allows walkable slope terrain")
