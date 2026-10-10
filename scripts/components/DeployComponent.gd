@@ -193,49 +193,10 @@ func _are_foundation_cells_free(
     return true
 
 
-## Check if a single cell is free for deploy (reuses BuildingManager logic pattern).
-## source_entity is excluded from the entity check — the deploying unit occupies its own cell.
+## Check if a single cell is free for deploy, via the shared build-intent query.
+## source_entity is excluded — the deploying unit occupies its own cell.
 func _is_cell_free_for_deploy(cell: Vector2i, source_entity: Node3D = null) -> bool:
-    var key := CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_building_cells().has(key):
-        return false
-    # Check blocked cells — exclude source entity if it's the only blocker
-    if SpatialHash.instance.is_cell_blocked(cell):
-        if not _is_only_source_blocking(cell, source_entity):
-            return false
-    # Check entity presence — exclude source entity
-    if SpatialHash.instance.is_any_entity_on_cell(cell):
-        if not _is_only_source_on_cell(cell, source_entity):
-            return false
-    if SpatialHash.instance.is_bib_cell(cell) or SpatialHash.instance.has_resource_cell(cell):
-        return false
-    var cell_type := TerrainSystem.get_cell_type(cell)
-    return cell_type == "" or cell_type == "clear"
-
-
-## Check if the only entity blocking a cell is the source entity.
-func _is_only_source_blocking(cell: Vector2i, source_entity: Node3D) -> bool:
-    if not source_entity:
-        return false
-    var entries := SpatialHash.instance.get_entries(cell)
-    for entry in entries:
-        var node: Node3D = entry.get("node")
-        var mc: MovementController = entry.get("mc")
-        if is_instance_valid(node) and node != source_entity and mc:
-            return false
-    return true
-
-
-## Check if the only entity on a cell is the source entity.
-func _is_only_source_on_cell(cell: Vector2i, source_entity: Node3D) -> bool:
-    if not source_entity:
-        return false
-    var entries := SpatialHash.instance.get_entries(cell)
-    for entry in entries:
-        var node: Node3D = entry.get("node")
-        if is_instance_valid(node) and node != source_entity:
-            return false
-    return true
+    return SpatialHash.instance.is_cell_free_for_build(cell, 0, source_entity)
 
 
 ## Scatter allied units blocking foundation cells. Returns true if all cells cleared.
@@ -254,19 +215,11 @@ func scatter_blockers(source_entity: Node3D, target_data: EntityData) -> bool:
     return scattered_any
 
 
-## Check if a cell can be cleared by scattering (no terrain/building/resource blockers).
+## Check if a cell can be cleared by scattering: no permanent terrain/building/
+## resource blocker. Blocking units are scatterable and do not disqualify the cell.
 func _can_scatter_cell(cell: Vector2i) -> bool:
-    var key := CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_building_cells().has(key):
-        return false
-    if SpatialHash.instance.is_bib_cell(cell) or SpatialHash.instance.has_resource_cell(cell):
-        return false
-    var cell_type := TerrainSystem.get_cell_type(cell)
-    if cell_type != "" and cell_type != "clear":
-        return false
-    # Cell blocked by terrain/building/resource — scatter won't help.
-    # Only attempt scatter if the only blockers are scatterable entities.
-    return true
+    var occ := SpatialHash.instance.get_cell_occupancy(cell)
+    return occ.terrain_buildable and not occ.building and not occ.bib and not occ.resource
 
 
 ## Scatter units from a single cell. Returns true if scatter was attempted.

@@ -21,11 +21,7 @@ func test_centered_building_foundation_can_be_placed_and_registered() -> void:
     var origin := Vector2i(64, 64)
     for dx in 2:
         for dz in 2:
-            var cell := origin + Vector2i(dx, dz)
-            var key := "%d,%d" % [cell.x, cell.y]
-            TerrainSystem._cells[key] = {
-                "height": 0, "type": "clear", "variant": 1, "direction": "", "rotation": 0.0
-            }
+            TerrainSystem.set_cell_type(origin + Vector2i(dx, dz), "clear")
     var can_place: bool = _bm.can_place(building_type, origin)
     if can_place:
         var cells: Array[Vector2i] = []

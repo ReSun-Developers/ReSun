@@ -383,15 +383,7 @@ func _find_exit_cell(factory: Node3D) -> Variant:
         cell,
         5,
         func(candidate: Vector2i) -> bool:
-            var key := CellUtil.cell_key(candidate)
-            if SpatialHash.instance.get_building_cells().has(key):
-                return true
-            if SpatialHash.instance.is_cell_blocked(candidate):
-                return true
-            var cell_type := TerrainSystem.get_cell_type(candidate)
-            if cell_type != "" and cell_type != "clear":
-                return true
-            return false
+            return not SpatialHash.instance.is_cell_free_for_unit_exit(candidate)
     )
     if found == cell:
         return null

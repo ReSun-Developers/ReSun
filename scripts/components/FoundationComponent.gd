@@ -129,18 +129,8 @@ static func occupied_cells(
 static func is_cell_buildable(cell: Vector2i) -> bool:
     var sh := SpatialHash.instance
     if sh:
-        if sh.get_building_cells().has(CellUtil.cell_key(cell)):
-            return false
-        if sh.is_cell_blocked(cell):
-            return false
-        if sh.is_any_entity_on_cell(cell):
-            return false
-        if sh.is_bib_cell(cell):
-            return false
-        if sh.has_resource_cell(cell):
-            return false
-    var cell_type := TerrainSystem.get_cell_type(cell)
-    return cell_type == "" or cell_type == "clear"
+        return sh.is_cell_free_for_build(cell)
+    return TerrainSystem.is_cell_buildable(cell)
 
 
 static func footprint_buildable(footprint: Vector2i, origin_cell: Vector2i) -> bool:

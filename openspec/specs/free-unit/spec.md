@@ -1,4 +1,11 @@
-## ADDED Requirements
+# free-unit Specification
+
+## Purpose
+
+FreeUnitComponent spawns a configured free unit (such as a refinery's harvester) in a free cell
+adjacent to its parent when the parent enters the world.
+
+## Requirements
 
 ### Requirement: FreeUnitComponent spawns free unit on placement
 FreeUnitComponent SHALL spawn a free unit entity adjacent to its parent when the parent enters the scene tree, then remove itself.
@@ -16,11 +23,22 @@ FreeUnitComponent SHALL spawn a free unit entity adjacent to its parent when the
 - **THEN** FreeUnitComponent does NOT spawn a free unit
 
 ### Requirement: Adjacent free cell search
-FreeUnitComponent SHALL find an unoccupied cell adjacent to the parent's foundation.
+
+FreeUnitComponent SHALL find an unoccupied cell adjacent to the parent's foundation by
+evaluating each candidate through the shared build-intent occupancy query
+(`SpatialHash.get_cell_occupancy` plus `is_cell_free_for_build`), extended so a candidate is
+also refused when it is reserved for an inbound unit. Candidate cells SHALL be refused when they
+hold a building, bib, or resource cell, any unit body (moving or idle), a reservation, or
+non-buildable terrain. FreeUnitComponent SHALL NOT read `SpatialHash` private registries
+directly.
 
 #### Scenario: Spiral search
 - **WHEN** searching for an adjacent cell
-- **THEN** cells are checked in expanding radius (1–5 cells) from the building origin, skipping building cells, blocked cells, and reserved cells
+- **THEN** cells are checked in expanding radius (1–5 cells) from the building origin, skipping building cells, bib cells, resource cells, unit-occupied cells, blocked cells, and reserved cells
+
+#### Scenario: Bib and resource cells are skipped
+- **WHEN** a candidate cell holds a bib or a resource entity
+- **THEN** it is not selected as the free-unit spawn cell
 
 #### Scenario: Terrain type filter
 - **WHEN** checking a candidate cell
