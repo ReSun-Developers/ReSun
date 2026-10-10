@@ -521,55 +521,39 @@ func _complete_deploy(source_entity: Node3D) -> void:
     call_deferred("_do_deploy", source_entity, origin, target_data, snap)
 
 
-## Execute the deferred deploy: create target, apply snapshot, free source.
+## Execute the deferred deploy: create target through the seam, apply snapshot,
+## free source. Registration (occupancy, registry, prerequisites, death wiring)
+## is owned by the spawn seam and BuildingManager's registrar.
 func _do_deploy(
     source: Node3D, origin: Vector2i, target_data: EntityData, snap: Dictionary
 ) -> void:
     if not is_instance_valid(source):
         _state = DeployState.IDLE
         return
-    var target_entity := EntityFactory.create_entity(deploys_into)
-    if not target_entity:
-        push_error("[Deploy] Failed to create target entity: %s" % deploys_into)
+    var buildings_parent := _get_buildings_parent()
+    if buildings_parent == null:
+        push_error("[Deploy] no scene root for deployed structure: %s" % deploys_into)
         source.queue_free()
         _state = DeployState.IDLE
         return
     var world_pos := _cell_origin_to_world(origin, target_data.foundation)
     world_pos.y = _get_max_height(origin, target_data.foundation)
-    target_entity.position = world_pos
-    # Assign the player before add_child so MovementController._ready() caches the
-    # real id (the crush filter's query side). Setting it post-add leaves
+    # Player is assigned inside spawn before add_child so MovementController._ready()
+    # caches the real id (the crush filter's query side). Setting it post-add leaves
     # _player_id = -1 forever, so an undeployed crusher treats every unit as an
     # enemy and crushes friendlies.
-    var deploy_stats := target_entity.get_node_or_null("StatsComponent") as StatsComponent
-    if deploy_stats:
-        deploy_stats.player_id = snap["player_id"]
-    var buildings_parent := _get_buildings_parent()
-    if buildings_parent == null:
-        push_error("[Deploy] no scene root for deployed structure: %s" % deploys_into)
-        target_entity.free()
+    var target_entity := (
+        EntityFactory.spawn(
+            deploys_into,
+            {"world_pos": world_pos, "player_id": snap["player_id"], "parent": buildings_parent}
+        )
+        as Node3D
+    )
+    if not target_entity:
+        push_error("[Deploy] Failed to create target entity: %s" % deploys_into)
         source.queue_free()
         _state = DeployState.IDLE
         return
-    buildings_parent.add_child(target_entity)
-    var cells: Array[Vector2i] = []
-    for dx in target_data.foundation.x:
-        for dz in target_data.foundation.y:
-            cells.append(origin + Vector2i(dx, dz))
-    SpatialHash.instance.register_building_cells(cells)
-    (
-        BuildingManager
-        . _buildings
-        . append(
-            {
-                "node": target_entity,
-                "type": target_data,
-                "origin": origin,
-                "cells": cells,
-            }
-        )
-    )
-    PrerequisiteSystem.register_building(snap["player_id"], target_data)
     _apply_snapshot(target_entity, snap)
     source.queue_free()
     _state = DeployState.IDLE
@@ -612,18 +596,15 @@ func _complete_undeploy(source_entity: Node3D) -> void:
         return
     var snap := _snapshot_entity(source_entity)
     var source_position := source_entity.global_position
-    var source_stats := source_entity.get_node_or_null("StatsComponent") as StatsComponent
-    var source_data_id: String = source_stats.id if source_stats else ""
     _deselect_entity(source_entity)
-    _unregister_building_cells(source_entity)
-    if not source_data_id.is_empty():
-        var source_data := EntityFactory.get_entity_data(source_data_id)
-        if source_data:
-            PrerequisiteSystem.unregister_building(snap["player_id"], source_data)
+    # Remove the building from the registry and its owner's prerequisites before
+    # it transforms away; occupancy is unregistered by FoundationComponent on exit.
+    BuildingManager.unregister_building_entity(source_entity)
     call_deferred("_do_undeploy", source_entity, source_position, target_data, snap)
 
 
-## Execute the deferred undeploy: create target, apply snapshot, free source.
+## Execute the deferred undeploy: create target through the seam, apply
+## snapshot, free source.
 func _do_undeploy(
     source: Node3D,
     source_position: Vector3,
@@ -633,31 +614,31 @@ func _do_undeploy(
     if not is_instance_valid(source):
         _state = DeployState.IDLE
         return
-    var target_entity := EntityFactory.create_entity(undeploys_into)
-    if not target_entity:
-        push_error("[Deploy] Failed to create target entity: %s" % undeploys_into)
+    var parent := _get_buildings_parent()
+    if parent == null:
+        push_error("[Deploy] no scene root for undeployed entity: %s" % undeploys_into)
         source.queue_free()
         _state = DeployState.IDLE
         return
     var target_cell := CellUtil.world_to_cell(source_position) + deploy_cell
     var world_pos := CellUtil.cell_to_world(target_cell)
     world_pos.y = TerrainSystem.get_height_at_world_smooth(world_pos)
-    target_entity.position = world_pos
-    # Assign the player before add_child so MovementController._ready() caches the
-    # real id (the crush filter's query side). Setting it post-add leaves
+    # Player is assigned inside spawn before add_child so MovementController._ready()
+    # caches the real id (the crush filter's query side). Setting it post-add leaves
     # _player_id = -1 forever, so an undeployed crusher treats every unit as an
     # enemy and crushes friendlies.
-    var deploy_stats := target_entity.get_node_or_null("StatsComponent") as StatsComponent
-    if deploy_stats:
-        deploy_stats.player_id = snap["player_id"]
-    var parent := _get_buildings_parent()
-    if parent == null:
-        push_error("[Deploy] no scene root for undeployed entity: %s" % undeploys_into)
-        target_entity.free()
+    var target_entity := (
+        EntityFactory.spawn(
+            undeploys_into,
+            {"world_pos": world_pos, "player_id": snap["player_id"], "parent": parent}
+        )
+        as Node3D
+    )
+    if not target_entity:
+        push_error("[Deploy] Failed to create target entity: %s" % undeploys_into)
         source.queue_free()
         _state = DeployState.IDLE
         return
-    parent.add_child(target_entity)
     _apply_snapshot(target_entity, snap)
     # Issue pending move command to the new entity after creation.
     if _has_pending_move:
@@ -732,17 +713,6 @@ func _remove_source_from_systems(_source_entity: Node3D) -> void:
     # If source is a vehicle, just remove from spatial hash
     # Vehicle cells are managed by spatial hash rebuild, no explicit unregister needed
     pass
-
-
-## Unregister building cells from spatial hash.
-func _unregister_building_cells(building_entity: Node3D) -> void:
-    var idx := BuildingManager._find_building_index(building_entity)
-    if idx >= 0:
-        var entry: Dictionary = BuildingManager._buildings[idx]
-        var cells: Array = entry.get("cells", []) as Array
-        if not cells.is_empty():
-            SpatialHash.instance.unregister_building_cells(cells)
-        BuildingManager._buildings.remove_at(idx)
 
 
 ## --- Utility ----------------------------------------------------------------

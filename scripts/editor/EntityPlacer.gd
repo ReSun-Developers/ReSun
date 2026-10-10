@@ -82,13 +82,15 @@ func _update_preview() -> void:
     if _selected_entity_id == _preview_entity_id and is_instance_valid(_preview_entity):
         return
     _remove_preview()
-    var entity := EntityFactory.create_entity(_selected_entity_id)
+    # Editor ghosts are detached: rendered but never registered in the live world.
+    var entity := (
+        EntityFactory.spawn(_selected_entity_id, {"detached": true, "parent": editor}) as Node3D
+    )
     if not entity:
         return
     _preview_entity = entity
     _preview_entity_id = _selected_entity_id
     _set_preview_transparency(entity, 0.75)
-    editor.add_child(entity)
     _update_preview_position()
 
 
@@ -146,11 +148,18 @@ func _place_entity_on_cell(cell: Vector2i) -> void:
     if not entity_data:
         return
     var overrides: Dictionary = {}
-    var entity := EntityFactory.create_entity(_selected_entity_id, overrides)
+    var foundation: Vector2i = entity_data.foundation
+    var world_pos: Vector3 = editor._cell_origin_world_pos(cell, foundation)
+    # Editor stamps are detached: they must not register live occupancy.
+    var entity := (
+        EntityFactory.spawn(
+            _selected_entity_id,
+            {"overrides": overrides, "world_pos": world_pos, "detached": true, "parent": editor}
+        )
+        as Node3D
+    )
     if not entity:
         return
-    var foundation: Vector2i = entity_data.foundation
-    entity.position = editor._cell_origin_world_pos(cell, foundation)
     var data: Dictionary = {
         "id": _selected_entity_id,
         "player_id": _selected_player_id,
@@ -159,7 +168,6 @@ func _place_entity_on_cell(cell: Vector2i) -> void:
         data["house_id"] = _selected_house_id
     var entry: Dictionary = {"node": entity, "data": data}
     editor._painted_entities[key] = entry
-    editor.add_child(entity)
     var select_comp := EditorSelectComponent.new()
     select_comp.name = "EditorSelectComponent"
     entity.add_child(select_comp)
@@ -175,10 +183,14 @@ func _place_tree_on_cell(cell: Vector2i) -> void:
         if is_instance_valid(existing):
             existing.queue_free()
         editor._painted_entities.erase(key)
-    var entity := EntityFactory.create_entity("TIBERIUM_TREE")
+    var entity := (
+        EntityFactory.spawn(
+            "TIBERIUM_TREE",
+            {"world_pos": editor._cell_world_pos(cell), "detached": true, "parent": editor}
+        )
+        as Node3D
+    )
     if not entity:
         return
-    entity.position = editor._cell_world_pos(cell)
     var data: Dictionary = {"id": "TIBERIUM_TREE"}
     editor._painted_entities[key] = {"node": entity, "data": data}
-    editor.add_child(entity)

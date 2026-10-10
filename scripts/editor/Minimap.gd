@@ -117,10 +117,11 @@ func _update_entity_dots() -> void:
     var mesh := ImmediateMesh.new()
     var half: float = CellUtil.CELL_SIZE * 0.25
     var added := false
-    for entity in get_tree().get_nodes_in_group("entities"):
+    for entry in _minimap_entities():
+        var entity: Node3D = entry.get("node")
         if not is_instance_valid(entity) or not entity is Node3D:
             continue
-        var color: Variant = _resolve_entity_color(entity)
+        var color: Variant = _resolve_entity_color(entity, entry.get("player_id", -1))
         if color == null:
             continue
         if not added:
@@ -132,15 +133,49 @@ func _update_entity_dots() -> void:
     _entity_dots_mesh.mesh = mesh
 
 
+## Editor entities for minimap dots. The MapEditor tracks its content in
+## `_painted_entities` (detached entities are not in the live `entities` group),
+## so read that set from the owning editor when present, else the live group.
+func _minimap_entities() -> Array:
+    var ancestor := get_parent()
+    while ancestor:
+        var painted: Variant = ancestor.get("_painted_entities")
+        if painted is Dictionary:
+            var out: Array = []
+            for key in painted:
+                var entry: Variant = painted[key]
+                if not entry is Dictionary:
+                    continue
+                var node: Variant = entry.get("node")
+                if not is_instance_valid(node):
+                    continue
+                var pid: int = -1
+                var data: Variant = entry.get("data")
+                if data is Dictionary:
+                    pid = int(data.get("player_id", -1))
+                out.append({"node": node, "player_id": pid})
+            return out
+        ancestor = ancestor.get_parent()
+    var live: Array = []
+    for entity in get_tree().get_nodes_in_group("entities"):
+        live.append({"node": entity, "player_id": -1})
+    return live
+
+
 ## (entity) → minimap Color or null, combining ArtData resolution with the
-## owner player's color lookup.
-func _resolve_entity_color(entity: Node) -> Variant:
+## owner player's color lookup. Prefers the owner id from the painted data,
+## falling back to the live StatsComponent.
+func _resolve_entity_color(entity: Node, player_id_hint: int = -1) -> Variant:
     var art_comp := entity.get_node_or_null("ArtComponent")
     var art: ArtData = (art_comp as ArtComponent).art_data if art_comp else null
     var owner_color: Variant = null
-    var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-    if stats and stats.player_id >= 0:
-        var player := PlayerManager.get_player_data(stats.player_id)
+    var pid := player_id_hint
+    if pid < 0:
+        var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
+        if stats:
+            pid = stats.player_id
+    if pid >= 0:
+        var player := PlayerManager.get_player_data(pid)
         if player:
             owner_color = player.color
     return ArtData.minimap_color(art, owner_color)

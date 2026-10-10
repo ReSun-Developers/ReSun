@@ -8,6 +8,15 @@ extends Node
 ## once per damaged cell victim.
 signal impact_played(damage_type: String, position: Vector3)
 
+## Emitted once per non-detached spawn, after the entity is inserted into the
+## world. Consumers use it to register buildings (registry, prerequisites, death
+## wiring) uniformly regardless of the placement source.
+signal spawned(entity: Node3D, data: EntityData, player_id: int)
+
+## Meta applied by `spawn(..., {detached: true})`. A detached entity renders in
+## the scene but is excluded from every world registry and group.
+const DETACHED_META: String = "detached"
+
 const ENTITY_SCENE: PackedScene = preload("res://scenes/entities/Entity.tscn")
 const STATS_COMPONENT_SCRIPT: GDScript = preload("res://scripts/components/StatsComponent.gd")
 const HEALTH_COMPONENT_SCENE: PackedScene = preload("res://scenes/components/HealthComponent.tscn")
@@ -236,6 +245,65 @@ func create_entity(entity_id: String, overrides: Dictionary = {}) -> Node3D:
     if data.resource_spawner:
         entity.add_to_group("resource_trees")
     return entity
+
+
+## Single insertion seam: assembles `entity_id` (reusing `create_entity`) and
+## brings it into the world. Owns position and player assignment before tree
+## entry, parenting, and the spawn event. Placement policy (cost, validation,
+## flattening, build-up, map rotation/height, health overrides) stays with the
+## caller.
+##
+## `placement` keys:
+##   world_pos : Vector3  — set before `add_child` so occupancy derives the cell
+##   player_id : int       — set before `add_child` so components cache it
+##   parent    : Node      — defaults to the match world's entity container
+##   detached  : bool      — render-only; excluded from registries and events
+##   overrides : Dictionary — passed to `create_entity`
+func spawn(entity_id: String, placement: Dictionary = {}) -> Node3D:
+    var overrides: Dictionary = placement.get("overrides", {})
+    var detached: bool = placement.get("detached", false)
+    var entity := create_entity(entity_id, overrides)
+    if not entity:
+        return null
+
+    if detached:
+        entity.set_meta(DETACHED_META, true)
+        for group in entity.get_groups():
+            entity.remove_from_group(group)
+
+    var player_id: int = placement.get("player_id", -1)
+    if not detached and player_id >= 0:
+        var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
+        if stats:
+            stats.player_id = player_id
+
+    entity.position = placement.get("world_pos", Vector3.ZERO)
+
+    var parent: Node = placement.get("parent", null)
+    if parent != null and not is_instance_valid(parent):
+        parent = null
+    if parent == null:
+        parent = World.spawn_container(World.Bucket.ENTITIES)
+    if parent == null:
+        push_error("EntityFactory.spawn: no scene root for %s" % entity_id)
+        entity.free()
+        return null
+    parent.add_child(entity)
+
+    if not detached:
+        spawned.emit(entity, _resolve_data(entity_id, overrides), player_id)
+    return entity
+
+
+## EntityData as the entity was actually built: the cached resource, or — when
+## overrides were applied — a duplicate with them set, mirroring `create_entity`.
+func _resolve_data(entity_id: String, overrides: Dictionary) -> EntityData:
+    var data := get_entity_data(entity_id)
+    if data and not overrides.is_empty():
+        data = data.duplicate() as EntityData
+        for key in overrides:
+            data.set(key, overrides[key])
+    return data
 
 
 func _add_components(entity: Node3D, data: EntityData) -> void:

@@ -107,7 +107,7 @@ func test_set_generator_replaces_previous_generator() -> void:
 
 ## Minimal sellable/repairable building: FoundationComponent + BUILDING stats +
 ## HealthComponent. Foundation size is irrelevant to the generator's gate.
-func _make_building(damaged: bool = false) -> Node3D:
+func _make_building(damaged: bool = false, owner_id: int = -1) -> Node3D:
     var building := Node3D.new()
     building.name = "Building"
     var foundation := FoundationComponent.new()
@@ -116,6 +116,7 @@ func _make_building(damaged: bool = false) -> Node3D:
     var stats := StatsComponent.new()
     stats.name = "StatsComponent"
     stats.entity_type = EntityData.EntityType.BUILDING
+    stats.player_id = PlayerManager.get_local_player_id() if owner_id < 0 else owner_id
     building.add_child(stats)
     var health := HealthComponent.new()
     health.name = "HealthComponent"
@@ -133,6 +134,13 @@ func test_sell_order_suppresses_voice_event() -> void:
         TestHelper.assert_eq(
             orders[0].get("voice_event"), "", "sell order suppresses the voice event"
         )
+    building.free()
+
+
+func test_enemy_building_not_sellable() -> void:
+    var building := _make_building(false, PlayerManager.get_local_player_id() + 1)
+    var orders := SellOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
+    TestHelper.assert_eq(orders.size(), 0, "enemy-owned building produces no sell order")
     building.free()
 
 

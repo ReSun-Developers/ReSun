@@ -33,9 +33,6 @@ func _ready() -> void:
         set_physics_process(false)
         return
     _parent = get_parent() as Node3D
-    if _parent and _parent.get_meta("_preview", false):
-        set_physics_process(false)
-        return
     var ancestor: Node = _parent
     while ancestor:
         if ancestor.has_meta("is_map_editor"):
@@ -48,6 +45,10 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
     if Engine.is_editor_hint():
+        return
+    # Detached entities (previews) never scan; checked per tick so a preview
+    # finalized into a real entity resumes without re-initialization.
+    if _parent and _parent.get_meta("detached", false):
         return
     if not _resolve_siblings():
         return

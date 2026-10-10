@@ -57,14 +57,19 @@ func _paint_resource_cell(cell: Vector2i, key: String) -> void:
         "strength": health_val,
         "resource_type_id": "tiberium_green",
     }
-    var entity := EntityFactory.create_entity("TIBERIUM_RIPARIUS", overrides)
+    var world_pos: Vector3 = editor._cell_world_pos(cell)
+    var entity := (
+        EntityFactory.spawn(
+            "TIBERIUM_RIPARIUS",
+            {"overrides": overrides, "world_pos": world_pos, "detached": true, "parent": editor}
+        )
+        as Node3D
+    )
     if not entity:
         return
-    entity.position = editor._cell_world_pos(cell)
     var data: Dictionary = overrides.duplicate()
     data["id"] = "TIBERIUM_RIPARIUS"
     editor._painted_entities[key] = {"node": entity, "data": data}
-    editor.add_child(entity)
 
 
 func _erase_resource_cell(_cell: Vector2i, key: String) -> void:
