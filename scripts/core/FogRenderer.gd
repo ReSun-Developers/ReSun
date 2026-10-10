@@ -159,7 +159,7 @@ func _sync_building(node: Node3D) -> void:
         return
     if not PlayerManager.is_enemy(PlayerManager.get_local_player_id(), stats.player_id):
         return
-    if node.has_meta("_preview"):
+    if node.has_meta("detached"):
         return
     var depot := GhostDepot.get_instance()
     var art := node.get_node_or_null("ArtComponent") as ArtComponent

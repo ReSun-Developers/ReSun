@@ -30,7 +30,10 @@ func _is_sellable_building(entity: Node3D) -> bool:
     if not entity.get_node_or_null("FoundationComponent"):
         return false
     var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-    if stats and stats.entity_type != EntityData.EntityType.BUILDING:
+    if not stats or stats.entity_type != EntityData.EntityType.BUILDING:
+        return false
+    # Only the acting (local) player may sell their own buildings.
+    if stats.player_id != PlayerManager.get_local_player_id():
         return false
     var health := entity.get_node_or_null("HealthComponent") as HealthComponent
     if health and health.current_health <= 0:

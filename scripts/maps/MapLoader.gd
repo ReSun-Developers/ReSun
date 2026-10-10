@@ -109,29 +109,23 @@ static func load_map_into(path: String, parent: Node) -> Array[Dictionary]:
         for key in OVERRIDE_KEYS:
             if entry_dict.has(key):
                 overrides[key] = entry_dict[key]
-        var entity := EntityFactory.create_entity(entity_id, overrides)
-        if not entity:
-            continue
 
         var entry_player_id: int = entry_dict.get("player_id", -1)
-        if entry_player_id >= 0:
-            var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-            if stats:
-                stats.player_id = entry_player_id
-        var house_id := resolve_house_id(entry_dict)
-        if not house_id.is_empty():
-            entity.set_meta("house_id", house_id)
+        var entity_data := EntityFactory.get_entity_data(entity_id)
         var cell_str: String = entry_dict.get("cell", "")
+        var has_cell := false
+        var cell := Vector2i.ZERO
+        var world_pos := Vector3.ZERO
         if not cell_str.is_empty():
             var parts := cell_str.split(",")
             if parts.size() == 2:
-                var cell := Vector2i(parts[0].to_int(), parts[1].to_int())
+                has_cell = true
+                cell = Vector2i(parts[0].to_int(), parts[1].to_int())
                 # The map editor stores a building's cell as its footprint origin
                 # and places the entity at the footprint center. Match that so
                 # dock/foundation cells (derived from the entity's world
                 # position) line up with where the building visually sits.
-                var entity_data := EntityFactory.get_entity_data(entity_id)
-                var world_pos: Vector3 = placement_position(cell, entity_data)
+                world_pos = placement_position(cell, entity_data)
                 if entity_data and entity_data.bridge_kind != EntityData.BridgeKind.NONE:
                     # Deck mesh sits at its walkable surface: the cell's lowest
                     # terrain corner plus the authored rise (matching
@@ -149,17 +143,44 @@ static func load_map_into(path: String, parent: Node) -> Array[Dictionary]:
                     if not cell_data.is_empty():
                         var h: int = cell_data.get("max_height", cell_data.get("height", 0))
                         world_pos.y = float(h) * TerrainSystem.HEIGHT_STEP
-                entity.position = world_pos
-                var rotation_y: float = entry_dict.get("rotation_y", 0.0)
-                if rotation_y != 0.0:
-                    if entity_data and entity_data.entity_type != EntityData.EntityType.BUILDING:
-                        _apply_rotation_with_slope(entity, rotation_y)
+
+        # Editor loads detach: entities render but register no live occupancy.
+        # Detected by the map editor's content store (`_painted_entities`), not
+        # the `is_map_editor` meta, which non-editor callers also set to skip
+        # camera framing.
+        var detached: bool = parent.get("_painted_entities") != null
+        var entity := (
+            (
+                EntityFactory
+                . spawn(
+                    entity_id,
+                    {
+                        "world_pos": world_pos,
+                        "player_id": entry_player_id,
+                        "overrides": overrides,
+                        "parent": parent,
+                        "detached": detached,
+                    }
+                )
+            )
+            as Node3D
+        )
+        if not entity:
+            continue
+
+        var house_id := resolve_house_id(entry_dict)
+        if not house_id.is_empty():
+            entity.set_meta("house_id", house_id)
+        if has_cell:
+            var rotation_y: float = entry_dict.get("rotation_y", 0.0)
+            if rotation_y != 0.0:
+                if entity_data and entity_data.entity_type != EntityData.EntityType.BUILDING:
+                    _apply_rotation_with_slope(entity, rotation_y)
         var current_health: int = entry_dict.get("current_health", 0)
         if current_health > 0:
             var hp := entity.get_node_or_null("HealthComponent") as HealthComponent
             if hp:
                 hp.current_health = current_health
-        parent.add_child(entity)
         result.append({"key": cell_str, "node": entity, "data": entry_dict})
 
     if not parent.has_meta("is_map_editor"):

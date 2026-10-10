@@ -14,7 +14,7 @@ func _ready() -> void:
     var entity := get_parent() as Node3D
     if not entity:
         return
-    if entity.has_meta("_preview") or entity.process_mode == Node.PROCESS_MODE_DISABLED:
+    if entity.has_meta("detached") or entity.process_mode == Node.PROCESS_MODE_DISABLED:
         return
     # Only buildings register building cells — vehicles/infantry should not.
     var stats := entity.get_node_or_null("StatsComponent") as StatsComponent

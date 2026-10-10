@@ -24,7 +24,8 @@ func configure(data: EntityData) -> void:
 
 func _ready() -> void:
     var root := get_parent() as Node3D
-    if root and not root.is_in_group("resources"):
+    var detached: bool = root != null and root.get_meta("detached", false)
+    if root and not detached and not root.is_in_group("resources"):
         root.add_to_group("resources")
     # Warhead damage hits the backing HealthComponent directly; mirror it back
     # into the authoritative bale amount so a damaged cell yields less tiberium.
@@ -35,7 +36,9 @@ func _ready() -> void:
     _update_visual.call_deferred()
     # Defer cell registration so the entity's global_position is settled
     # (important for spawned resources where position is set after add_child).
-    _register_cell.call_deferred()
+    # Detached entities (editor previews/stamps) never register occupancy.
+    if not detached:
+        _register_cell.call_deferred()
 
 
 ## Syncs bales from the post-damage health so warhead damage reduces the

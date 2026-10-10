@@ -29,7 +29,8 @@ func configure(data: EntityData) -> void:
 
 func _ready() -> void:
     var root := get_parent() as Node3D
-    if root:
+    # Detached entities (editor/preview) never join the bridge registry.
+    if root and not root.get_meta("detached", false):
         if root.has_meta("bridge_piece_id"):
             piece_id = String(root.get_meta("bridge_piece_id"))
         if not root.is_in_group("bridge"):
@@ -37,7 +38,13 @@ func _ready() -> void:
     # Destructibility split (#250): only LOW normal span pieces hook the revert.
     # LOW end pieces (slope ramps) and every high-bridge cell are indestructible.
     # RAIL is a HIGH variant, so a rail piece is never a destruction target.
-    if _health and _bridge_kind == EntityData.BridgeKind.LOW and not _is_end:
+    if (
+        root
+        and not root.get_meta("detached", false)
+        and _health
+        and _bridge_kind == EntityData.BridgeKind.LOW
+        and not _is_end
+    ):
         _health.health_zero.connect(_on_destroyed)
 
 

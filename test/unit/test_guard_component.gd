@@ -490,18 +490,14 @@ func test_preview_meta_disables_guard_scan():
     _set_teams(0, 1)
     var root: Node = Engine.get_main_loop().root
     var unit := _make_unit(0)
-    unit.set_meta("_preview", true)
+    unit.set_meta("detached", true)
     var enemy := _make_enemy(1)
     _place(root, unit, Vector3(0, 0, 0))
     _place(root, enemy, Vector3(4, 0, 0))
     _rebuild()
-    # _ready already ran without preview meta — re-run the gate path.
-    var guard := unit.get_node("GuardComponent") as GuardComponent
-    guard._ready()
-    # Gate is set_physics_process(false) — engine will not invoke _physics_process.
-    TestHelper.assert_true(
-        not guard.is_physics_processing(), "preview entity disables Guard physics"
-    )
+    _tick_guard(unit)
+    var combat := unit.get_node("CombatComponent") as CombatComponent
+    TestHelper.assert_true(combat.get_target() == null, "detached entity does not scan or acquire")
     _cleanup([unit, enemy])
 
 

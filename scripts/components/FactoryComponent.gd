@@ -32,6 +32,10 @@ const KNOWN_FACTORY_TYPES: PackedStringArray = [
 
 
 func _ready() -> void:
+    # Detached entities (editor/preview) are not live factories.
+    var parent := get_parent()
+    if parent and parent.get_meta("detached", false):
+        return
     # EntityPlacer/BuildingManager assign StatsComponent.player_id before the
     # entity enters the tree. Sync before announcing the factory so listeners
     # never observe a newly added factory with the sentinel owner -1.

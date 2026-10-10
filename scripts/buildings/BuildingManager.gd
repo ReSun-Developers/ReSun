@@ -22,11 +22,49 @@ var _grid_overlay: PlacementGridOverlay = null
 func _ready() -> void:
     _load_building_types()
     _create_preview()
-    building_placed.connect(_on_building_placed)
+    EntityFactory.spawned.connect(_on_entity_spawned)
 
 
-func _on_building_placed(_building: Node3D, entity_data: EntityData) -> void:
-    PrerequisiteSystem.register_building(PlayerManager.get_local_player_id(), entity_data)
+## Single registration path for every building that enters the world, regardless
+## of source (build mode, map load, deploy). Driven by the spawn seam so
+## map-loaded and deployed buildings register identically to runtime placements.
+func _on_entity_spawned(entity: Node3D, data: EntityData, player_id: int) -> void:
+    if data == null or data.entity_type != EntityData.EntityType.BUILDING:
+        return
+    _register_building_entity(entity, data, player_id)
+
+
+func _register_building_entity(entity: Node3D, data: EntityData, player_id: int) -> void:
+    var fc := entity.get_node_or_null("FoundationComponent") as FoundationComponent
+    var foundation: Vector2i = fc.foundation if fc else data.foundation
+    var bib: Array[Vector2i] = fc.bib_cells if fc else data.bib_cells
+    var origin := CellUtil.world_to_cell_origin(entity.global_position, foundation)
+    var cells := FoundationComponent.occupied_cells(foundation, bib, origin)
+    (
+        _buildings
+        . append(
+            {
+                "node": entity,
+                "type": data,
+                "origin": origin,
+                "cells": cells,
+                "player_id": player_id,
+            }
+        )
+    )
+    if player_id >= 0:
+        PrerequisiteSystem.register_building(player_id, data)
+    var health := entity.get_node_or_null("HealthComponent") as HealthComponent
+    if health:
+        var on_death := _on_building_destroyed.bind(entity)
+        if not health.health_zero.is_connected(on_death):
+            health.health_zero.connect(on_death)
+
+
+## Clears the per-match building registry. Called before a new match's map loads
+## so a previous match's buildings do not accumulate on top of the new set.
+func clear_registry() -> void:
+    _buildings.clear()
 
 
 func _load_building_types() -> void:
@@ -220,53 +258,25 @@ func place_building(building_type: EntityData, origin_cell: Vector2i) -> bool:
             push_warning("[BuildingManager] Insufficient funds for %s" % building_type.id)
             return false
 
-    var building: Node3D = EntityFactory.create_entity(building_type.id)
-    if not building:
-        push_error("[BuildingManager] Failed to create building entity")
-        return false
-
-    var stats := building.get_node_or_null("StatsComponent") as StatsComponent
-    if stats:
-        stats.player_id = pid
-
     var world_pos := _cell_origin_to_world(origin_cell, building_type.foundation)
     var max_height := _get_max_height(origin_cell, building_type.foundation)
     world_pos.y = max_height
 
-    building.position = world_pos
-    parent.add_child(building)
-
-    var cells := FoundationComponent.occupied_cells(
-        building_type.foundation, building_type.bib_cells, origin_cell
+    # Entry through the seam: position and player before insertion, registration
+    # (occupancy via FoundationComponent, registry/prereq/death via the spawn
+    # event) owned by the seam and the registrar.
+    var building := (
+        EntityFactory.spawn(
+            building_type.id, {"world_pos": world_pos, "player_id": pid, "parent": parent}
+        )
+        as Node3D
     )
-    SpatialHash.instance.register_building_cells(cells)
-
-    if not building_type.bib_cells.is_empty():
-        var fc := building.get_node_or_null("FoundationComponent") as FoundationComponent
-        if fc:
-            var bib := fc.get_bib_cells(origin_cell)
-            if not bib.is_empty():
-                SpatialHash.instance.register_bib_cells(bib)
+    if not building:
+        push_error("[BuildingManager] Failed to create building entity")
+        return false
 
     # Level the terrain under the footprint after placement
     TerrainSystem.flatten_footprint(origin_cell, building_type.foundation)
-
-    (
-        _buildings
-        . append(
-            {
-                "node": building,
-                "type": building_type,
-                "origin": origin_cell,
-                "cells": cells,
-            }
-        )
-    )
-
-    # Connect death handler — cleanup on health_zero.
-    var health := building.get_node_or_null("HealthComponent") as HealthComponent
-    if health:
-        health.health_zero.connect(_on_building_destroyed.bind(building))
 
     building_placed.emit(building, building_type)
 
@@ -416,11 +426,12 @@ func _create_building_preview() -> void:
     if _building_preview:
         _building_preview.queue_free()
         _building_preview = null
-    _building_preview = EntityFactory.create_entity(current_building_type.id)
+    _building_preview = (
+        EntityFactory.spawn(current_building_type.id, {"detached": true, "parent": _preview})
+        as Node3D
+    )
     if _building_preview:
-        _building_preview.set_meta("_preview", true)
         _set_node_transparency(_building_preview, 0.75)
-        _preview.add_child(_building_preview)
         # The model may load asynchronously; re-apply transparency once it arrives.
         var art := _building_preview.get_node_or_null("ArtComponent") as ArtComponent
         if art:
@@ -500,20 +511,22 @@ func sell_building(building_node: Node3D) -> bool:
     var entity_data: EntityData = entry.get("type") as EntityData
     if not entity_data:
         return false
-    var pid := PlayerManager.get_local_player_id()
-    # Refund a rules-configurable share of the cost
+    var owner_id := _building_owner(building_node, entry)
+    # Selling is only allowed by the acting (local) player against their own
+    # building. Refusing here keeps the rule true for any caller, not just the
+    # sell order generator.
+    if owner_id < 0 or owner_id != PlayerManager.get_local_player_id():
+        return false
+    # Refund a rules-configurable share of the cost to the building's owner.
     var rules := GlobalRules.get_current()
     var refund_pct: float = rules.refund_percent if rules else 0.5
     var refund: int = int(entity_data.cost * refund_pct)
     EconomyManager.add(
-        pid, refund, "sell:%s" % entity_data.id, EconomyManager.get_default_category(), true
+        owner_id, refund, "sell:%s" % entity_data.id, EconomyManager.get_default_category(), true
     )
-    # Unregister from prerequisite system
-    PrerequisiteSystem.unregister_building(pid, entity_data)
-    # Unregister cells
-    var cells: Array = entry.get("cells", []) as Array
-    if not cells.is_empty():
-        SpatialHash.instance.unregister_building_cells(cells)
+    # Unregister from prerequisite system for the owner.
+    PrerequisiteSystem.unregister_building(owner_id, entity_data)
+    # Occupancy cells are unregistered by FoundationComponent on world exit.
     # Remove from list
     _buildings.remove_at(idx)
     # Deselect before freeing so rally line clears
@@ -528,19 +541,28 @@ func sell_building(building_node: Node3D) -> bool:
     return true
 
 
+## Owning player for a building: the live StatsComponent when present, the
+## player id recorded at registration next, and the local player as a last
+## resort for legacy registry entries built without either.
+func _building_owner(building_node: Node3D, entry: Dictionary) -> int:
+    var stats := building_node.get_node_or_null("StatsComponent") as StatsComponent
+    if stats and stats.player_id >= 0:
+        return stats.player_id
+    if entry.has("player_id"):
+        return int(entry["player_id"])
+    return PlayerManager.get_local_player_id()
+
+
 func _on_building_destroyed(building_node: Node3D) -> void:
     var idx := _find_building_index(building_node)
     if idx < 0:
         return
     var entry: Dictionary = _buildings[idx]
     var entity_data: EntityData = entry.get("type") as EntityData
-    var pid := PlayerManager.get_local_player_id()
-    # Unregister from prerequisite system
-    PrerequisiteSystem.unregister_building(pid, entity_data)
-    # Unregister cells
-    var cells: Array = entry.get("cells", []) as Array
-    if not cells.is_empty():
-        SpatialHash.instance.unregister_building_cells(cells)
+    var owner_id := _building_owner(building_node, entry)
+    # Unregister from prerequisite system for the owner.
+    PrerequisiteSystem.unregister_building(owner_id, entity_data)
+    # Occupancy cells are unregistered by FoundationComponent on world exit.
     # Remove from list
     _buildings.remove_at(idx)
     # Deselect before freeing
@@ -551,6 +573,21 @@ func _on_building_destroyed(building_node: Node3D) -> void:
     building_destroyed.emit(building_node, entity_data)
     # Free the node
     building_node.queue_free()
+
+
+## Removes a building from the registry and its owner's prerequisites without
+## firing death cleanup. Used when a building is transformed away (undeploy).
+## Occupancy cells are unregistered by FoundationComponent on world exit.
+func unregister_building_entity(building_node: Node3D) -> void:
+    var idx := _find_building_index(building_node)
+    if idx < 0:
+        return
+    var entry: Dictionary = _buildings[idx]
+    var entity_data: EntityData = entry.get("type") as EntityData
+    var owner_id := _building_owner(building_node, entry)
+    if entity_data:
+        PrerequisiteSystem.unregister_building(owner_id, entity_data)
+    _buildings.remove_at(idx)
 
 
 func repair_building(building_node: Node3D) -> bool:

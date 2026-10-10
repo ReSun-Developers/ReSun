@@ -10,6 +10,7 @@ const MAIN_SCENE: PackedScene = preload("res://scenes/MainScene.tscn")
 const MISSION_ID: String = "gdi01"
 
 var _gc: Node = null
+var _bm: Node = null
 
 
 func _bounds() -> Node:
@@ -55,7 +56,18 @@ func test_second_mission_replaces_world_and_rebinds_camera() -> void:
         return
 
     _gc.start_mission(MISSION_ID)
+    var first_building_count: int = _bm._buildings.size() if _bm else 0
     _gc.start_mission(MISSION_ID)
+
+    TestHelper.assert_true(first_building_count > 0, "first match registered map buildings")
+    (
+        TestHelper
+        . assert_eq(
+            _bm._buildings.size() if _bm else -1,
+            first_building_count,
+            "building registry does not accumulate across a mission reload",
+        )
+    )
 
     TestHelper.assert_eq(
         gameplay.get_child_count(), 1, "exactly one World root after a second match"

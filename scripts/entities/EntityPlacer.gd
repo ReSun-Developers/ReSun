@@ -30,19 +30,18 @@ var _skip_input_frames: int = 0
 func place_entity(
     entity_data: EntityData, world_pos: Vector3, player_id: int, parent: Node3D = null
 ) -> Node3D:
-    var entity := EntityFactory.create_entity(entity_data.id)
-    if not entity:
-        return null
-    var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-    if stats:
-        stats.player_id = player_id
-    entity.position = world_pos
     var target: Node = parent if parent else World.spawn_container(World.Bucket.ENTITIES)
     if target == null:
         push_error("EntityPlacer: no scene root to place %s" % entity_data.id)
-        entity.free()
         return null
-    target.add_child(entity)
+    var entity := (
+        EntityFactory.spawn(
+            entity_data.id, {"world_pos": world_pos, "player_id": player_id, "parent": target}
+        )
+        as Node3D
+    )
+    if not entity:
+        return null
     var rules := GlobalRules.get_current()
     var lm: Locomotor = rules.get_locomotor(entity_data.locomotor) if rules else null
     if lm and lm.shares_cell:
@@ -61,22 +60,21 @@ func place_entity(
 
 func start_preview(entity_data: EntityData) -> void:
     cancel_preview()
-    var entity := EntityFactory.create_entity(entity_data.id)
+    var host: Node = World.spawn_container(World.Bucket.ENTITIES)
+    if host == null:
+        push_error("EntityPlacer: no scene root for preview of %s" % entity_data.id)
+        exit_placing_mode()
+        return
+    # Spawn detached: inserted for rendering, excluded from every registry and
+    # group, so the ghost never pollutes occupancy or joins selection.
+    var entity := EntityFactory.spawn(entity_data.id, {"detached": true, "parent": host}) as Node3D
     if not entity:
         return
-    # Make inert: remove from all groups, disable processing, disable collision
-    _remove_preview_groups(entity)
+    # Make inert: disable processing and collision.
     entity.process_mode = Node.PROCESS_MODE_DISABLED
     _store_and_disable_collision(entity)
     # Visual
     _set_node_transparency(entity, 0.33)
-    var host: Node = World.spawn_container(World.Bucket.ENTITIES)
-    if host == null:
-        push_error("EntityPlacer: no scene root for preview of %s" % entity_data.id)
-        entity.free()
-        exit_placing_mode()
-        return
-    host.add_child(entity)
     _preview = entity
     _preview_data = entity_data
 
@@ -89,11 +87,26 @@ func update_preview_position(world_pos: Vector3) -> void:
 func finalize_preview(player_id: int) -> Node3D:
     if not is_instance_valid(_preview) or not _preview_data:
         return null
-    # Restore: groups, processing, collision, transparency
+    # Restore: clear the detached marker, rejoin groups, processing, collision,
+    # transparency. Detached marker must go first so guard resumes its scan.
+    _preview.remove_meta(EntityFactory.DETACHED_META)
     _add_preview_groups(_preview, _preview_data)
     _preview.process_mode = Node.PROCESS_MODE_INHERIT
     _restore_collision(_preview)
     _clear_preview_materials(_preview)
+    # A detached unit was skipped by the unit-mesh renderer; request instancing now.
+    var art := _preview.get_node_or_null("ArtComponent") as ArtComponent
+    if art:
+        var model := art.get_model_root()
+        if model:
+            art._request_registration(model)
+    # Components that skipped world registration while detached reactivate now.
+    var resource := _preview.get_node_or_null("ResourceComponent") as ResourceComponent
+    if resource:
+        resource.call_deferred("_register_cell")
+    var free := _preview.get_node_or_null("FreeUnitComponent") as FreeUnitComponent
+    if free and is_instance_valid(free) and not free.free_unit_id.is_empty():
+        free.call_deferred("_spawn_free_unit")
     # Set player
     var stats := _preview.get_node_or_null("StatsComponent") as StatsComponent
     if stats:
@@ -284,11 +297,6 @@ func _get_camera_3d() -> Camera3D:
 
 
 # --- Group management ---
-
-
-func _remove_preview_groups(entity: Node3D) -> void:
-    for group in entity.get_groups():
-        entity.remove_from_group(group)
 
 
 func _add_preview_groups(entity: Node3D, data: EntityData) -> void:

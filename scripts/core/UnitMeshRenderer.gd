@@ -168,7 +168,7 @@ func _can_register(entity_root: Node3D) -> bool:
         return false
     var node: Node = entity_root
     while node:
-        if node.has_meta("_preview") or node.has_meta("is_map_editor"):
+        if node.has_meta("detached") or node.has_meta("is_map_editor"):
             return false
         node = node.get_parent()
     return true
@@ -297,7 +297,7 @@ func _physics_process(_delta: float) -> void:
         var preview := (
             in_map_editor
             or entity_node.process_mode == Node.PROCESS_MODE_DISABLED
-            or entity_node.has_meta("_preview")
+            or entity_node.has_meta("detached")
         )
         if preview:
             _set_model_visible(model_root, true)

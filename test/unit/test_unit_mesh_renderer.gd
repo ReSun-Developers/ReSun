@@ -90,8 +90,8 @@ func test_register_hides_model_and_allocates_slot():
 func test_register_rejects_preview_and_disabled_entities():
     _setup()
     var preview_entity := _make_unit(Vector3(5.0, 0.0, 5.0))
-    preview_entity.set_meta("_preview", true)
-    TestHelper.assert_true(not _register(preview_entity), "preview-meta entity rejected")
+    preview_entity.set_meta("detached", true)
+    TestHelper.assert_true(not _register(preview_entity), "detached entity rejected")
     var disabled_entity := _make_unit(Vector3(6.0, 0.0, 6.0))
     disabled_entity.process_mode = Node.PROCESS_MODE_DISABLED
     TestHelper.assert_true(not _register(disabled_entity), "PROCESS_MODE_DISABLED entity rejected")

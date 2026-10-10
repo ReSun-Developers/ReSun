@@ -35,6 +35,15 @@ func _on_game_changed(_def: GameDefinition) -> void:
         prerequisites_changed.emit(player_id)
 
 
+## Clears all owned-building counts for a fresh match, so a previous match's
+## map-authored buildings do not carry over. Emits for every affected player.
+func reset_for_match() -> void:
+    var affected: Array = _player_buildings.keys()
+    _player_buildings.clear()
+    for player_id: int in affected:
+        prerequisites_changed.emit(player_id)
+
+
 func register_building(player_id: int, entity_data: EntityData) -> void:
     if not _player_buildings.has(player_id):
         _player_buildings[player_id] = {}

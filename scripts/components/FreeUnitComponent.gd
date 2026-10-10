@@ -10,7 +10,7 @@ var _retrying: bool = false
 func _ready() -> void:
     if Engine.is_editor_hint():
         return
-    if get_parent().get_meta("_preview", false):
+    if get_parent().get_meta("detached", false):
         return
     var ancestor := get_parent()
     while ancestor:

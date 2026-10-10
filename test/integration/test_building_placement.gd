@@ -176,7 +176,7 @@ func test_preview_building_does_not_register_cells():
     var fc := FoundationComponent.new()
     fc.foundation = Vector2i(3, 3)
     entity.add_child(fc)
-    entity.set_meta("_preview", true)
+    entity.set_meta("detached", true)
     entity.position = Vector3(11.0, 0.0, 11.0)
     SpatialHash.instance.add_child(entity)
     var sh := SpatialHash.instance

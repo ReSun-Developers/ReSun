@@ -234,30 +234,28 @@ func _spawn_at_cell(cell: Vector2i, tree_comp: ResourceTreeComponent, bales: flo
     var bale_capacity: float = rt.bales_per_cell if rt and rt.bales_per_cell > 0.0 else 1.0
     var spawn_bales := randf_range(0.01, bales)
     var health := maxi(1, int(roundf(spawn_bales / bale_capacity * float(max_health))))
-    var entity := (
+    var container: Node = World.spawn_container(World.Bucket.ENTITIES)
+    if container == null:
+        push_warning("ResourceGrowthSystem: no scene root for resource at %s" % cell)
+        return
+    var world_pos := CellUtil.cell_to_world(cell)
+    (
         EntityFactory
-        . create_entity(
+        . spawn(
             tree_comp.spawned_entity_id,
             {
-                "strength": max_health,
-                "spawn_health": health,
-                "resource_type_id": tree_comp.resource_type_id,
-                "resource_regrowth_rate": tree_comp.regrowth_rate,
+                "world_pos": world_pos,
+                "overrides":
+                {
+                    "strength": max_health,
+                    "spawn_health": health,
+                    "resource_type_id": tree_comp.resource_type_id,
+                    "resource_regrowth_rate": tree_comp.regrowth_rate,
+                },
+                "parent": container,
             }
         )
     )
-    if not entity:
-        return
-
-    var world_pos := CellUtil.cell_to_world(cell)
-    # Set position before add_child so ResourceComponent._ready() sees the
-    # correct global_position when it registers the cell in SpatialHash.
-    entity.position = world_pos
-    var container: Node = World.spawn_container(World.Bucket.ENTITIES)
-    if container:
-        container.add_child(entity)
-    else:
-        push_warning("ResourceGrowthSystem: no scene root for resource at %s" % cell)
 
 
 func _grow_entry(entry: Dictionary) -> void:

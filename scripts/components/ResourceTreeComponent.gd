@@ -12,7 +12,7 @@ class_name ResourceTreeComponent extends Node
 
 func _ready() -> void:
     var root := get_parent() as Node3D
-    if root and not root.is_in_group("resource_trees"):
+    if root and not root.get_meta("detached", false) and not root.is_in_group("resource_trees"):
         root.add_to_group("resource_trees")
 
 

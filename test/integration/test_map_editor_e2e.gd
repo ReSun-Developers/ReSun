@@ -228,6 +228,11 @@ func test_loaded_buildings_visible_in_editor() -> void:
             )
         var painted_count: int = editor._painted_entities.size()
         _assert_true(painted_count >= 318, "all map entities registered in _painted_entities")
+        _assert_eq(
+            SpatialHash.instance._building_cells.size(),
+            0,
+            "editor load registers no live occupancy cells",
+        )
     _cleanup_map_editor(editor)
     _ts.clear()
     _ts.init_grid(50, 50)

@@ -44,35 +44,35 @@ func test_building_death_removes_entry_from_building_manager():
     TestHelper.assert_eq(idx_after, idx_before - 1, "building entry removed from _buildings")
 
 
-# --- Task 3.2: Building death unregisters cells from SpatialHash ---
+# --- Task 3.2: Building death removes its registry entry (occupancy owned by
+# FoundationComponent on world exit, not by the death handler) ---
 
 
-func test_building_death_unregisters_cells_from_spatial_hash():
+func test_building_death_unregisters_registry_entry():
     if _bm == null:
         TestHelper.fail("BuildingManager not injected")
         return
+    # Built with no StatsComponent to cover the null-owner path through the
+    # registrar.
     var building := _make_entity_with_health(100)
-    var cells: Array[Vector2i] = [Vector2i(200, 200)]
-    SpatialHash.instance.register_building_cells(cells)
-    (
-        _bm
-        . _buildings
-        . append(
-            {
-                "node": building,
-                "type": EntityData.new(),
-                "origin": Vector2i(200, 200),
-                "cells": cells,
-            }
-        )
-    )
-    var key := CellUtil.cell_key(Vector2i(200, 200))
-    var registered_before: bool = SpatialHash.instance._building_cells.has(key)
+    var data := EntityData.new()
+    data.id = "TEST_DEATH_BLDG"
+    _bm._register_building_entity(building, data, -1)
+    var registered := false
+    for entry in _bm._buildings:
+        if entry.get("node") == building:
+            registered = true
+            break
+    TestHelper.assert_true(registered, "building registered through the registrar")
     # Call handler directly
     _bm._on_building_destroyed(building)
-    var registered_after: bool = SpatialHash.instance._building_cells.has(key)
-    TestHelper.assert_true(registered_before, "cells registered before death")
-    TestHelper.assert_eq(registered_after, false, "cells unregistered after death")
+    var found := false
+    for entry in _bm._buildings:
+        if entry.get("node") == building:
+            found = true
+            break
+    TestHelper.assert_eq(found, false, "registry entry removed after death (null StatsComponent)")
+    building.free()
 
 
 # --- Task 3.3: Building death entry removed (PrerequisiteSystem test simplified) ---
@@ -160,6 +160,31 @@ func test_building_destroyed_signal_emitted():
     TestHelper.assert_eq(signal_data.size(), 1, "building_destroyed emitted once")
     if signal_data.size() > 0:
         TestHelper.assert_eq(signal_data[0], building, "signal passes correct building node")
+
+
+func test_building_death_unregisters_prerequisite():
+    if _bm == null:
+        TestHelper.fail("BuildingManager not injected")
+        return
+    var saved: Dictionary = PrerequisiteSystem._player_buildings.duplicate(true)
+    var building := _make_entity_with_health(100)
+    var data := EntityData.new()
+    data.id = "TEST_DEATH_PREREQ"
+    _bm._register_building_entity(building, data, 2)
+    TestHelper.assert_eq(
+        PrerequisiteSystem.get_build_count(2, "TEST_DEATH_PREREQ"), 1, "registered for owner 2"
+    )
+    _bm._on_building_destroyed(building)
+    (
+        TestHelper
+        . assert_eq(
+            PrerequisiteSystem.get_build_count(2, "TEST_DEATH_PREREQ"),
+            0,
+            "prerequisite released on death",
+        )
+    )
+    PrerequisiteSystem._player_buildings = saved
+    building.free()
 
 
 # --- Task 3.6: Entity health_zero triggers queue_free via signal ---

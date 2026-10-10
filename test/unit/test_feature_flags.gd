@@ -206,6 +206,41 @@ func test_sell_refund_defaults_to_half():
     TestHelper.restore_game_context(_gc, snap)
 
 
+func test_sell_building_refuses_foreign_owner():
+    var pid := PlayerManager.get_local_player_id()
+    var node := Node3D.new()
+    var stats := StatsComponent.new()
+    stats.name = "StatsComponent"
+    stats.entity_type = EntityData.EntityType.BUILDING
+    stats.player_id = pid + 1
+    node.add_child(stats)
+    var data := EntityData.new()
+    data.id = "TEST_SELL_ENEMY"
+    data.cost = 100
+    var saved: Array = _bm._buildings.duplicate()
+    _bm._buildings.clear()
+    (
+        _bm
+        . _buildings
+        . append(
+            {
+                "node": node,
+                "type": data,
+                "origin": Vector2i(0, 0),
+                "cells": [] as Array,
+                "player_id": pid + 1,
+            }
+        )
+    )
+    var before: int = _em.get_balance(pid)
+    var sold: bool = _bm.sell_building(node)
+    TestHelper.assert_true(not sold, "foreign-owned building is refused")
+    TestHelper.assert_eq(_em.get_balance(pid), before, "no refund to the local player")
+    _bm._buildings.clear()
+    _bm._buildings.assign(saved)
+    node.free()
+
+
 func test_resource_component_neutral_defaults():
     var rc := ResourceComponent.new()
     var rt := ResourceTreeComponent.new()

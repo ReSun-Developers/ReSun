@@ -32,6 +32,10 @@ func _on_mission_started(mission: Mission) -> void:
         push_error("MissionBoot: no Gameplay node; cannot load mission '%s'" % mission.id)
         return
     var map: Node = MISSION_MAP_SCENE.instantiate()
+    # The new map's buildings register on load; clear the previous match's
+    # registry and prerequisite counts first so they do not accumulate.
+    BuildingManager.clear_registry()
+    PrerequisiteSystem.reset_for_match()
     _swap_world(gameplay, map)
     _show_match_session()
     PlayerManager.begin_mission(mission, map.find_child("MapConfig", true, false))
