@@ -197,7 +197,7 @@ The system SHALL display a compact debug stats label at the top of the panel (al
 - **THEN** the debug stats label updates every frame
 
 ### Requirement: Entity placement via EntityPlacer
-The system SHALL provide a centralized EntityPlacer singleton for all entity placement, including debug mode. EntityPlacer manages inert preview entities (frozen, non-interactive, transparent) and restores original materials on finalize. EntityPlacer SHALL own the free-placement session as a single nullable placing-data field: `start_placing(data)` starts the preview, `stop_placing()` cancels it, `is_placing()` reports session state — there SHALL be no separate mode-flag state machine and no session state stored in any UI script. Session input SHALL be poll-based in `EntityPlacer._process` (mouse events do not reach `_unhandled_input` at runtime in this codebase; the same reason MouseHandler and BuildingManager poll), with `_unhandled_input` keeping keyboard/test fallback handling. A one-frame input skip (`_skip_input_frames`) after arming SHALL prevent the arming cameo click — which the Input singleton records even when GUI consumes it — from committing the placement. Building ghosts SHALL commit through BuildingManager (`place_building` at the foundation-snapped origin cell); all other entity types finalize the ghost via `finalize_preview`. `EntityPlacer.is_placing()` SHALL be the single source of placement-mode truth for gameplay guards: MouseHandler click routing and the PauseMenu ESC guard SHALL query EntityPlacer, not the Sidebar.
+The system SHALL provide a centralized EntityPlacer singleton for all entity placement, including debug mode. EntityPlacer manages inert preview entities (frozen, non-interactive, transparent) and restores original materials on finalize. EntityPlacer SHALL own the free-placement session as a single nullable placing-data field: `start_placing(data)` starts the preview, `exit_placing_mode()` cancels it, `is_placing()` reports session state — there SHALL be no separate mode-flag state machine and no session state stored in any UI script. A primary (`select_entity`) press SHALL commit the placement and a secondary (`deselect_entity`) press or `ui_cancel` (Escape) SHALL cancel it. A commit press while the pointer is over the gameplay minimap SHALL be ignored (the minimap owns it); cancel is unaffected by the minimap. The click that arms the session is a cameo button press consumed as GUI input, so it SHALL NOT commit the placement. Preview repositioning SHALL track the cursor every frame, independent of input events. Building ghosts SHALL commit through BuildingManager (`place_building` at the foundation-snapped origin cell); all other entity types finalize the ghost via `finalize_preview`. `EntityPlacer.is_placing()` SHALL be the single source of placement-mode truth for gameplay guards: MouseHandler click routing and the PauseMenu ESC guard SHALL query EntityPlacer, not the Sidebar.
 
 #### Scenario: Preview creation
 - **WHEN** user enters placement mode (debug or production)
@@ -212,16 +212,16 @@ The system SHALL provide a centralized EntityPlacer singleton for all entity pla
 - **THEN** original set_surface_override_material values (set by ArtComponent) are restored, preventing gray/default material loss
 
 #### Scenario: Placing-start click does not commit
-- **WHEN** a cameo click starts the placing session (the click is consumed as GUI input but still registered by the Input singleton)
-- **THEN** the session's first input-poll frame is skipped, so the same physical click SHALL NOT commit the placement
+- **WHEN** a cameo click arms the placing session (the click is consumed as GUI input)
+- **THEN** the same physical click SHALL NOT commit the placement
 
 #### Scenario: Commit is poll-driven
-- **WHEN** the session is placing and `select_entity` registers as just-pressed in `_process`
+- **WHEN** the session is placing and a `select_entity` input event is received
 - **THEN** the placement commits (buildings via `BuildingManager.place_building`, other entities via `finalize_preview`) and `is_placing()` returns false in the same frame
 
 #### Scenario: Cancel is poll-driven
-- **WHEN** the session is placing and `deselect_entity` or `ui_cancel` registers as just-pressed in `_process`
-- **THEN** the preview is cancelled and `is_placing()` returns false; keyboard events reaching `_unhandled_input` also cancel as fallback
+- **WHEN** the session is placing and a `deselect_entity` or `ui_cancel` input event is received
+- **THEN** the preview is cancelled and `is_placing()` returns false
 
 #### Scenario: Building commits route through BuildingManager
 - **WHEN** a BUILDING ghost commits

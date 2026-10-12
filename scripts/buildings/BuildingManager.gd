@@ -10,7 +10,6 @@ var is_build_mode: bool = false
 var current_building_type: EntityData = null
 var _buildings: Array[Dictionary] = []
 var exiting_build_mode: bool = false
-var _skip_input_frames: int = 0
 
 var building_types: Array[EntityData] = []
 
@@ -81,23 +80,25 @@ func _process(_delta: float) -> void:
     if not is_build_mode:
         return
 
-    # Skip input for one frame after entering build mode to prevent
-    # the click that triggered it from also placing the building
-    if _skip_input_frames > 0:
-        _skip_input_frames -= 1
-        _update_preview_position()
-        return
-
     _update_preview_position()
 
-    if Input.is_action_just_pressed("select_entity"):
+
+## Commit and cancel are event-driven. The click that armed build mode was a cameo
+## Button press consumed as GUI input, so it never reaches this handler — no
+## skip-frame counter is needed. Repositioning stays in `_process` (camera pans
+## emit no motion events).
+func _unhandled_input(event: InputEvent) -> void:
+    if not is_build_mode:
+        return
+
+    if event.is_action_pressed("select_entity"):
         # The gameplay minimap owns its own clicks; do not place through it.
         if not UIUtil.is_mouse_over_minimap():
-            _try_place_building()
-    elif Input.is_action_just_pressed("deselect_entity"):
+            _try_place_building(get_viewport().get_mouse_position())
+        get_viewport().set_input_as_handled()
+    elif event.is_action_pressed("deselect_entity") or event.is_action_pressed("ui_cancel"):
         exit_build_mode()
-    elif Input.is_action_just_pressed("ui_cancel"):
-        exit_build_mode()
+        get_viewport().set_input_as_handled()
 
 
 func enter_build_mode(building_type: EntityData) -> void:
@@ -107,7 +108,7 @@ func enter_build_mode(building_type: EntityData) -> void:
 
     current_building_type = building_type
     is_build_mode = true
-    _skip_input_frames = 1
+    exiting_build_mode = false
     # Re-set white even when the overlay survives a type switch mid-session —
     # _ensure_grid_overlay only populates it on creation.
     _ensure_grid_overlay()
@@ -458,16 +459,18 @@ func _apply_transparency(node: Node, mat: StandardMaterial3D) -> void:
         _apply_transparency(child, mat)
 
 
-func _try_place_building() -> void:
+## Attempts placement at the footprint under `screen_pos`. The screen position
+## is passed in (rather than read from the viewport here) so the place/latch path
+## is testable without a live pointer.
+func _try_place_building(screen_pos: Vector2) -> void:
     if not current_building_type:
         return
 
-    var mouse_pos := get_viewport().get_mouse_position()
     var camera := _get_camera_3d()
     if not camera:
         return
 
-    var hit: Variant = TerrainSystem.mouse_ray_to_terrain(camera, mouse_pos)
+    var hit: Variant = TerrainSystem.mouse_ray_to_terrain(camera, screen_pos)
     if hit == null:
         return
     var hit_pos := hit as Vector3
