@@ -797,3 +797,49 @@ func test_seek_interrupted_when_movement_stops():
     SpatialHash.instance.unregister_building_cells(blocked)
     root.remove_child(entity)
     entity.free()
+
+
+## A cell occupied only by the deploying source is free for deploy (the source is
+## excluded); a second unit on the same cell refuses it. Covers the shared
+## build-intent exclusion replacing the old _is_only_source_* helpers.
+func test_deploy_cell_free_excludes_source():
+    var root: Node = Engine.get_main_loop().root
+    var cell := Vector2i(30, 30)
+    var parts := _make_deploy_entity(root, cell)
+    var entity: Node3D = parts[0]
+    var deploy: DeployComponent = parts[2]
+    entity.add_to_group("entities")
+    var src_cell := CellUtil.world_to_cell(entity.global_position)
+    SpatialHash.instance.rebuild()
+
+    (
+        TestHelper
+        . assert_true(
+            deploy._is_cell_free_for_deploy(src_cell, entity),
+            "deploy cell is free when only the source occupies it",
+        )
+    )
+
+    var other := Node3D.new()
+    other.global_position = CellUtil.cell_to_world(src_cell)
+    other.add_to_group("entities")
+    var ostats := StatsComponent.new()
+    ostats.name = "StatsComponent"
+    ostats.entity_type = EntityData.EntityType.VEHICLE
+    ostats.player_id = 1
+    other.add_child(ostats)
+    var omc := MovementController.new()
+    omc.name = "MovementController"
+    other.add_child(omc)
+    SpatialHash.instance.add_child(other)
+    SpatialHash.instance.rebuild()
+
+    var refused: bool = not deploy._is_cell_free_for_deploy(src_cell, entity)
+
+    SpatialHash.instance.remove_child(other)
+    other.free()
+    root.remove_child(entity)
+    entity.free()
+    SpatialHash.instance.rebuild()
+
+    TestHelper.assert_true(refused, "deploy cell refused when a second unit is present")

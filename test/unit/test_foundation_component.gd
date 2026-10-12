@@ -7,6 +7,9 @@ var _test_failed := 0
 
 
 func _ok(cond: bool, name: String) -> void:
+    # Report through TestHelper so the runner actually counts these assertions;
+    # the local counters/prints are only for readable per-test output.
+    TestHelper.assert_true(cond, name)
     if cond:
         _test_passed += 1
         print("    PASS: " + name)
@@ -17,15 +20,9 @@ func _ok(cond: bool, name: String) -> void:
 
 func _setup_clear(origin: Vector2i, size: Vector2i) -> void:
     TerrainSystem.init_grid(64, 64)
-    var offset_x := TerrainSystem.grid_cells.x >> 1
-    var offset_z := TerrainSystem.grid_cells.y >> 1
     for dx in size.x:
         for dz in size.y:
-            var cell := origin + Vector2i(dx, dz)
-            var key := "%d,%d" % [cell.x + offset_x, cell.y + offset_z]
-            TerrainSystem._cells[key] = {
-                "height": 0, "type": "clear", "variant": 1, "direction": "", "rotation": 0.0
-            }
+            TerrainSystem.set_cell_type(origin + Vector2i(dx, dz), "clear")
 
 
 func test_occupied_cells_excludes_bib():
@@ -51,6 +48,10 @@ func test_is_cell_buildable_free_clear():
     SpatialHash.instance._building_cells.clear()
     SpatialHash.instance._blocked_cells.clear()
     _setup_clear(Vector2i(5, 5), Vector2i(1, 1))
+    _ok(
+        TerrainSystem.get_cell_type(Vector2i(5, 5)) == "clear",
+        "fixture seeded a clear cell at (5,5)"
+    )
     _ok(
         FoundationComponent.is_cell_buildable(Vector2i(5, 5)),
         "is_cell_buildable true on free clear"
@@ -93,9 +94,9 @@ func test_is_buildable_false_on_steep_height():
     SpatialHash.instance._building_cells.clear()
     SpatialHash.instance._blocked_cells.clear()
     _setup_clear(Vector2i(20, 20), Vector2i(2, 2))
-    var offset_x := TerrainSystem.grid_cells.x >> 1
-    var offset_z := TerrainSystem.grid_cells.y >> 1
-    TerrainSystem.set_vertex(20 + offset_x, 20 + offset_z, 3)
+    # Raise a corner vertex of the (20,20) cell so the footprint's height delta
+    # exceeds HEIGHT_STEP. Vertices span the cell, so cell (20,20) is raised.
+    TerrainSystem.set_vertex(20, 20, 3)
     var fc := FoundationComponent.new()
     fc.foundation = Vector2i(2, 2)
     var result := fc.is_buildable(Vector2i(20, 20))

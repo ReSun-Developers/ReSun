@@ -1,5 +1,26 @@
 class_name SpatialHash extends Node
 
+
+## Composite snapshot of a cell's occupancy, returned by `get_cell_occupancy`.
+## Permanent facts (building/bib/resource/terrain_buildable) are ground-only;
+## momentary facts (units/blocked/moving/shared_count/reserved) are level-scoped.
+## `blocked`/`moving`/`shared_count` partition `units` by movement state and
+## sharing. Buildings and resource overlays never appear in `units`.
+class CellOccupancy:
+    extends RefCounted
+    var cell: Vector2i = Vector2i.ZERO
+    var level: int = 0
+    var building: bool = false
+    var bib: bool = false
+    var resource: bool = false
+    var terrain_buildable: bool = false
+    var units: Array[Node3D] = []
+    var blocked: bool = false
+    var moving: bool = false
+    var shared_count: int = 0
+    var reserved: bool = false
+
+
 static var instance: SpatialHash
 
 var _grid: Dictionary = {}
@@ -663,6 +684,77 @@ func is_any_entity_on_cell(cell: Vector2i, level: int = 0) -> bool:
             continue
         return true
     return false
+
+
+## Composite occupancy snapshot for a cell. `level` scopes the momentary facts
+## (units/blocked/moving/shared_count/reserved); the permanent facts (building,
+## bib, resource, terrain) are ground-only. `exclude` removes one entity's
+## momentary contribution so a caller can ask "is this cell free apart from me".
+## Buildings and resource overlays never appear in `units`: buildings have no
+## MovementController, and overlays are not in the "entities" group.
+func get_cell_occupancy(cell: Vector2i, level: int = 0, exclude: Node3D = null) -> CellOccupancy:
+    var occ := CellOccupancy.new()
+    occ.cell = cell
+    occ.level = level
+    var key := CellUtil.cell_key(cell)
+    # Permanent facts are ground-only: buildings/bibs/resources never sit on a
+    # deck, so a level > 0 query reports none of them and no ground terrain.
+    if level == 0:
+        occ.building = _building_cells.has(key)
+        occ.bib = _bib_cells.has(key)
+        occ.resource = _resource_cells.has(key)
+        occ.terrain_buildable = TerrainSystem.is_cell_buildable(cell)
+    occ.reserved = _reserved.has(CellUtil.cell_level_key(cell, level))
+    for entry in _grid.get(key, []):
+        if entry["mc"] == null:
+            continue
+        if int(entry.get("level", 0)) != level:
+            continue
+        var node: Node3D = entry["node"]
+        if exclude != null and node == exclude:
+            continue
+        occ.units.append(node)
+        if int(entry.get("state", MovementController.State.IDLE)) == MovementController.State.IDLE:
+            if bool(entry.get("shares", false)):
+                occ.shared_count += 1
+            else:
+                occ.blocked = true
+        else:
+            occ.moving = true
+    return occ
+
+
+## True when a structure may occupy `cell`: buildable terrain, no building/bib/
+## resource, and no unit body of any state (idle, moving, or sharing). Mirrors
+## the original TS `CellClass::Is_Clear_To_Build`. Ground-scoped.
+func is_cell_free_for_build(cell: Vector2i, level: int = 0, exclude: Node3D = null) -> bool:
+    var occ := get_cell_occupancy(cell, level, exclude)
+    if not occ.terrain_buildable or occ.building or occ.bib or occ.resource:
+        return false
+    return occ.units.is_empty()
+
+
+## True when a produced or free unit may appear on `cell`: no building/bib, no
+## idle non-sharer and no moving unit, and idle sharers below
+## `shared_slots_per_cell`. A resource cell is allowed (tiberium is driveable).
+## Mirrors a TS `Can_Enter_Cell(...) == MOVE_OK` exit test at the occupancy
+## level. Walkable terrain (slopes included) is a locomotor concern, not
+## buildability, so non-`"clear"` terrain is NOT refused here.
+func is_cell_free_for_unit_exit(cell: Vector2i, level: int = 0, exclude: Node3D = null) -> bool:
+    var occ := get_cell_occupancy(cell, level, exclude)
+    if occ.building or occ.bib:
+        return false
+    if occ.blocked or occ.moving:
+        return false
+    return occ.shared_count < CellSubPositions.get_slot_count()
+
+
+## True when tiberium may seed `cell`: buildable terrain, no building/bib. Units
+## are ignored (tiberium grows under units). Mirrors the original TS
+## `CellClass::Can_Tiberium_Germinate`. Ground-scoped.
+func is_cell_free_for_resource(cell: Vector2i, level: int = 0) -> bool:
+    var occ := get_cell_occupancy(cell, level)
+    return occ.terrain_buildable and not occ.building and not occ.bib
 
 
 ## Level-scoped cell reservation. Keys are `CellUtil.cell_level_key`; level 0 is

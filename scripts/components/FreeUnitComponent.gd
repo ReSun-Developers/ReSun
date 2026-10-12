@@ -76,15 +76,11 @@ func _find_adjacent_free_cell(origin: Vector2i, _foundation: Vector2i) -> Vector
         origin,
         5,
         func(cell: Vector2i) -> bool:
-            var key := CellUtil.cell_key(cell)
-            if SpatialHash.instance and SpatialHash.instance.get_building_cells().has(key):
+            var sh := SpatialHash.instance
+            if sh == null:
+                return not TerrainSystem.is_cell_buildable(cell)
+            var occ := sh.get_cell_occupancy(cell)
+            if occ.reserved or not occ.terrain_buildable or occ.building or occ.bib or occ.resource:
                 return true
-            if SpatialHash.instance and SpatialHash.instance.is_cell_blocked(cell):
-                return true
-            if SpatialHash.instance and SpatialHash.instance._reserved.has(key):
-                return true
-            var cell_type := TerrainSystem.get_cell_type(cell)
-            if cell_type != "" and cell_type != "clear":
-                return true
-            return false
+            return not occ.units.is_empty()
     )

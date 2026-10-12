@@ -80,7 +80,8 @@ cell set.
 | sub-slot | Reserved position within a cell for units whose locomotor has `shares_cell = true`; mainly used by infantry. | [cell-occupancy](openspec/specs/cell-occupancy/spec.md) |
 | shared slots | Max sharers per cell: `GlobalRules.shared_slots_per_cell`. | [global-rules](openspec/specs/global-rules/spec.md) |
 | cell reservation | Present/coming occupancy registry so batching units don't collide mid-move. | [cell-reservation](openspec/specs/cell-reservation/spec.md) |
-| blocked cells | Cells removed from pathing: idle-unit bodies, buildings (non-bib), resources. | [spatial-hash](openspec/specs/spatial-hash/spec.md) |
+| blocked cells | Cells removed from pathing: idle-unit bodies, buildings (non-bib), resources. Distinct from the occupancy snapshot's `blocked` field, which is narrower (an idle non-sharing unit only). | [spatial-hash](openspec/specs/spatial-hash/spec.md) |
+| cell occupancy query | One composite snapshot of what occupies a cell (permanent facts + momentary `units`/`blocked`/`moving`/`shared_count`/`reserved`) with three intent projections: `build`, `unit exit`, `resource`. Replaces per-consumer "is this cell free" predicates. | [cell-occupancy](openspec/specs/cell-occupancy/spec.md) · scripts/core/SpatialHash.gd |
 | SpatialHash | Entity-per-cell spatial index rebuilt every physics frame. | [spatial-hash](openspec/specs/spatial-hash/spec.md) |
 
 ## Map & Bounds

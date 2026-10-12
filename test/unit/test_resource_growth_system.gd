@@ -247,3 +247,113 @@ func test_spawn_routes_to_current_world_after_replacement():
         )
     (second["world"] as Node).free()
     (second["tree_root"] as Node).free()
+
+
+# --- Occupancy convergence tests ---
+# Tiberium target cells ignore units (grow under them) and respect non-buildable
+# terrain. A unit standing on a tiberium source cell freezes it from spreading.
+
+
+func _growth() -> Node:
+    return (Engine.get_main_loop() as SceneTree).root.get_node("ResourceGrowthSystem")
+
+
+func _make_growth_unit(at: Vector3) -> Node3D:
+    var unit := Node3D.new()
+    unit.name = "GrowthOccupant"
+    unit.global_position = at
+    unit.add_to_group("entities")
+    var stats := StatsComponent.new()
+    stats.name = "StatsComponent"
+    stats.entity_type = EntityData.EntityType.INFANTRY
+    stats.player_id = 0
+    unit.add_child(stats)
+    var mc := MovementController.new()
+    mc.name = "MovementController"
+    unit.add_child(mc)
+    (Engine.get_main_loop() as SceneTree).root.add_child(unit)
+    return unit
+
+
+func test_resource_target_ignores_units():
+    _ts.init_grid(GRID.x, GRID.y)
+    _sh._building_cells.clear()
+    _sh._bib_cells.clear()
+    var cell := Vector2i(20, 20)
+    var unit := _make_growth_unit(CellUtil.cell_to_world(cell))
+    _sh.rebuild()
+    var indexed: bool = not SpatialHash.instance.get_cell_occupancy(cell).units.is_empty()
+    var blocked: bool = _growth()._is_cell_blocked_for_resource(cell)
+    unit.get_parent().remove_child(unit)
+    unit.free()
+    _sh.rebuild()
+    TestHelper.assert_true(indexed, "resource-target fixture: unit was not indexed on the cell")
+    TestHelper.assert_true(not blocked, "tiberium target ignores a unit standing on it")
+
+
+func test_resource_target_refuses_building_and_bib():
+    _ts.init_grid(GRID.x, GRID.y)
+    _ts.set_cell_type(TREE_CELL, "clear")
+    _sh.register_building_cells([TREE_CELL])
+    var blocked_building: bool = _growth()._is_cell_blocked_for_resource(TREE_CELL)
+    _sh.unregister_building_cells([TREE_CELL])
+    var bib := TREE_CELL + Vector2i(1, 0)
+    _sh.register_bib_cells([bib])
+    var blocked_bib: bool = _growth()._is_cell_blocked_for_resource(bib)
+    _sh.unregister_bib_cells([bib])
+    TestHelper.assert_true(blocked_building, "tiberium target refuses a building cell")
+    TestHelper.assert_true(blocked_bib, "tiberium target refuses a bib cell")
+
+
+func test_resource_target_refuses_slope():
+    _ts.init_grid(GRID.x, GRID.y)
+    _ts.set_cell_type(TREE_CELL, "slope")
+    TestHelper.assert_true(
+        _ts.get_cell_type(TREE_CELL) == "slope", "slope fixture: seeded type not observed"
+    )
+    var blocked: bool = _growth()._is_cell_blocked_for_resource(TREE_CELL)
+    _ts.set_cell_type(TREE_CELL, "clear")
+    TestHelper.assert_true(blocked, "tiberium target refuses non-buildable terrain")
+
+
+func test_source_freeze_stops_spread_until_unit_leaves():
+    var fx := _spawn_around_tree_root(SPAWN_RADIUS)
+    if fx.is_empty():
+        return
+    var spawned: Array[Node] = fx["spawned"]
+    if spawned.is_empty():
+        return
+    var growth := _growth()
+    var saved_trees: Array = growth._cached_trees
+    growth._cached_trees = [fx["tree_root"]]
+    var rules := GlobalRules.get_current()
+    var res_node: Node3D = spawned[0]
+    var res_comp := res_node.get_node("ResourceComponent") as ResourceComponent
+    var cell := CellUtil.world_to_cell(res_node.global_position)
+
+    var unit := _make_growth_unit(res_node.global_position)
+    _sh.rebuild()
+    var before: int = res_comp.spread_count
+    for i in 60:
+        growth._try_spread_from(res_node, res_comp, rules)
+    var frozen: int = res_comp.spread_count
+
+    unit.get_parent().remove_child(unit)
+    unit.free()
+    _sh.rebuild()
+    for i in 60:
+        growth._try_spread_from(res_node, res_comp, rules)
+    var resumed: int = res_comp.spread_count
+
+    growth._cached_trees = saved_trees
+    (fx["world"] as Node).free()
+    (fx["tree_root"] as Node).free()
+
+    (
+        TestHelper
+        . assert_true(
+            frozen == before,
+            "a unit on a tiberium source cell freezes its spread (delta=%d)" % (frozen - before),
+        )
+    )
+    TestHelper.assert_true(resumed > frozen, "removing the unit resumes spread")

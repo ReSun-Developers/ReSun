@@ -161,13 +161,4 @@ func _find_free_near(cell: Vector2i) -> Vector2i:
 
 
 func _is_cell_available(cell: Vector2i) -> bool:
-    if SpatialHash.instance.is_cell_blocked(cell):
-        return false
-    if SpatialHash.instance.is_cell_full_for_shared(cell):
-        return false
-    var key := CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_building_cells().has(key):
-        return false
-    if SpatialHash.instance.is_bib_cell(cell):
-        return false
-    return true
+    return SpatialHash.instance.is_cell_free_for_unit_exit(cell)

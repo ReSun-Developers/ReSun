@@ -319,6 +319,34 @@ func get_cell_type(cell: Vector2i) -> String:
     return data.get("type", "")
 
 
+## True when a cell's surface admits construction: the cell is inside the grid
+## extent and its type is `""` or `"clear"`. The single home of the `""`/`"clear"`
+## convention (the spatial occupancy query reads this). Out-of-extent cells return
+## false — `get_cell_type` returns `""` for them, which must not read as clear.
+func is_cell_buildable(cell: Vector2i) -> bool:
+    var extent: Vector2i = CellUtil.get_diamond_extent(grid_cells)
+    if cell.x < 0 or cell.x >= extent.x or cell.y < 0 or cell.y >= extent.y:
+        return false
+    var t := get_cell_type(cell)
+    return t == "" or t == "clear"
+
+
+## Seeds a cell's surface `type` without touching vertex-derived data, and emits
+## `cell_changed` so renderers re-resolve. Supported seam for tests/tools; normal
+## cell types are otherwise derived from vertices by `compute_and_emit_cell`. A
+## previously-uncomputed cell is given the canonical clear shape (not a type-only
+## dict) so height/rotation/variant readers stay well-formed.
+func set_cell_type(cell: Vector2i, type: String) -> void:
+    var key := CellUtil.cell_key_str(cell)
+    var data: Dictionary = _cells.get(key, {})
+    if data.is_empty():
+        data = {"height": 0, "type": type, "variant": 1, "direction": "", "rotation": 0.0}
+    else:
+        data["type"] = type
+    _cells[key] = data
+    cell_changed.emit(key, data)
+
+
 ## Land type id for a cell surface. At level 0: resource-occupied cells resolve
 ## to `resource`; otherwise the painted overlay applies, defaulting to "clear".
 ## Level 0 ignores any bridge deck above the cell — a deck is a separate surface,
