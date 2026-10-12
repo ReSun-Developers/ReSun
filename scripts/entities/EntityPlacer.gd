@@ -20,11 +20,6 @@ var _placing_mode: bool = false
 ## (which polls raw Input state that ignores event consumption) can skip the
 ## same physical click when routing orders.
 var _consumed_click_frame: int = -1
-## Frames to ignore commit/cancel polls after arming: the Input singleton
-## records the arming cameo click even though GUI consumes it, so an
-## unguarded poll would place at the cameo's screen point (BuildingManager
-## keeps the same counter for the same reason).
-var _skip_input_frames: int = 0
 
 
 func place_entity(
@@ -155,7 +150,6 @@ func enter_placing_mode() -> void:
 ## returns.
 func exit_placing_mode() -> void:
     _consumed_click_frame = -1
-    _skip_input_frames = 0
     if not _placing_mode and not has_preview():
         return
     _placing_mode = false
@@ -166,7 +160,6 @@ func exit_placing_mode() -> void:
 ## Start placing a specific entity: arms the mode and shows the ghost preview.
 func start_placing(data: EntityData) -> void:
     enter_placing_mode()
-    _skip_input_frames = 1
     start_preview(data)
 
 
@@ -190,11 +183,17 @@ func did_consume_click_this_frame() -> bool:
     return _consumed_click_frame == Engine.get_process_frames()
 
 
+## Commit and cancel are event-driven. The click that armed the session was a
+## cameo Button press consumed as GUI input, so it never reaches this handler —
+## no skip-frame counter is needed. Repositioning stays in `_process` (camera
+## pans emit no motion events).
 func _unhandled_input(event: InputEvent) -> void:
     if not is_placing() or not has_preview():
         return
     if event.is_action_pressed("select_entity"):
-        _commit_placement()
+        # The gameplay minimap owns its own clicks; do not commit through it.
+        if not UIUtil.is_mouse_over_minimap():
+            _commit_placement()
         get_viewport().set_input_as_handled()
     elif event.is_action_pressed("deselect_entity") or event.is_action_pressed("ui_cancel"):
         exit_placing_mode()
@@ -245,21 +244,6 @@ func _ground_hit() -> Variant:
 
 func _process(_delta: float) -> void:
     if not is_placing() or not has_preview():
-        return
-    if _skip_input_frames > 0:
-        _skip_input_frames -= 1
-        _reposition_preview()
-        return
-    # Poll-based input: mouse events do not reliably reach _unhandled_input at
-    # runtime (the same reason MouseHandler and BuildingManager poll theirs);
-    # the _unhandled_input branches above stay as keyboard/test fallback.
-    if Input.is_action_just_pressed("deselect_entity") or Input.is_action_just_pressed("ui_cancel"):
-        exit_placing_mode()
-        return
-    if Input.is_action_just_pressed("select_entity"):
-        # The gameplay minimap owns its own clicks; do not commit through it.
-        if not UIUtil.is_mouse_over_minimap():
-            _commit_placement()
         return
     _reposition_preview()
 

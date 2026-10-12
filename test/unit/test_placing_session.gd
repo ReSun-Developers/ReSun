@@ -104,6 +104,51 @@ func test_commit_is_event_driven() -> void:
     _drop_infantry_data()
 
 
+func test_minimap_click_does_not_commit() -> void:
+    var placer := _placer()
+    if not placer:
+        return
+    placer.exit_placing_mode()
+    var data := _make_infantry_data()
+    var scene_root := _mount_camera_scene(Vector3(2.0, 20.0, 2.0), Vector3(2.0, 0.0, 2.0))
+    # A Minimap-shaped Control covering the pointer, so UIUtil's ownership check fires.
+    var minimap := Control.new()
+    minimap.name = "Minimap"
+    minimap.mouse_filter = Control.MOUSE_FILTER_STOP
+    minimap.position = Vector2(-10000, -10000)
+    minimap.size = Vector2(20000, 20000)
+    scene_root.add_child(minimap)
+    UIUtil._cached_minimap = null
+    placer.start_placing(data)
+    TestHelper.assert_true(placer.has_preview(), "setup: ghost armed for the minimap test")
+    placer._unhandled_input(_action_event("select_entity"))
+    TestHelper.assert_true(
+        placer.is_placing(), "a commit click over the minimap is suppressed by the placing session"
+    )
+    # Sanity: the same click commits once the pointer is off the minimap.
+    scene_root.remove_child(minimap)
+    minimap.free()
+    UIUtil._cached_minimap = null
+    placer._unhandled_input(_action_event("select_entity"))
+    TestHelper.assert_true(not placer.is_placing(), "the same click commits off the minimap")
+    placer.exit_placing_mode()
+    _unmount_camera_scene(scene_root)
+    _drop_infantry_data()
+
+
+func test_select_armed_without_preview_does_nothing() -> void:
+    # enter_placing_mode arms the mode without a ghost; commit must not fire
+    # until start_placing has built one.
+    var placer := _placer()
+    if not placer:
+        return
+    placer.exit_placing_mode()
+    placer.enter_placing_mode()
+    placer._unhandled_input(_action_event("select_entity"))
+    TestHelper.assert_true(placer.is_placing(), "no preview means no commit; mode stays armed")
+    placer.exit_placing_mode()
+
+
 func test_cancel_is_event_driven() -> void:
     var placer := _placer()
     if not placer:
