@@ -248,7 +248,7 @@ func _get_current_entities() -> Array[EntityData]:
     for etype in types:
         var all := EntityFactory.get_all_by_type(etype as EntityData.EntityType)
         for data in all:
-            if PrerequisiteSystem.evaluate_build(player_id, data)["enabled"]:
+            if PrerequisiteSystem.evaluate_build(player_id, data).enabled:
                 result.append(data)
     return sort_buildables(result, _tab_types)
 

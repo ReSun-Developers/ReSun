@@ -105,7 +105,7 @@ func _compute_cheapest_cost() -> int:
         for data: EntityData in _ef.get_all_by_type(etype):
             if data.cost <= 0:
                 continue
-            if not PrerequisiteSystem.evaluate_build(player_id, data)["enabled"]:
+            if not PrerequisiteSystem.evaluate_build(player_id, data).enabled:
                 continue
             if cheapest < 0 or data.cost < cheapest:
                 cheapest = data.cost
@@ -116,6 +116,9 @@ func _compute_cheapest_cost() -> int:
 ## Affordability feedback only — never a production gate.
 func _update_credits_color() -> void:
     var player_id := PlayerManager.get_local_player_id()
+    # ponytail: gate + balance + Cheats.no_cost are joined inline here; extract a
+    # shared affordability helper only once a second consumer (e.g. a cameo tooltip)
+    # needs the same join.
     var insufficient: bool = (
         _cheapest_cost > 0
         and not Cheats.no_cost

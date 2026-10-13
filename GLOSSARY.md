@@ -159,11 +159,11 @@ are 45°-rotated rectangles, i.e. diamonds.
 
 | Term | Meaning | Where |
 |------|---------|-------|
-| power grid | Per-player aggregate of building power: `output` (Σ positive `power`) − `drain` (Σ \|negative\|). PowerGrid autoload is the authority; registered from tree add/remove of `PowerComponent`s. | [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) · scripts/core/PowerGrid.gd |
-| low power | Grid state where `sum < 0`; immediate on registry change. `drain = 0` grids are never low power. | [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) |
-| powered-down | Runtime offline state (`PowerComponent.is_online == false`) of a structure that *requires* power, under low power. Combat holds fire, radar reports offline, power-gated animation clips pause. Producers never power down in this phase. | [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) |
-| build rate | Production speed multiplier from power: 1.0 healthy; in low power `lerp(worst, best, output/drain)` (defaults 0.3 → 0.75). Slows production, never halts it. | [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) · [add-power-grid design](openspec/changes/add-power-grid/design.md) |
-| power bar | TS-style twin bar on the sidebar's left edge: black column backing a green output fill with a red drain fill in front (red rises above green on deficit). Fills map through `(value/2000)^0.4` and ease toward live PowerGrid targets. | [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) · scripts/ui/PowerBar.gd |
+| power grid | Per-player aggregate of building power: `output` (Σ positive `power`) − `drain` (Σ \|negative\|). PowerGrid autoload is the authority; registered from tree add/remove of `PowerComponent`s. | [power-grid](openspec/specs/power-grid/spec.md) · scripts/core/PowerGrid.gd |
+| low power | Grid state where `sum < 0`; immediate on registry change. `drain = 0` grids are never low power. | [power-grid](openspec/specs/power-grid/spec.md) |
+| powered-down | Runtime offline state (`PowerComponent.is_online == false`) of a structure that *requires* power, under low power. Combat holds fire, radar reports offline, power-gated animation clips pause. Producers never power down in this phase. | [power-grid](openspec/specs/power-grid/spec.md) |
+| build rate | Production speed multiplier from power: 1.0 healthy; in low power `lerp(worst, best, output/drain)` (defaults 0.3 → 0.75). Slows production, never halts it. | [power-grid](openspec/specs/power-grid/spec.md) · [add-power-grid design](openspec/changes/add-power-grid/design.md) |
+| power bar | TS-style twin bar on the sidebar's left edge: black column backing a green output fill with a red drain fill in front (red rises above green on deficit). Fills map through `(value/2000)^0.4` and ease toward live PowerGrid targets. | [power-grid](openspec/specs/power-grid/spec.md) · scripts/ui/PowerBar.gd |
 
 ## Radar & Minimap
 
@@ -274,9 +274,9 @@ Full dictionaries: scripts/data/*.gd. Only ambiguous pairs listed here.
 | `pip_color` | Seat pip color for a passenger riding in a transport (per entity type, default white); harvesters' cargo pips are unaffected. | scripts/data/EntityData.gd |
 | `strength` | Max hit points (legacy rules.ini name — do not rename casually). | scripts/data/EntityData.gd |
 | `tech_level` | Per-type build gate; the house's current level must be at least this. `-1` = never buildable (original TS semantics). | scripts/data/EntityData.gd · [tech-level](openspec/specs/tech-level/spec.md) |
-| build gate | The single per-player decision on whether an entity type can be built now, and why not when it cannot: menu flag, `tech_level`, build limit, prerequisites, and owned producer. Affordability is feedback, never a gate. | [build-gate change](openspec/changes/add-build-gate-query/specs/build-gate/spec.md) |
+| build gate | The single per-player decision on whether an entity type can be built now, and why not when it cannot: menu flag, `tech_level`, build limit, prerequisites, and owned producer. Affordability is feedback, never a gate. Returns a `BuildDecision` value. | [build-gate](openspec/specs/build-gate/spec.md) |
 | current tech level | A player's live level (`PlayerData.tech_level`), resolved from the mission or the rules default; compared against `EntityData.tech_level` on the build list. | [tech-level](openspec/specs/tech-level/spec.md) |
-| `powered` vs `is_online` | Data-level "requires power to function" flag (`EntityData.powered`, copied to PowerComponent) vs runtime state (`PowerComponent.is_online`, driven by the grid). Deliberately different names — never write `is_powered()` for the runtime state. | scripts/data/EntityData.gd · [add-power-grid change](openspec/changes/add-power-grid/specs/power-grid/spec.md) |
+| `powered` vs `is_online` | Data-level "requires power to function" flag (`EntityData.powered`, copied to PowerComponent) vs runtime state (`PowerComponent.is_online`, driven by the grid). Deliberately different names — never write `is_powered()` for the runtime state. | scripts/data/EntityData.gd · [power-grid](openspec/specs/power-grid/spec.md) |
 
 ## Mission Scripting
 

@@ -18,6 +18,17 @@ enum BuildReason {
     NO_FACTORY,
 }
 
+
+## The build-gate result: whether a type is buildable for a player, why not when
+## it is not, its cost, and the raw producer-ownership fact. See `evaluate_build`.
+class BuildDecision:
+    extends RefCounted
+    var enabled: bool
+    var reason: BuildReason
+    var cost: int
+    var owned_factory: bool
+
+
 ## player_id → { entity_id → count }
 var _player_buildings: Dictionary = {}
 
@@ -71,19 +82,19 @@ func unregister_building(player_id: int, entity_data: EntityData) -> void:
 ## type's queue) computed independently of the outcome, so consumers such as the
 ## debug direct-deploy fallback can trust it even when the cheat bypasses the gate.
 ## Affordability is intentionally not considered here.
-func evaluate_build(player_id: int, entity_data: EntityData) -> Dictionary:
+func evaluate_build(player_id: int, entity_data: EntityData) -> BuildDecision:
     var owned_factory := _owns_factory_for(player_id, entity_data)
     var reason := _first_failing_reason(player_id, entity_data, owned_factory)
-    return {
-        "enabled": reason == BuildReason.NONE,
-        "reason": reason,
-        "cost": entity_data.cost,
-        "owned_factory": owned_factory,
-    }
+    var decision := BuildDecision.new()
+    decision.enabled = reason == BuildReason.NONE
+    decision.reason = reason
+    decision.cost = entity_data.cost
+    decision.owned_factory = owned_factory
+    return decision
 
 
 func can_build(player_id: int, entity_data: EntityData) -> bool:
-    return bool(evaluate_build(player_id, entity_data)["enabled"])
+    return evaluate_build(player_id, entity_data).enabled
 
 
 ## First gate that fails, in fixed order, or `NONE` when the type is buildable.
