@@ -277,39 +277,28 @@ func _handle_single_click(mouse_pos: Vector2, shift_pressed: bool):
         if ground_pos != Vector3.INF:
             selection_manager.request_set_rally_point(ground_pos)
     else:
-        _handle_left_click_normal(camera, mouse_pos, shift_pressed)
+        _handle_left_click_normal(mouse_pos, shift_pressed)
 
 
-func _handle_left_click_normal(camera: Camera3D, mouse_pos: Vector2, shift_pressed: bool) -> void:
-    var from = camera.project_ray_origin(mouse_pos)
-    var dir := camera.project_ray_normal(mouse_pos).normalized()
-    var space_state = camera.get_world_3d().direct_space_state
-    var query := PhysicsRayQueryParameters3D.create(from, from + dir * raycast_distance)
-    query.collide_with_areas = true
-
-    var modifiers := OrderSystem.build_modifiers(shift_pressed)
-
-    # Pass 1: layer 16 — SelectComponent (units, buildings).
-    query.collision_mask = 1 << 15
-    var result := space_state.intersect_ray(query)
-    if result.has("collider"):
-        var collider := result.collider as Node
-        var target := _find_entity_parent(collider)
-        var target_cell := Vector2i.ZERO
-        var target_pos := Vector3.ZERO
-        if target:
-            target_cell = CellUtil.world_to_cell(target.global_position)
-            target_pos = target.global_position
-        else:
-            target_pos = _get_ground_position_at_mouse()
-        # Check if entity is already selected
-        var select_comp := _find_select_component(collider)
+func _handle_left_click_normal(mouse_pos: Vector2, shift_pressed: bool) -> void:
+    var probe := _probe_pointer(mouse_pos)
+    var unit: Dictionary = probe["unit"]
+    if not unit.is_empty():
+        var target: Node3D = unit["entity"]
+        var select_comp: SelectComponent = unit["select_comp"]
         var already_selected := (
             select_comp and selection_manager and selection_manager.is_entity_selected(select_comp)
         )
+        # Entity intake when the hit resolves to an entity root; a collider
+        # without one is ground under the cursor (same as the pre-probe path).
+        var intake: OrderProbe
+        if target:
+            intake = OrderProbe.from_entity(target, shift_pressed)
+        else:
+            intake = OrderProbe.from_ground(_get_ground_position_at_mouse(), 0, shift_pressed)
         # If already selected or no select component, try order system
         if already_selected or not select_comp:
-            _try_execute_orders(target, target_cell, target_pos, modifiers)
+            _try_execute_orders(intake)
             return
         # Unselected entity — try orders (attack/dock/harvest) before selecting;
         # only select when no order applies (enemy and friendly alike, so a
@@ -317,21 +306,17 @@ func _handle_left_click_normal(camera: Camera3D, mouse_pos: Vector2, shift_press
         # clears cross-ownership mixes.
         if select_comp and selection_manager:
             if not shift_pressed:
-                if _try_execute_orders(target, target_cell, target_pos, modifiers):
+                if _try_execute_orders(intake):
                     return
             selection_manager.select_entity(select_comp, shift_pressed)
         return
 
-    # Pass 2: layer 17 — interact hitboxes (tiberium, dock).
-    query.collision_mask = 1 << 16
-    result = space_state.intersect_ray(query)
-    if result.has("collider"):
-        var collider := result.collider as Node
-        var target := _find_entity_parent(collider)
-        if target:
-            var target_cell := CellUtil.world_to_cell(target.global_position)
-            if _try_execute_orders(target, target_cell, target.global_position, modifiers):
-                return
+    # Interact hitboxes (tiberium, dock) — layer 17.
+    var interact: Dictionary = probe["interact"]
+    if not interact.is_empty():
+        var target: Node3D = interact["entity"]
+        if target and _try_execute_orders(OrderProbe.from_entity(target, shift_pressed)):
+            return
 
     # No entity — deselect and issue movement command.
     if selection_manager and not selection_manager.selected_entities.is_empty():
@@ -339,16 +324,14 @@ func _handle_left_click_normal(camera: Camera3D, mouse_pos: Vector2, shift_press
         if not pick.is_empty():
             # Carry the picked surface level so a move onto a bridge deck targets
             # the deck; ground picks stay at level 0.
-            modifiers[OrderResult.MOD_TARGET_LEVEL] = int(pick["level"])
-            OrderSystem.issue(
-                OrderSystem.get_orders(null, Vector2i.ZERO, pick["position"] as Vector3, modifiers)
+            var intake := OrderProbe.from_ground(
+                pick["position"] as Vector3, int(pick["level"]), shift_pressed
             )
+            OrderSystem.issue(OrderSystem.resolve_probe(intake).orders)
 
 
-func _try_execute_orders(
-    target: Node, target_cell: Vector2i, target_pos: Vector3, modifiers: Dictionary
-) -> bool:
-    return OrderSystem.issue(OrderSystem.get_orders(target, target_cell, target_pos, modifiers))
+func _try_execute_orders(intake: OrderProbe) -> bool:
+    return OrderSystem.issue(OrderSystem.resolve_probe(intake).orders)
 
 
 ## Box-select: select entities whose projection falls inside the drag rectangle.
@@ -423,40 +406,61 @@ func _find_entity_parent(node: Node) -> Node3D:
     return null
 
 
-## Handle hover preview by raycasting at entities under the cursor.
-func _handle_hover_preview(mouse_pos: Vector2) -> void:
+## Shared 2-pass pointer probe: layer 16 (SelectComponent bodies) then layer 17
+## (interact hitboxes). Returns raw facts only — fog gate, miss-count lag and
+## select-vs-order policy stay at the call sites. Both passes are cast up front;
+## callers consult `unit` first and fall back to `interact` (hover policy) or
+## not at all (click returns on a unit hit, matching the pre-probe short-circuit).
+func _probe_pointer(mouse_pos: Vector2) -> Dictionary:
     var camera := _get_camera_3d()
     if not camera:
-        return
+        return {"unit": {}, "interact": {}}
 
     var from = camera.project_ray_origin(mouse_pos)
     var dir := camera.project_ray_normal(mouse_pos).normalized()
-
     var space_state = camera.get_world_3d().direct_space_state
     var query := PhysicsRayQueryParameters3D.create(from, from + dir * raycast_distance)
     query.collide_with_areas = true
 
-    # Pass 1: layer 16 — SelectComponent (units, buildings).
+    var unit: Dictionary = {}
     query.collision_mask = 1 << 15
     var result = space_state.intersect_ray(query)
-
     if result.has("collider"):
         var collider := result.collider as Node
-        var select_comp := _find_select_component(collider)
-        var entity := _find_entity_parent(collider)
+        unit = {
+            "select_comp": _find_select_component(collider),
+            "entity": _find_entity_parent(collider),
+        }
+
+    var interact: Dictionary = {}
+    query.collision_mask = 1 << 16
+    result = space_state.intersect_ray(query)
+    if result.has("collider"):
+        var collider := result.collider as Node
+        interact = {"entity": _find_entity_parent(collider)}
+
+    return {"unit": unit, "interact": interact}
+
+
+## Handle hover preview by raycasting at entities under the cursor.
+func _handle_hover_preview(mouse_pos: Vector2) -> void:
+    if not _get_camera_3d():
+        return
+
+    var probe := _probe_pointer(mouse_pos)
+    var unit: Dictionary = probe["unit"]
+    if not unit.is_empty():
+        var select_comp: SelectComponent = unit["select_comp"]
+        var entity: Node3D = unit["entity"]
         if select_comp and entity and _is_fog_visible(entity):
             _hover_miss_count = 0
             selection_manager.set_hover_preview(true, select_comp)
             _hovered_entity = entity
             return
 
-    # Pass 2: layer 17 — interact hitboxes (tiberium, dock).
-    query.collision_mask = 1 << 16
-    result = space_state.intersect_ray(query)
-
-    if result.has("collider"):
-        var collider := result.collider as Node
-        var entity := _find_entity_parent(collider)
+    var interact: Dictionary = probe["interact"]
+    if not interact.is_empty():
+        var entity: Node3D = interact["entity"]
         if entity and _is_fog_visible(entity):
             _hover_miss_count = 0
             _hovered_entity = entity
@@ -531,18 +535,16 @@ func _update_cursor() -> void:
         if scroll != CursorState.Type.DEFAULT:
             cursor_type = scroll
         else:
-            # Delegate to OrderSystem for cursor resolution
-            var target := _hovered_entity
-            var target_cell := Vector2i.ZERO
-            var target_pos := Vector3.ZERO
-            if is_instance_valid(target):
-                target_cell = CellUtil.world_to_cell(target.global_position)
-                target_pos = target.global_position
+            # Delegate to OrderSystem for cursor resolution. The lagged
+            # _hovered_entity is intentional (hover preview owns the raycast);
+            # ground fallback carries level 0 — observationally the generator's
+            # default, never a deck pick.
+            var intake: OrderProbe
+            if is_instance_valid(_hovered_entity):
+                intake = OrderProbe.from_entity(_hovered_entity, false)
             else:
-                target = null
-                target_pos = _get_ground_position_at_mouse()
-            var modifiers := OrderSystem.build_modifiers(false)
-            cursor_type = OrderSystem.resolve(target, target_cell, target_pos, modifiers).cursor
+                intake = OrderProbe.from_ground(_get_ground_position_at_mouse(), 0, false)
+            cursor_type = OrderSystem.resolve_probe(intake).cursor
 
     _apply_cursor(cursor_type)
 

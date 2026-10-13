@@ -764,9 +764,10 @@ func _handle_click(cell: Vector2i) -> void:
     var target: Node3D = _cell_targets.get(cell) as Node3D
     var target_level := _top_surface_level(cell)
     var world := _ground_order_pos(cell, target_level)
-    var modifiers := OrderSystem.build_modifiers(Input.is_key_pressed(KEY_SHIFT))
-    modifiers[OrderResult.MOD_TARGET_LEVEL] = target_level
-    var resolution := OrderSystem.resolve(target, cell, world, modifiers)
+    var intake := OrderProbe.from_cell(
+        cell, target, world, target_level, Input.is_key_pressed(KEY_SHIFT)
+    )
+    var resolution := OrderSystem.resolve_probe(intake)
     if resolution.orders.is_empty():
         BoundsSystem.center_camera_on_cell(cell)
         return

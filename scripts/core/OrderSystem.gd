@@ -35,6 +35,13 @@ func get_cursor(
     return resolve(target, target_cell, target_pos, modifiers).cursor
 
 
+## Seam entry for typed intake: splats an OrderProbe into the tuple resolve().
+## The tuple surface stays spec-mandated; callers should prefer this over
+## hand-building the quadruple. Disappears if resolve() ever absorbs the probe.
+func resolve_probe(probe: OrderProbe) -> OrderResolution:
+    return resolve(probe.target, probe.target_cell, probe.target_pos, probe.modifiers)
+
+
 func get_orders(
     target: Node3D,
     target_cell: Vector2i,
