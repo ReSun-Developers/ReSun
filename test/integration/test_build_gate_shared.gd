@@ -67,11 +67,11 @@ func test_build_list_and_production_share_one_decision():
 
     # One decision, read directly.
     TestHelper.assert_true(
-        bool(PrerequisiteSystem.evaluate_build(local_id, pass_data)["enabled"]),
+        bool(PrerequisiteSystem.evaluate_build(local_id, pass_data).enabled),
         "gated-in type is enabled"
     )
     TestHelper.assert_true(
-        not bool(PrerequisiteSystem.evaluate_build(local_id, fail_data)["enabled"]),
+        not bool(PrerequisiteSystem.evaluate_build(local_id, fail_data).enabled),
         "denied type is disabled"
     )
 

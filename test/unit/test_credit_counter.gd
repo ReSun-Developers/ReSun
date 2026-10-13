@@ -196,10 +196,10 @@ func test_unaffordable_type_is_still_enabled():
     _ensure_synth_buildable()
     _set_local_balance(0)
     var data: EntityData = EntityFactory.get_entity_data(SYNTH_ID)
-    var result: Dictionary = PrerequisiteSystem.evaluate_build(
+    var result: PrerequisiteSystem.BuildDecision = PrerequisiteSystem.evaluate_build(
         PlayerManager.get_local_player_id(), data
     )
     _drop_synth()
     TestHelper.assert_true(
-        bool(result["enabled"]), "a type the player cannot afford is still buildable"
+        bool(result.enabled), "a type the player cannot afford is still buildable"
     )
