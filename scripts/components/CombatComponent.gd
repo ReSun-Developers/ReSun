@@ -790,7 +790,7 @@ func _move_toward_target(force: bool = false) -> void:
     _combat_move = true
     _chase_leg_enemy_cell = CellUtil.world_to_cell(_engagement_pos())
     _last_chase_replan_time = _now()
-    mc.set_target_position(stop_pos, false, true)
+    mc.approach(stop_pos)
 
 
 ## World-space positions of airborne jumpjets within the 3x3 cells around the

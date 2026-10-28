@@ -717,7 +717,7 @@ func test_player_move_clears_attack_target():
     cc.set_target(target)
     TestHelper.assert_eq(cc._target, target, "target set before move")
     TestHelper.assert_true(cc._attack_active, "attack active before move")
-    mc.set_target_position(Vector3(5, 0, 5))
+    mc.move_to(Vector3(5, 0, 5))
     TestHelper.assert_eq(cc._target, null, "target cleared after player move")
     TestHelper.assert_eq(cc._attack_active, false, "attack inactive after player move")
     _ts.clear()
@@ -746,7 +746,7 @@ func test_combat_move_preserves_attack_target():
     entity.global_position = Vector3(1, 0, 1)
     cc.set_target(target)
     cc._combat_move = true
-    mc.set_target_position(Vector3(5, 0, 5))
+    mc.move_to(Vector3(5, 0, 5))
     TestHelper.assert_eq(cc._target, target, "target preserved after combat move")
     TestHelper.assert_true(cc._attack_active, "attack active after combat move")
     _ts.clear()
@@ -1312,7 +1312,7 @@ func test_chase_replans_out_of_wait_state():
     cc.set_target(target)
     mc._state = MovementController.State.WAIT
     cc._physics_process(0.1)
-    var left_wait: bool = mc._state != MovementController.State.WAIT
+    var left_wait: bool = mc.get_state() != MovementController.State.WAIT
     var target_kept: bool = cc._target == target
     root.remove_child(entity)
     root.remove_child(target)
@@ -1344,7 +1344,7 @@ func test_chase_in_range_wait_fires_without_replan():
         if target.get_node("HealthComponent").current_health < 100:
             fired = true
             break
-    var stayed_wait: bool = mc._state == MovementController.State.WAIT
+    var stayed_wait: bool = mc.get_state() == MovementController.State.WAIT
     root.remove_child(entity)
     root.remove_child(target)
     entity.free()
@@ -1415,7 +1415,7 @@ func test_chase_replan_keeps_target_then_player_move_clears():
     target.global_position = Vector3(30.0, 0.0, 4.0)
     cc._physics_process(0.1)
     var kept_after_replan: bool = cc._target == target
-    mc.set_target_position(Vector3(5, 0, 5))
+    mc.move_to(Vector3(5, 0, 5))
     var cleared_after_player_move: bool = cc._target == null
     root.remove_child(entity)
     root.remove_child(target)
@@ -1802,7 +1802,7 @@ func test_player_move_clears_ground_engagement():
     entity.global_position = Vector3(1, 0, 1)
     cc.set_ground_target(Vector3(9, 0, 9))
     TestHelper.assert_true(cc.is_engaged(), "ground engagement active before the move")
-    mc.set_target_position(Vector3(5, 0, 5))
+    mc.move_to(Vector3(5, 0, 5))
     TestHelper.assert_true(not cc.is_engaged(), "player move clears the ground engagement")
     _ts.clear()
     remove_child(entity)

@@ -55,7 +55,7 @@ func _can_board_target(target: Node3D) -> bool:
 
 
 ## Walk to the transport and board: targets the transport's own cell with a
-## straight final leg (set_exact_target), so the infantry walks flush to the
+## straight final leg (board), so the infantry walks flush to the
 ## APC. Boarding happens only on arrival at the APC's center — never instantly
 ## at order time, even from an adjacent cell.
 func _approach(transport: Node3D) -> void:
@@ -70,7 +70,7 @@ func _approach(transport: Node3D) -> void:
         movement.arrived.connect(_on_arrived)
     if not movement.movement_started.is_connected(_on_movement_started):
         movement.movement_started.connect(_on_movement_started)
-    movement.set_exact_target(transport.global_position)
+    movement.board(transport.global_position)
 
 
 func _on_arrived(_position: Vector3) -> void:
@@ -92,7 +92,7 @@ func _on_arrived(_position: Vector3) -> void:
     # cell with a normal move — its relocation logic finds the nearest free one.
     var movement := entity.get_node_or_null("MovementController") as MovementController
     if movement:
-        movement.set_target_position(transport.global_position)
+        movement.move_to(transport.global_position)
 
 
 ## A new (non-exact) move supersedes the pending board: without this, a
@@ -104,7 +104,7 @@ func _on_movement_started() -> void:
     if not entity:
         return
     var movement := entity.get_node_or_null("MovementController") as MovementController
-    if movement and not movement._exact_target:
+    if movement and not movement.is_exact_move():
         _clear_pending()
 
 

@@ -1,7 +1,9 @@
 ## Purpose
 
 CombatComponent resolves enemy targets into attack orders, tracks the current target, enforces per-weapon cooldowns, measures engagement range, applies hitscan damage through warhead armor multipliers, and coordinates movement toward out-of-range targets.
+
 ## Requirements
+
 ### Requirement: CombatComponent tracks attack target
 CombatComponent SHALL maintain a `_target: Node3D` reference set via `set_target(entity, hold_ground := false)`. The optional `hold_ground` flag SHALL default to `false` so existing player-order and test call sites are unchanged. When `hold_ground` is true, CombatComponent SHALL treat the engagement as stand-and-shoot: it SHALL NOT issue chase/approach moves, and when the target's horizontal distance exceeds the longest weapon range on a `_physics_process` tick it SHALL clear the target and stop attacking. The target SHALL persist across `_physics_process` ticks until explicitly cleared via `clear_target()`, the target becomes invalid, or (hold-ground only) the target leaves weapon range.
 
@@ -154,7 +156,7 @@ CombatComponent SHALL connect to `MovementController.arrived` signal on first at
 
 #### Scenario: Unit moves toward target
 - **WHEN** target is out of range and MC is idle, or the current move was just superseded by a fresh attack order
-- **THEN** CombatComponent SHALL compute a stop position at `weapon.attack_range * CELL_SIZE` distance from the target's effective target point, on the attacker's side of that point, and call `mc.set_target_position(stop_pos)`
+- **THEN** CombatComponent SHALL compute a stop position at `weapon.attack_range * CELL_SIZE` distance from the target's effective target point, on the attacker's side of that point, and call `mc.approach(stop_pos)`
 
 #### Scenario: Attacker stops at range from the nearest wall, not the center
 - **WHEN** the target is a large building and the attacker approaches from outside its footprint
@@ -184,7 +186,7 @@ CombatComponent SHALL clear its attack target and stop attacking when the player
 - **THEN** CombatComponent SHALL clear `_target`, set `_attack_active = false`, and stop firing
 
 #### Scenario: Combat move preserves attack
-- **WHEN** CombatComponent issues a move to close distance to target (sets `_combat_move = true` before calling `mc.set_target_position()`)
+- **WHEN** CombatComponent issues a move to close distance to target (sets `_combat_move = true` before calling `mc.approach()`)
 - **THEN** MovementController emits `movement_started`, CombatComponent SHALL detect `_combat_move`, skip clearing attack state, and continue attacking after arrival
 
 ### Requirement: Attack cancels player move
@@ -207,11 +209,15 @@ Issuing an attack order SHALL cancel a ground unit's in-progress player move and
 - **THEN** the in-flight move SHALL be cancelled via `cancel_move_retain_vertical()` and the jumpjet SHALL attack from its air zone (no change to existing airborne behavior)
 
 ### Requirement: movement_started signal on MovementController
-MovementController SHALL emit `signal movement_started` at the beginning of `set_target_position()`, before any pathfinding or movement begins.
+MovementController SHALL emit `signal movement_started` at the beginning of each public move intent (`move_to`, `player_move`, `exit_move`, `approach`, `board`), before any pathfinding or movement begins. The private re-target SHALL NOT emit it.
 
 #### Scenario: Signal emitted on move
-- **WHEN** `set_target_position()` is called with a valid position
+- **WHEN** a public move intent is called with a valid position
 - **THEN** `movement_started` SHALL be emitted before movement begins
+
+#### Scenario: Signal suppressed on re-target
+- **WHEN** the controller re-targets itself internally
+- **THEN** `movement_started` SHALL NOT be emitted
 
 ### Requirement: is_moving getter on MovementController
 MovementController SHALL expose `func is_moving() -> bool` that returns `true` when `_state != State.IDLE`.
@@ -430,4 +436,3 @@ Overlays failing their gate SHALL take no damage. An overlay that is itself the 
 #### Scenario: Overlay damaged exactly once when it is the target
 - **WHEN** an overlay entity is itself the shot's entity target and its warhead gate passes
 - **THEN** its health SHALL decrease by a single hit, not two
-

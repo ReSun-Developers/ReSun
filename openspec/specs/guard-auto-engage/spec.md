@@ -1,7 +1,9 @@
 ## Purpose
 
 GuardComponent Mode A stand-and-shoot acquisition: idle armed entities auto-acquire the nearest in-range hostile and engage without chasing.
+
 ## Requirements
+
 ### Requirement: GuardComponent attaches to armed entities
 `EntityFactory` SHALL attach a `GuardComponent` to every entity whose `EntityData.weapons` array is non-empty, alongside the existing `CombatComponent`. Entities with no weapons SHALL NOT receive a `GuardComponent`.
 
@@ -75,7 +77,7 @@ When a target is set with `hold_ground = true`, CombatComponent SHALL NOT issue 
 
 #### Scenario: Guard engagement stays put while target in range
 - **WHEN** a hold-ground target remains within weapon range
-- **THEN** CombatComponent SHALL fire (subject to cooldown/facing) and SHALL NOT call `mc.set_target_position` for a chase
+- **THEN** CombatComponent SHALL fire (subject to cooldown/facing) and SHALL NOT call `mc.approach()` for a chase
 
 #### Scenario: Target leaves weapon range disengages without moving
 - **WHEN** a hold-ground target moves beyond longest weapon range
@@ -121,4 +123,3 @@ GuardComponent SHALL run the hood scan at most once per throttle interval (a fix
 #### Scenario: Phase offset separates same-frame spawns
 - **WHEN** two guarded entities are created in the same frame
 - **THEN** their first scans SHALL be staggered by the per-instance phase offset rather than coinciding
-

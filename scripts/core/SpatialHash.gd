@@ -3,9 +3,10 @@ class_name SpatialHash extends Node
 
 ## Composite snapshot of a cell's occupancy, returned by `get_cell_occupancy`.
 ## Permanent facts (building/bib/resource/terrain_buildable) are ground-only;
-## momentary facts (units/blocked/moving/shared_count/reserved) are level-scoped.
-## `blocked`/`moving`/`shared_count` partition `units` by movement state and
-## sharing. Buildings and resource overlays never appear in `units`.
+## momentary facts (units/blocked/moving/shared_count/shared_moving/reserved) are
+## level-scoped. `blocked`/`moving`/`shared_count`/`shared_moving` partition
+## `units` by movement state and sharing. Buildings and resource overlays never
+## appear in `units`.
 class CellOccupancy:
     extends RefCounted
     var cell: Vector2i = Vector2i.ZERO
@@ -18,6 +19,7 @@ class CellOccupancy:
     var blocked: bool = false
     var moving: bool = false
     var shared_count: int = 0
+    var shared_moving: bool = false
     var reserved: bool = false
 
 
@@ -155,9 +157,9 @@ func rebuild() -> void:
         var key := CellUtil.cell_key(cell)
         var etype: int = stats.entity_type if stats else -1
         var pid: int = stats.player_id if stats else -1
-        var state: int = mc._state if mc else -1
+        var state: int = mc.get_state() if mc else -1
         var shares: bool = mc.shares_cell() if mc else false
-        var entry_level: int = mc._surface_level if mc else 0
+        var entry_level: int = mc.get_surface_level() if mc else 0
         var entry := {
             "node": entity_root,
             "mc": mc,
@@ -199,9 +201,9 @@ func _reconcile() -> void:
         var shares := false
         var level: int = 0
         if mc and is_instance_valid(mc):
-            state = mc._state
+            state = mc.get_state()
             shares = mc.shares_cell()
-            level = mc._surface_level
+            level = mc.get_surface_level()
         var pos: Vector3 = node.global_position
         var last_x: float = entry["last_x"]
         var last_z: float = entry["last_z"]
@@ -687,11 +689,11 @@ func is_any_entity_on_cell(cell: Vector2i, level: int = 0) -> bool:
 
 
 ## Composite occupancy snapshot for a cell. `level` scopes the momentary facts
-## (units/blocked/moving/shared_count/reserved); the permanent facts (building,
-## bib, resource, terrain) are ground-only. `exclude` removes one entity's
-## momentary contribution so a caller can ask "is this cell free apart from me".
-## Buildings and resource overlays never appear in `units`: buildings have no
-## MovementController, and overlays are not in the "entities" group.
+## (units/blocked/moving/shared_count/shared_moving/reserved); the permanent facts
+## (building, bib, resource, terrain) are ground-only. `exclude` removes one
+## entity's momentary contribution so a caller can ask "is this cell free apart
+## from me". Buildings and resource overlays never appear in `units`: buildings
+## have no MovementController, and overlays are not in the "entities" group.
 func get_cell_occupancy(cell: Vector2i, level: int = 0, exclude: Node3D = null) -> CellOccupancy:
     var occ := CellOccupancy.new()
     occ.cell = cell
@@ -706,7 +708,9 @@ func get_cell_occupancy(cell: Vector2i, level: int = 0, exclude: Node3D = null) 
         occ.terrain_buildable = TerrainSystem.is_cell_buildable(cell)
     occ.reserved = _reserved.has(CellUtil.cell_level_key(cell, level))
     for entry in _grid.get(key, []):
-        if entry["mc"] == null:
+        if entry["mc"] == null or not is_instance_valid(entry["mc"]):
+            continue
+        if not is_instance_valid(entry["node"]):
             continue
         if int(entry.get("level", 0)) != level:
             continue
@@ -714,11 +718,17 @@ func get_cell_occupancy(cell: Vector2i, level: int = 0, exclude: Node3D = null) 
         if exclude != null and node == exclude:
             continue
         occ.units.append(node)
-        if int(entry.get("state", MovementController.State.IDLE)) == MovementController.State.IDLE:
-            if bool(entry.get("shares", false)):
+        var idle: bool = (
+            int(entry.get("state", MovementController.State.IDLE)) == MovementController.State.IDLE
+        )
+        var shares: bool = bool(entry.get("shares", false))
+        if idle:
+            if shares:
                 occ.shared_count += 1
             else:
                 occ.blocked = true
+        elif shares:
+            occ.shared_moving = true
         else:
             occ.moving = true
     return occ
@@ -744,7 +754,7 @@ func is_cell_free_for_unit_exit(cell: Vector2i, level: int = 0, exclude: Node3D 
     var occ := get_cell_occupancy(cell, level, exclude)
     if occ.building or occ.bib:
         return false
-    if occ.blocked or occ.moving:
+    if occ.blocked or occ.moving or occ.shared_moving:
         return false
     return occ.shared_count < CellSubPositions.get_slot_count()
 

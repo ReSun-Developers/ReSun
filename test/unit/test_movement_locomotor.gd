@@ -139,7 +139,7 @@ func test_subterranean_distant_digs():
     mc._locomotor_data = sub
     mc._is_subterranean = true
     var target := CellUtil.cell_to_world(Vector2i(54, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var waypoints: int = mc._waypoints.size()
     _reset_terrain()
@@ -155,7 +155,7 @@ func test_subterranean_nearby_stays_surface():
     mc._locomotor_data = _subterranean()
     mc._is_subterranean = true
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var waypoints: int = mc._waypoints.size()
     _reset_terrain()
@@ -173,7 +173,7 @@ func test_hybrid_reset_on_arrival():
     mc._spline_t = 1.0
     mc._handle_moving_movement(0.016)
     var hybrid: bool = mc._hybrid_active
-    var idle: bool = mc._state == MovementController.State.IDLE
+    var idle: bool = mc.get_state() == MovementController.State.IDLE
     _reset_terrain()
     pair[0].queue_free()
     TestHelper.assert_eq(hybrid, false, "arrival resets hybrid flag")
@@ -462,7 +462,7 @@ func test_idle_deck_unit_keeps_deck_height():
     )
     mc._idle_snapped = false
     mc._physics_process(1.0 / 60.0)
-    var resolved_level: int = mc._surface_level
+    var resolved_level: int = mc.get_surface_level()
     var stayed_y: float = entity.global_position.y
     _sh._bridge_cells.erase(CellUtil.cell_level_key(cell, 1))
     root.remove_child(entity)
@@ -519,7 +519,7 @@ func test_idle_ground_unit_under_deck_stays_on_ground():
     )
     mc._idle_snapped = false
     mc._physics_process(1.0 / 60.0)
-    var resolved_level: int = mc._surface_level
+    var resolved_level: int = mc.get_surface_level()
     var stayed_y: float = entity.global_position.y
     _sh._bridge_cells.erase(CellUtil.cell_level_key(cell, 1))
     root.remove_child(entity)

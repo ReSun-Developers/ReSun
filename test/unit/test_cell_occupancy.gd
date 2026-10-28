@@ -202,6 +202,24 @@ func test_exit_refuses_moving_unit():
     _teardown()
 
 
+func test_moving_sharer_is_reported_separately():
+    _setup()
+    var sh := SpatialHash.instance
+    _make_unit(true, MovementController.State.MOVING)
+    sh.rebuild()
+    var occ := sh.get_cell_occupancy(CELL)
+    TestHelper.assert_true(occ.shared_moving, "moving sharer sets shared_moving")
+    TestHelper.assert_true(not occ.moving, "moving sharer is not a non-sharing mover")
+    (
+        TestHelper
+        . assert_true(
+            not sh.is_cell_free_for_unit_exit(CELL),
+            "exit refused while a sharing unit is still moving",
+        )
+    )
+    _teardown()
+
+
 func test_exit_refuses_idle_non_sharer():
     _setup()
     var sh := SpatialHash.instance

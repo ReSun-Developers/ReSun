@@ -75,8 +75,7 @@ func _start_exit(unit: Node3D = null, exit_pos: Vector3 = Vector3.ZERO) -> void:
     if is_instance_valid(unit):
         var mc := unit.get_node_or_null("MovementController") as MovementController
         if mc:
-            mc._has_sub_slot = false
-            CellReservation.instance.release_all(unit)
+            mc.release_sub_slot()
             if not mc.arrived.is_connected(_on_exit_arrived):
                 mc.arrived.connect(_on_exit_arrived.bind(unit))
         _move_to_exit(unit, exit_pos)
@@ -90,7 +89,7 @@ func _on_exit_arrived(_position: Vector3, unit: Node3D) -> void:
     if _rally_component and _rally_component.has_rally_point():
         var mc := unit.get_node_or_null("MovementController") as MovementController
         if mc:
-            mc.set_target_position(_rally_component.get_target_position(), true)
+            mc.exit_move(_rally_component.get_target_position())
         _rally_component = null
         return
     _rally_component = null
@@ -108,7 +107,7 @@ func _move_to_exit(unit: Node3D, exit_pos: Vector3) -> void:
 
     var mc := unit.get_node_or_null("MovementController") as MovementController
     if mc:
-        mc.set_target_position(target_pos, true)
+        mc.exit_move(target_pos)
 
 
 func _nudge_blocker(cell: Vector2i) -> void:
@@ -116,11 +115,11 @@ func _nudge_blocker(cell: Vector2i) -> void:
     var entries := SpatialHash.instance.get_entries(cell)
     for entry in entries:
         var mc: MovementController = entry.get("mc", null)
-        if mc and mc._state == MovementController.State.IDLE:
+        if mc and mc.is_idle():
             if _entry_is_enemy(entry, owner_id):
                 continue
             var free := _find_free_near(cell)
-            mc.set_target_position(CellUtil.cell_to_world(free))
+            mc.move_to(CellUtil.cell_to_world(free))
             return
 
 

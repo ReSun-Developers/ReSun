@@ -3,7 +3,9 @@
 ## Purpose
 
 `SelectionManager` tracks the player's selected entities and issues group moves, distributing sharers to cells by capacity and non-sharers by offset formation.
+
 ## Requirements
+
 ### Requirement: SelectionManager tracks selected entities
 `SelectionManager` SHALL be an autoload singleton maintaining `selected_entities: Array[SelectComponent]`. It emits `selection_changed(selected_entities)` whenever the selection set changes.
 
@@ -50,7 +52,7 @@ When multiple vehicles are selected and a move command is issued, `request_move(
 - **THEN** all vehicles move to the exact target position (no formation offsets)
 
 ### Requirement: Infantry cell pre-assignment
-When infantry units are selected and a move command is issued, `request_move()` SHALL pre-assign each infantry to a cell using spiral search from the target cell, with max 3 per cell based on `CellReservation` combined capacity (physical idle infantry + in-flight claims). `request_move()` SHALL NOT pre-assign sub-slots; slot assignment SHALL occur at movement start inside `MovementController.set_target_position` via `CellReservation.reserve_sub_slot`.
+When infantry units are selected and a move command is issued, `request_move()` SHALL pre-assign each infantry to a cell using spiral search from the target cell, with max 3 per cell based on `CellReservation` combined capacity (physical idle infantry + in-flight claims). `request_move()` SHALL NOT pre-assign sub-slots; slot assignment SHALL occur at movement start inside the MovementController move intent (`move_to` / `player_move`) via `CellReservation.reserve_sub_slot`.
 
 #### Scenario: Three infantry to same cell
 - **WHEN** 3 infantry move to a cell with no existing infantry and no claims
@@ -143,7 +145,7 @@ SelectionManager SHALL synchronize its internal selection list with the visual `
 - **THEN** `selected_entities` is reconciled within 100 ms
 
 ### Requirement: Sharers distribute by capacity
-The system SHALL separate sharers from non-sharers when processing a group move command. Units whose MovementController `shares_cell()` returns true SHALL be distributed to cells near the target with at most `CellSubPositions.get_slot_count()` per cell, using `CellReservation` combined capacity. Each sharer SHALL be assigned a sub-slot at movement start inside `MovementController.set_target_position`; SelectionManager SHALL NOT pre-assign slots. Non-sharers SHALL use the existing offset-based vehicle formation.
+The system SHALL separate sharers from non-sharers when processing a group move command. Units whose MovementController `shares_cell()` returns true SHALL be distributed to cells near the target with at most `CellSubPositions.get_slot_count()` per cell, using `CellReservation` combined capacity. Each sharer SHALL be assigned a sub-slot at movement start inside the MovementController move intent (`move_to` / `player_move`); SelectionManager SHALL NOT pre-assign slots. Non-sharers SHALL use the existing offset-based vehicle formation.
 
 #### Scenario: Group move with mixed units
 - **WHEN** a player issues a move command with 6 sharers and 2 non-sharers selected
@@ -223,4 +225,3 @@ Ownership SHALL be determined from `StatsComponent.player_id` (missing component
 - **WHEN** an enemy is selected and the player shift-drags a box over local units
 - **THEN** the enemy SHALL be deselected
 - **AND** only the local units SHALL be selected
-

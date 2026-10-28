@@ -186,7 +186,7 @@ func test_shipped_high_bridge_drive_crosses_the_span() -> void:
     mc._locomotor_data = wheel
     vehicle.global_position = CellUtil.cell_to_world(START_CELL)
     vehicle.global_position.y = deck_height
-    mc.set_target_position(CellUtil.cell_to_world(FAR_CELL))
+    mc.move_to(CellUtil.cell_to_world(FAR_CELL))
 
     # The produced path crosses every deck cell on the level-1 surface.
     var crossed: Dictionary = _path_deck_levels(mc)
@@ -199,7 +199,7 @@ func test_shipped_high_bridge_drive_crosses_the_span() -> void:
     # arrives on the far road cut within the frame budget.
     var deck_y: Dictionary = {}
     var frames := 0
-    while frames < MAX_DRIVE_FRAMES and mc._state != MovementController.State.IDLE:
+    while frames < MAX_DRIVE_FRAMES and mc.get_state() != MovementController.State.IDLE:
         mc._physics_process(DRIVE_DT)
         frames += 1
         var cell := CellUtil.world_to_cell(vehicle.global_position)
@@ -208,7 +208,7 @@ func test_shipped_high_bridge_drive_crosses_the_span() -> void:
     TestHelper.assert_true(
         frames < MAX_DRIVE_FRAMES, "the vehicle finished within the frame budget"
     )
-    TestHelper.assert_eq(mc._state, MovementController.State.IDLE, "the vehicle ends idle")
+    TestHelper.assert_eq(mc.get_state(), MovementController.State.IDLE, "the vehicle ends idle")
     TestHelper.assert_eq(
         CellUtil.world_to_cell(vehicle.global_position), FAR_CELL, "the vehicle ends on FAR_CELL"
     )
@@ -248,7 +248,7 @@ func test_shipped_high_bridge_crossing_needs_the_decks() -> void:
     mc._locomotor_data = wheel
     vehicle.global_position = CellUtil.cell_to_world(START_CELL)
     vehicle.global_position.y = float(DECK_GRADE) * _ts.HEIGHT_STEP
-    mc.set_target_position(CellUtil.cell_to_world(FAR_CELL))
+    mc.move_to(CellUtil.cell_to_world(FAR_CELL))
     TestHelper.assert_eq(
         _path_deck_levels(mc).size(), 0, "without decks the route uses no deck cell"
     )
@@ -257,7 +257,7 @@ func test_shipped_high_bridge_crossing_needs_the_decks() -> void:
     # control had a reachable crossing to lose.
     _spawn_bridges()
     _sh.rebuild()
-    mc.set_target_position(CellUtil.cell_to_world(FAR_CELL))
+    mc.move_to(CellUtil.cell_to_world(FAR_CELL))
     TestHelper.assert_true(
         _path_deck_levels(mc).size() > 0, "restored decks put the crossing back on the route"
     )

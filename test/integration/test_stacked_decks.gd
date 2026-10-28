@@ -127,17 +127,13 @@ func test_ground_and_level_one_traffic_share_stacked_corridor() -> void:
     deck.global_position = CellUtil.cell_to_world(START_CELL)
     deck.global_position.y = level1_y
 
-    ground_mc.set_target_position(
-        CellUtil.cell_to_world(FAR_CELL), false, false, false, null, null, true, false, 0
-    )
-    deck_mc.set_target_position(
-        CellUtil.cell_to_world(FAR_CELL), false, false, false, null, null, true, false, 1
+    ground_mc.player_move(CellUtil.cell_to_world(FAR_CELL), null, null, 0)
+    deck_mc.player_move(CellUtil.cell_to_world(FAR_CELL), null, null, 1)
+    TestHelper.assert_true(
+        ground_mc.get_state() != MovementController.State.IDLE, "ground vehicle accepted the order"
     )
     TestHelper.assert_true(
-        ground_mc._state != MovementController.State.IDLE, "ground vehicle accepted the order"
-    )
-    TestHelper.assert_true(
-        deck_mc._state != MovementController.State.IDLE, "deck vehicle accepted the order"
+        deck_mc.get_state() != MovementController.State.IDLE, "deck vehicle accepted the order"
     )
     # Control: each route crosses the mid cell; the ground path is at level 0 and
     # the deck path at level 1 (a level-2 crossing is proven by the path query).
@@ -173,19 +169,21 @@ func test_ground_and_level_one_traffic_share_stacked_corridor() -> void:
     var deck_mid_y := NAN
     var frames := 0
     while frames < MAX_DRIVE_FRAMES and not _both_idle(ground_mc, deck_mc):
-        if ground_mc._state != MovementController.State.IDLE:
+        if ground_mc.get_state() != MovementController.State.IDLE:
             ground_mc._physics_process(DRIVE_DT)
             if CellUtil.world_to_cell(ground.global_position) == MID_CELL:
                 ground_mid_y = ground.global_position.y
-        if deck_mc._state != MovementController.State.IDLE:
+        if deck_mc.get_state() != MovementController.State.IDLE:
             deck_mc._physics_process(DRIVE_DT)
             if CellUtil.world_to_cell(deck.global_position) == MID_CELL:
                 deck_mid_y = deck.global_position.y
         frames += 1
 
     TestHelper.assert_true(frames < MAX_DRIVE_FRAMES, "both vehicles finished within the budget")
-    TestHelper.assert_eq(ground_mc._state, MovementController.State.IDLE, "ground vehicle stopped")
-    TestHelper.assert_eq(deck_mc._state, MovementController.State.IDLE, "deck vehicle stopped")
+    TestHelper.assert_eq(
+        ground_mc.get_state(), MovementController.State.IDLE, "ground vehicle stopped"
+    )
+    TestHelper.assert_eq(deck_mc.get_state(), MovementController.State.IDLE, "deck vehicle stopped")
     TestHelper.assert_eq(
         CellUtil.world_to_cell(ground.global_position), FAR_CELL, "ground vehicle reached far shore"
     )

@@ -113,7 +113,7 @@ A landing fly move SHALL fly straight to the exact sub-slot reserved at its land
 - **THEN** the stop position is clamped back onto the range circle, so the jumpjet fires on arrival instead of bouncing away
 
 ### Requirement: Air attack holds never book ground sub-slots
-Internal re-targets (repair, blocked-arrival settle, wait scatter, nudges) SHALL preserve the move's zone intent via `set_target_position(target, unblock_buildings, keep_zone, internal)` and SHALL NOT emit `movement_started` (they are not new player orders, so an in-progress attack is not cancelled). An airborne attacker holding its air position SHALL never reserve a ground sub-slot or land. A blocked/occupied ground cell below an airborne attack stop SHALL NOT displace the hold — the attacker stops at its in-range stop position regardless of ground occupancy. A jumpjet landing move (not an air hold) arriving at a blocked destination SHALL glide immediately to the nearest free cell instead of entering the `WAIT` freeze-and-scatter cycle.
+Internal re-targets (repair, blocked-arrival settle, wait scatter, nudges) SHALL preserve the move's zone intent via the private `_retarget(target, keep_zone, end_level)` and SHALL NOT emit `movement_started` (they are not new player orders, so an in-progress attack is not cancelled). An airborne attacker holding its air position SHALL never reserve a ground sub-slot or land. A blocked/occupied ground cell below an airborne attack stop SHALL NOT displace the hold — the attacker stops at its in-range stop position regardless of ground occupancy. A jumpjet landing move (not an air hold) arriving at a blocked destination SHALL glide immediately to the nearest free cell instead of entering the `WAIT` freeze-and-scatter cycle.
 
 #### Scenario: Blocked attack stop stays in place
 - **WHEN** an airborne attacker's stop position is on a blocked/occupied cell
@@ -128,7 +128,7 @@ Internal re-targets (repair, blocked-arrival settle, wait scatter, nudges) SHALL
 - **THEN** its current attack target is preserved (`movement_started` is not re-emitted)
 
 ### Requirement: Zone retention on attack
-When `MovementController.set_target_position(target, unblock_buildings, keep_zone)` is called with `keep_zone = true` on a jumpjet, the unit SHALL attack from its current zone: grounded units walk to the target and attack on land, airborne units fly to the target and attack in the air. A unit in ASCENDING or DESCENDING SHALL ascend to the flight altitude before attacking. `CombatComponent._move_toward_target()` SHALL pass `keep_zone = true`. Issuing an attack order while an airborne jumpjet is moving SHALL cancel the in-flight move (via `MovementController.cancel_move_retain_vertical()`) so the attack starts from the air zone instead of finishing the previous move's landing first.
+When `MovementController.approach(target)` is called on a jumpjet, the unit SHALL attack from its current zone: grounded units walk to the target and attack on land, airborne units fly to the target and attack in the air. A unit in ASCENDING or DESCENDING SHALL ascend to the flight altitude before attacking. `CombatComponent._move_toward_target()` SHALL call `approach(target)`. Issuing an attack order while an airborne jumpjet is moving SHALL cancel the in-flight move (via `MovementController.cancel_move_retain_vertical()`) so the attack starts from the air zone instead of finishing the previous move's landing first.
 
 #### Scenario: Grounded jumpjet attacks on land
 - **WHEN** a grounded jumpjet is issued an attack order and moves to approach

@@ -99,10 +99,10 @@ func _cleanup(pair: Array) -> void:
 
 
 func _travel(mc: MovementController) -> float:
-    mc.set_target_position(mc._parent.global_position + Vector3(30.0, 0.0, 0.0))
+    mc.move_to(mc._parent.global_position + Vector3(30.0, 0.0, 0.0))
     var start: Vector3 = mc._parent.global_position
     for _i in TICKS:
-        if mc._state == MovementController.State.IDLE:
+        if mc.get_state() == MovementController.State.IDLE:
             break
         mc._handle_moving_movement(DELTA)
     return mc._parent.global_position.distance_to(start)
