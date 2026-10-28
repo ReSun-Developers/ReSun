@@ -285,15 +285,25 @@ func _get_camera_3d() -> Camera3D:
 
 func _add_preview_groups(entity: Node3D, data: EntityData) -> void:
     var etype := data.entity_type
+    var select_comp := entity.get_node_or_null("SelectComponent") as SelectComponent
+    var is_selectable: bool = (
+        data.is_selectable if select_comp == null else select_comp.is_selectable
+    )
+    var is_drag_selectable: bool = (
+        data.is_drag_selectable if select_comp == null else select_comp.is_drag_selectable
+    )
     if etype != EntityData.EntityType.OVERLAY:
         if etype != EntityData.EntityType.TERRAIN or data.foundation != Vector2i(1, 1):
             entity.add_to_group("entities")
     var is_unit := StatsComponent.is_unit_type(etype)
     if is_unit:
-        entity.add_to_group("selectable")
-        entity.add_to_group("drag_selectable")
+        if is_selectable:
+            entity.add_to_group("selectable")
+        if is_drag_selectable:
+            entity.add_to_group("drag_selectable")
     elif etype == EntityData.EntityType.BUILDING:
-        entity.add_to_group("selectable")
+        if is_selectable:
+            entity.add_to_group("selectable")
     if data.resource_category != "":
         entity.add_to_group("resources")
     if data.resource_spawner:

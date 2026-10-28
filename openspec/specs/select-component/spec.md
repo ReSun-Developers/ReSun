@@ -12,15 +12,18 @@ Defines `SelectComponent`'s selection visuals: select boxes, health bar and colo
 - **THEN** a SelectComponent child node is added with `SelectionHitbox` and `SelectOutline` collision shapes
 
 ### Requirement: Select box types
+
 SelectComponent SHALL support three visual modes via `select_box_type`: Infantry, Vehicle, and Structure. Each mode determines the visual style of the selection indicator.
 
 #### Scenario: Structure select box
+
 - **WHEN** `select_box_type == SelectBoxType.Structure`
 - **THEN** a 3D selection box is rendered using ImmediateMesh L-shaped corner lines (12 bottom corners + 6 top corners)
 
 #### Scenario: Vehicle/Infantry select box
+
 - **WHEN** `select_box_type` is Infantry or Vehicle
-- **THEN** the entity registers in "selectable", "entities", and "drag_selectable" groups
+- **THEN** the Infantry/Vehicle selection indicator style is used; group membership is governed by the Group registration requirement
 
 ### Requirement: Health bar for structures
 When a Structure entity has a HealthComponent, SelectComponent SHALL render a segmented health bar at the top of the selection box using BoxMesh with a grid overlay.
@@ -91,18 +94,33 @@ When a building has a RallyPointComponent, SelectComponent SHALL draw a green li
 - **THEN** rally line is redrawn to the new position
 
 ### Requirement: Group registration
-SelectComponent SHALL register its parent entity in scene tree groups based on its type and selectability flags:
+
+SelectComponent SHALL register its parent entity in scene tree groups based on its type and selectability flags when the entity enters the tree, unless the entity is detached:
 - "selectable": if `is_selectable == true`
-- "drag_selectable": if `is_drag_selectable == true`
+- "drag_selectable": if `is_drag_selectable == true` and the component is not a Structure box
 - "entities": always (for iteration by core systems)
 
+Detached entities SHALL join no groups.
+
 #### Scenario: Selectable unit registered
+
 - **WHEN** a Vehicle entity with `is_selectable = true` enters the scene tree
 - **THEN** parent is in "selectable", "drag_selectable", and "entities" groups
 
 #### Scenario: Structure not in drag_selectable
+
 - **WHEN** a Structure entity enters the scene tree
-- **THEN** parent is NOT in "drag_selectable" group (structures can't be box-selected)
+- **THEN** parent is in "selectable" and "entities" groups, but NOT in "drag_selectable"
+
+#### Scenario: Non-selectable unit registers no selection group
+
+- **WHEN** a non-structure entity with `is_selectable = false` and `is_drag_selectable = false` enters the scene tree
+- **THEN** parent is NOT in "selectable" and NOT in "drag_selectable", but is in "entities"
+
+#### Scenario: Drag opt-out registers no drag group
+
+- **WHEN** a non-structure entity with `is_selectable = true` and `is_drag_selectable = false` enters the scene tree
+- **THEN** parent is in "selectable" but NOT in "drag_selectable"
 
 ### Requirement: Move target line drawing
 When a selected unit has a `MovementController` and is executing a move order, `SelectComponent` SHALL register a green line with the shared `MoveLineRenderer` autoload, drawn from the unit to the final cell of its current move order, with a small filled marker at the destination cell center. When the unit has an active attack target (`CombatComponent.get_target()`), the line SHALL end at the attack target's current position instead of the move order's destination cell, so the marker tracks the enemy entity as it moves. The line SHALL use the same layer treatment as the rally line (unshaded, `no_depth_test`, `render_priority = 100`), provided by the shared renderer material. When the per-game `move_target_line` setting is off, `SelectComponent` SHALL NOT register the move-target line; rally lines are governed by their own requirement and are unaffected by this setting.

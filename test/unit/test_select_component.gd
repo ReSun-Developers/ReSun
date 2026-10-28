@@ -248,3 +248,73 @@ func test_non_refinery_builds_no_storage_bar():
         )
     )
     entity.free()
+
+
+# ========================================
+# Selectability group registration (#451)
+# ========================================
+
+
+func _make_group_entity(select_box_type: int) -> Node3D:
+    var entity := Node3D.new()
+    var sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
+    sc.name = "SelectComponent"
+    sc.select_box_type = select_box_type
+    entity.add_child(sc)
+    return entity
+
+
+func test_non_selectable_unit_joins_only_entities_group():
+    var entity := _make_group_entity(SelectComponent.SelectBoxType.Vehicle)
+    var sc := entity.get_node("SelectComponent") as SelectComponent
+    sc.is_selectable = false
+    sc.is_drag_selectable = false
+    (Engine.get_main_loop() as SceneTree).root.add_child(entity)
+    var result := (
+        entity.is_in_group("entities")
+        and not entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    entity.free()
+    TestHelper.assert_true(result, "non-selectable unit joins only the entities group")
+
+
+func test_drag_opt_out_keeps_click_selectable_group():
+    var entity := _make_group_entity(SelectComponent.SelectBoxType.Vehicle)
+    var sc := entity.get_node("SelectComponent") as SelectComponent
+    sc.is_selectable = true
+    sc.is_drag_selectable = false
+    (Engine.get_main_loop() as SceneTree).root.add_child(entity)
+    var result := (
+        entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+        and entity.is_in_group("entities")
+    )
+    entity.free()
+    TestHelper.assert_true(result, "drag opt-out stays in selectable but not drag_selectable")
+
+
+func test_structure_joins_selectable_but_not_drag():
+    var entity := _make_group_entity(SelectComponent.SelectBoxType.Structure)
+    (Engine.get_main_loop() as SceneTree).root.add_child(entity)
+    var result := (
+        entity.is_in_group("selectable")
+        and entity.is_in_group("entities")
+        and not entity.is_in_group("drag_selectable")
+    )
+    entity.free()
+    TestHelper.assert_true(result, "structure joins selectable/entities but never drag_selectable")
+
+
+func test_non_selectable_structure_joins_only_entities_group():
+    var entity := _make_group_entity(SelectComponent.SelectBoxType.Structure)
+    var sc := entity.get_node("SelectComponent") as SelectComponent
+    sc.is_selectable = false
+    (Engine.get_main_loop() as SceneTree).root.add_child(entity)
+    var result := (
+        entity.is_in_group("entities")
+        and not entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    entity.free()
+    TestHelper.assert_true(result, "non-selectable structure joins only the entities group")
