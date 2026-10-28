@@ -9,6 +9,39 @@ var _sm: Node = null
 var _pm: Node = null
 
 
+## Deterministic movement stub: records the assigned destination and emits the
+## movement signals the guard stance listens to, without touching terrain/pathing.
+class _FakeMovement:
+    extends MovementController
+    var moving := false
+    var requested := Vector3.ZERO
+    var requested_level := 0
+    var request_count := 0
+
+    func is_moving() -> bool:
+        return moving
+
+    func get_target_position() -> Vector3:
+        return requested
+
+    func set_target_position(
+        target: Vector3,
+        _unblock_buildings: bool = false,
+        _keep_zone: bool = false,
+        _internal: bool = false,
+        _cost_cache: Pathfinder.PathCostCache = null,
+        _terrain: Node = null,
+        _bounded: bool = false,
+        _exact_target: bool = false,
+        _end_level: int = 0,
+    ) -> void:
+        requested = target
+        requested_level = _end_level
+        moving = true
+        request_count += 1
+        movement_started.emit()
+
+
 func _make_weapon(damage: int = 10, range_cells: float = 5.0) -> WeaponData:
     var w := WeaponData.new()
     w.id = "TEST_WEAPON"
@@ -46,6 +79,34 @@ func _make_non_combat_entity(player_id: int = -1) -> Node3D:
     stats.player_id = player_id
     entity.add_child(stats)
     return entity
+
+
+## Replaces the real controller with the deterministic stub so order execution
+## does not depend on terrain/pathfinding.
+func _use_fake_movement(entity: Node3D) -> _FakeMovement:
+    var real := entity.get_node_or_null("MovementController")
+    if real:
+        real.free()
+    var mc := _FakeMovement.new()
+    mc.name = "MovementController"
+    entity.add_child(mc)
+    return mc
+
+
+func _make_guard_entity(player_id: int = -1) -> Node3D:
+    var entity := _make_combat_entity(player_id)
+    var guard := GuardComponent.new()
+    guard.name = "GuardComponent"
+    entity.add_child(guard)
+    return entity
+
+
+func _guard_modifiers() -> Dictionary:
+    return {
+        OrderResult.MOD_FORCE_ATTACK: true,
+        OrderResult.MOD_FORCE_MOVE: true,
+        OrderResult.MOD_GUARD_AREA: true,
+    }
 
 
 func _make_deploy_entity(can_undeploy: bool = false, player_id: int = -1) -> Node3D:
@@ -922,15 +983,198 @@ func test_resolve_ctrl_alt_falls_back_to_force_move():
     _setup_selection([entity])
     var target := _make_target(local_id + 1)
     var gen := _get_generator()
-    # Ctrl+Alt+Click is Guard Area in the original (not implemented); the held
-    # Alt currently yields force-move rather than firing.
-    var modifiers := {OrderResult.MOD_FORCE_ATTACK: true, OrderResult.MOD_FORCE_MOVE: true}
+    # A movable unit without a GuardComponent cannot guard: Ctrl+Alt keeps the
+    # force-move fallback rather than firing or guarding.
+    var modifiers := _guard_modifiers()
     var resolution := gen.resolve(target, Vector2i.ZERO, target.global_position, modifiers)
     TestHelper.assert_eq(
         resolution.cursor, CursorState.Type.MOVE, "Ctrl+Alt -> MOVE fallback, not ATTACK"
     )
     _teardown_selection([entity])
     target.free()
+
+
+func test_resolve_ctrl_alt_guard_capable_yields_guard():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var entity := _make_guard_entity(local_id)
+    _setup_selection([entity])
+    var gen := _get_generator()
+    var resolution := gen.resolve(null, Vector2i.ZERO, Vector3(9.0, 0.0, 4.0), _guard_modifiers())
+    TestHelper.assert_eq(resolution.cursor, CursorState.Type.GUARD, "Ctrl+Alt -> GUARD cursor")
+    TestHelper.assert_eq(resolution.orders.size(), 1, "Ctrl+Alt -> 1 guard-area order")
+    TestHelper.assert_eq(
+        resolution.orders[0].cursor, CursorState.Type.GUARD, "the order is a GUARD order"
+    )
+    (
+        TestHelper
+        . assert_true(
+            resolution.orders[0].priority > gen.GROUND_MOVE_PRIORITY,
+            "guard area outranks the synthesized ground MOVE",
+        )
+    )
+    _teardown_selection([entity])
+
+
+func test_resolve_ctrl_alt_over_enemy_guard_capable_yields_guard():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var entity := _make_guard_entity(local_id)
+    _setup_selection([entity])
+    var target := _make_target(local_id + 1)
+    var gen := _get_generator()
+    var resolution := gen.resolve(target, Vector2i.ZERO, target.global_position, _guard_modifiers())
+    TestHelper.assert_eq(resolution.cursor, CursorState.Type.GUARD, "Ctrl+Alt over enemy -> GUARD")
+    TestHelper.assert_eq(resolution.orders.size(), 1, "Ctrl+Alt over enemy -> 1 guard order")
+    TestHelper.assert_eq(resolution.orders[0].target, target, "guard order targets the enemy")
+    _teardown_selection([entity])
+    target.free()
+
+
+func test_resolve_ctrl_alt_enemy_selection_is_never_guard():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var enemy := _make_guard_entity(local_id + 1)
+    _setup_selection([enemy])
+    var gen := _get_generator()
+    var resolution := gen.resolve(null, Vector2i.ZERO, Vector3(5.0, 0.0, 5.0), _guard_modifiers())
+    TestHelper.assert_eq(resolution.orders.size(), 0, "enemy selection -> no guard order")
+    TestHelper.assert_true(
+        resolution.cursor != CursorState.Type.GUARD, "enemy selection -> no GUARD cursor"
+    )
+    _teardown_selection([enemy])
+
+
+func test_guard_order_moves_selection_and_enters_stance():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var first := _make_guard_entity(local_id)
+    var first_mc := _use_fake_movement(first)
+    var second := _make_guard_entity(local_id)
+    var second_mc := _use_fake_movement(second)
+    var plain := _make_non_combat_entity(local_id)
+    var plain_mc := _use_fake_movement(plain)
+    first.position = Vector3.ZERO
+    second.position = Vector3(4.0, 0.0, 0.0)
+    plain.position = Vector3(0.0, 0.0, 4.0)
+    _setup_selection([first, second, plain])
+    var gen := _get_generator()
+    var resolution := gen.resolve(null, Vector2i.ZERO, Vector3(8.0, 0.0, 6.0), _guard_modifiers())
+    TestHelper.assert_eq(resolution.orders.size(), 1, "one synthesized guard order")
+    resolution.orders[0].execute.call()
+    _sm._process(0.0)
+    var first_guard := first.get_node("GuardComponent") as GuardComponent
+    var second_guard := second.get_node("GuardComponent") as GuardComponent
+    TestHelper.assert_true(first_guard.has_guard_area(), "first guard unit enters the stance")
+    TestHelper.assert_true(second_guard.has_guard_area(), "second guard unit enters the stance")
+    (
+        TestHelper
+        . assert_true(
+            first_guard._guard_area_anchor.is_equal_approx(first_mc.requested),
+            "the stance anchors on the unit's own assigned destination",
+        )
+    )
+    (
+        TestHelper
+        . assert_true(
+            second_guard._guard_area_anchor.is_equal_approx(second_mc.requested),
+            "each unit anchors on its own formation slot",
+        )
+    )
+    (
+        TestHelper
+        . assert_true(
+            not first_mc.requested.is_equal_approx(second_mc.requested),
+            "formation slots differ, so the anchor is not the shared click point",
+        )
+    )
+    TestHelper.assert_true(plain_mc.request_count >= 1, "unarmed unit receives the move too")
+    _sm._pending_moves.clear()
+    _sm._pending_index = 0
+    SpatialHash.instance.clear_reservations()
+    _teardown_selection([first, second, plain])
+
+
+func test_build_modifiers_guard_area_precedence():
+    var ctrl_alt := OrderSystem.build_modifiers_for(true, true, false, false)
+    TestHelper.assert_true(ctrl_alt[OrderResult.MOD_GUARD_AREA], "Ctrl+Alt sets guard area")
+    var ctrl_alt_rally := OrderSystem.build_modifiers_for(true, true, false, true)
+    (
+        TestHelper
+        . assert_true(
+            not ctrl_alt_rally[OrderResult.MOD_GUARD_AREA],
+            "a rally receiver suppresses guard area so Alt keeps its rally point",
+        )
+    )
+    var ctrl_only := OrderSystem.build_modifiers_for(true, false, false, false)
+    TestHelper.assert_true(
+        not ctrl_only[OrderResult.MOD_GUARD_AREA], "Ctrl alone is not guard area"
+    )
+    var alt_only := OrderSystem.build_modifiers_for(false, true, false, false)
+    TestHelper.assert_true(not alt_only[OrderResult.MOD_GUARD_AREA], "Alt alone is not guard area")
+
+
+func test_stop_clears_guard_area():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var entity := _make_guard_entity(local_id)
+    _setup_selection([entity])
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    guard.set_guard_area(entity.global_position)
+    var handler := MouseHandler.new()
+    handler.selection_manager = _sm
+    handler.apply_selection_hotkey(true)
+    TestHelper.assert_true(not guard.has_guard_area(), "Stop clears the guard-area stance")
+    handler.free()
+    _teardown_selection([entity])
+
+
+func _make_rally_receiver(player_id: int) -> Node3D:
+    var entity := Node3D.new()
+    entity.name = "Factory"
+    var rally := RallyPointComponent.new()
+    rally.name = "RallyPointComponent"
+    entity.add_child(rally)
+    var stats := StatsComponent.new()
+    stats.name = "StatsComponent"
+    stats.player_id = player_id
+    entity.add_child(stats)
+    return entity
+
+
+func test_alt_factory_click_sets_rally_point():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var local_id: int = _pm.get_local_player_id() if _pm else 0
+    var factory := _make_rally_receiver(local_id)
+    _setup_selection([factory])
+    TestHelper.assert_true(_sm.has_rally_receiver(), "factory selection accepts a rally point")
+    var pos := Vector3(12.0, 0.0, 8.0)
+    _sm.request_set_rally_point(pos)
+    var rally := factory.get_node("RallyPointComponent") as RallyPointComponent
+    TestHelper.assert_true(rally.has_rally_point(), "Alt click sets the rally point")
+    (
+        TestHelper
+        . assert_eq(
+            rally.rally_point,
+            CellUtil.world_to_cell(
+                BoundsSystem.clamp_to_visible_diamond(pos, BoundsSystem.ORDER_EDGE_INSET)
+            ),
+            "rally point lands on the clamped click cell",
+        )
+    )
+    _teardown_selection([factory])
 
 
 # --- OrderSystem.issue(): dispatch ---

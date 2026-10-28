@@ -23,6 +23,9 @@ var _cost_cache: Pathfinder.PathCostCache = null
 ## Batch-lifetime TerrainSystem reference, resolved once per move order so per-unit
 ## path resolution never walks the scene tree for the autoload.
 var _terrain: Node = null
+## Set by a guard-area order after request_move(); each unit that actually receives
+## the queued move enters the guard-area stance at its assigned destination.
+var _guard_area_pending: bool = false
 ## Perf-guard counter: "selectable"-group scans by the throttled sync. The
 ## per-frame path must only scan every 6th frame (test/unit/test_perf_guard.gd).
 ## ponytail: only catches scans routed through this scan site.
@@ -233,6 +236,8 @@ func _emit_hover(node: Node3D):
 func request_move(
     target_position: Vector3, skip_formation: bool = false, target_level: int = 0
 ) -> void:
+    # A new move order supersedes any queued guard-area marking.
+    _guard_area_pending = false
     if selected_entities.is_empty():
         return
 
@@ -352,6 +357,12 @@ func request_move(
         _pending_moves.append([sharer, cell_center, target_level])
 
 
+## Marks the queued move batch as guard area. Call after request_move(); units
+## skipped by request_move (transitioning, undeployable) never enter the stance.
+func request_guard_area() -> void:
+    _guard_area_pending = true
+
+
 func _process(_delta: float) -> void:
     _selection_sync_counter += 1
     if _selection_sync_counter % 6 == 0:
@@ -363,6 +374,8 @@ func _process(_delta: float) -> void:
         _execute_move(data[0] as SelectComponent, data[1] as Vector3, pending_level)
         _pending_index += 1
         batch -= 1
+    if _pending_index >= _pending_moves.size():
+        _guard_area_pending = false
 
 
 func _synchronize_visual_selection() -> void:
@@ -410,6 +423,10 @@ func _execute_move(select_comp: SelectComponent, position: Vector3, target_level
         mc.set_target_position(
             position, false, false, false, _cost_cache, _terrain, true, false, target_level
         )
+    if _guard_area_pending and is_instance_valid(mc):
+        var guard := parent.get_node_or_null("GuardComponent") as GuardComponent
+        if guard:
+            guard.set_guard_area(mc.get_target_position(), target_level)
     var harvest := parent.get_node_or_null("HarvestComponent") as HarvestComponent
     if harvest:
         harvest.cancel_harvest(true)
