@@ -58,7 +58,7 @@ enum BridgeKind { NONE, LOW, HIGH, RAIL }
 @export_group("Movement")
 ## Movement speed as the TS `Speed` value: leptons per game frame. 0 = immobile.
 @export var speed: float = 0.0
-## Movement zone — which terrain types this entity can traverse (e.g., "foot", "track", "float").
+## Movement zone — TS pathfinding domain class (e.g. Normal, Infantry, Fly); metadata only.
 @export var movement_zone: String = ""
 ## Locomotor type — determines movement behavior and animation (e.g., "Walk", "Drive", "Fly").
 @export var locomotor: String = ""
@@ -345,51 +345,6 @@ enum BridgeKind { NONE, LOW, HIGH, RAIL }
 ## Default build-speed factor when GlobalRules is unavailable (e.g. isolated tests).
 const DEFAULT_BUILD_SPEED: float = 0.4
 
-## Movement zones compatible with each locomotor type. Zone is metadata (TS
-## pathfinding domain class); passability is driven by the locomotor alone.
-const LOCOMOTOR_ZONES: Dictionary = {
-    "Foot": ["Infantry", "InfantryDestroyer"],
-    "Track":
-    [
-        "Normal",
-        "Crusher",
-        "Destroyer",
-        "AmphibiousCrusher",
-        "AmphibiousDestroyer",
-        "InfantryDestroyer",
-    ],
-    "Wheel": ["Normal", "Destroyer", "Crusher", "InfantryDestroyer"],
-    "Hover":
-    [
-        "Normal",
-        "Destroyer",
-        "AmphibiousCrusher",
-        "AmphibiousDestroyer",
-        "InfantryDestroyer",
-        "Crusher",
-    ],
-    "Amphibious":
-    [
-        "AmphibiousCrusher",
-        "AmphibiousDestroyer",
-        "Destroyer",
-        "InfantryDestroyer",
-        "Normal",
-    ],
-    "Fly": ["Fly"],
-    "Jumpjet": ["Fly"],
-    "Subterranean": ["Subterannean"],
-    "Ship": ["Subterannean", "Fly", "Destroyer", "AmphibiousCrusher", "AmphibiousDestroyer"],
-}
-
-
-## Returns true when the given movement zone is compatible with the locomotor.
-static func is_movement_zone_compatible(locomotor_id: String, zone: String) -> bool:
-    if zone.is_empty():
-        return true
-    var zones: Array = LOCOMOTOR_ZONES.get(locomotor_id, [])
-    return zones.has(zone)
-
 
 ## Returns effective build time in seconds, calculated from cost using the TS
 ## formula and scaled by the per-entity build_time_mult. An explicit build_speed
@@ -427,15 +382,14 @@ func validate() -> PackedStringArray:
         errors.append("%s: buildable building must have strength > 0" % id)
     var rules := GlobalRules.get_current()
     if rules:
-        if not locomotor.is_empty() and rules.get_locomotor(locomotor) == null:
+        var lm := rules.get_locomotor(locomotor)
+        if not locomotor.is_empty() and lm == null:
             errors.append("%s: unknown locomotor %s" % [id, locomotor])
-        if (
-            not movement_zone.is_empty()
-            and not is_movement_zone_compatible(locomotor, movement_zone)
-        ):
-            errors.append(
-                "%s: movement_zone %s contradicts locomotor %s" % [id, movement_zone, locomotor]
-            )
+        if not movement_zone.is_empty():
+            if locomotor.is_empty() or (lm != null and not lm.zones.has(movement_zone)):
+                errors.append(
+                    "%s: movement_zone %s contradicts locomotor %s" % [id, movement_zone, locomotor]
+                )
     var seen_weapon_indices: Dictionary = {}
     for group in weapon_mount_groups:
         if group == null:
