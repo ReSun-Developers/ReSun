@@ -274,7 +274,7 @@ func _change_state(new_state: int) -> void:
                     _change_state(State.HARVESTING)
                     return
                 _seek_timeout = SEEK_TIMEOUT
-                mc.set_target_position(_current_resource.global_position)
+                mc.move_to(_current_resource.global_position)
         State.DELIVERING:
             _last_field_position = entity_parent.global_position
         State.HIBERNATE:
@@ -303,7 +303,7 @@ func _unblock_dock_if_needed(entity_parent: Node3D) -> void:
         return
     var free_cell := dock.find_wait_cell()
     if free_cell != my_cell:
-        mc.set_target_position(CellUtil.cell_to_world(free_cell))
+        mc.move_to(CellUtil.cell_to_world(free_cell))
 
 
 func _find_nearest_resource(search_from: Vector3) -> Node3D:
@@ -323,8 +323,7 @@ func _find_nearest_resource(search_from: Vector3) -> Node3D:
             var ecell := CellUtil.world_to_cell(entity.global_position)
             if SpatialHash.instance.is_cell_blocked(ecell):
                 continue
-            var key: int = CellUtil.cell_key(ecell)
-            if SpatialHash.instance._reserved.has(key):
+            if SpatialHash.instance.get_cell_occupancy(ecell).reserved:
                 continue
         var dist := search_from.distance_squared_to(entity.global_position)
         if dist < nearest_dist:

@@ -1,5 +1,7 @@
 extends Node
 
+const MovementFactory := preload("res://test/movement_test_factory.gd")
+
 # MovementController jumpjet vertical state machine, booking, and attack holds
 
 var _ts: Node = null
@@ -23,24 +25,13 @@ func _jumpjet() -> Locomotor:
     return jj
 
 
-func _infantry_like(mc: MovementController) -> void:
-    mc._shares_cell = true
-    mc._stand_upright = true
-    mc._instant_turn = true
-    mc._organic_path = true
-
-
 func _make_mc(entity_type: int) -> Array:
-    var entity := Node3D.new()
-    var stats := StatsComponent.new()
-    stats.entity_type = entity_type
-    stats.player_id = 0
-    stats.weight = 3.0
-    entity.add_child(stats)
-    var mc := MovementController.new()
-    entity.add_child(mc)
-    mc._parent = entity
-    return [entity, mc]
+    return _make_mc_with(_jumpjet(), entity_type)
+
+
+func _make_mc_with(loco: Locomotor, entity_type: int) -> Array:
+    var mc := MovementFactory.make_movement_controller(loco, entity_type)
+    return [mc.get_parent(), mc]
 
 
 ## Creates an idle non-infantry entity occupying a cell, so the cell counts as
@@ -68,11 +59,8 @@ func test_jumpjet_move_order_walks_when_reachable():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var waypoints: int = mc._waypoints.size()
     var zone: int = mc._vertical_state
@@ -88,19 +76,16 @@ func test_jumpjet_move_order_walks_when_reachable():
 
 func test_jumpjet_move_order_flies_when_far():
     _reset_terrain()
-    var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
-    var mc: MovementController = pair[1]
     var jj := _jumpjet()
     jj.jumpjet_fly_distance = 1.0
-    mc._locomotor_data = jj
-    mc._is_jumpjet = true
-    _infantry_like(mc)
+    var pair: Array = _make_mc_with(jj, EntityData.EntityType.INFANTRY)
+    var mc: MovementController = pair[1]
     var target := CellUtil.cell_to_world(Vector2i(54, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var waypoints: int = mc._waypoints.size()
     var land: bool = mc._land_on_arrival
-    var booked: bool = mc._has_sub_slot
+    var booked: bool = mc.has_sub_slot()
     var cr := CellReservation.instance
     if cr:
         cr.clear()
@@ -116,17 +101,14 @@ func test_jumpjet_airborne_move_flies_then_lands():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var land: bool = mc._land_on_arrival
-    var booked: bool = mc._has_sub_slot
+    var booked: bool = mc.has_sub_slot()
     var dest: Vector3 = mc._waypoints[mc._waypoints.size() - 1]
-    var sub_pos: Vector3 = mc._sub_slot_position
+    var sub_pos: Vector3 = mc.get_sub_slot_position()
     var cr := CellReservation.instance
     if cr:
         cr.clear()
@@ -144,13 +126,10 @@ func test_jumpjet_walk_books_sub_slot():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.GROUND
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
-    var booked: bool = mc._has_sub_slot
+    mc.move_to(target)
+    var booked: bool = mc.has_sub_slot()
     var cr := CellReservation.instance
     if cr:
         cr.clear()
@@ -165,11 +144,8 @@ func test_jumpjet_move_order_same_cell_stays_grounded():
     var entity: Node3D = pair[0]
     var mc: MovementController = pair[1]
     entity.global_position = CellUtil.cell_to_world(Vector2i(52, 50))
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var zone: int = mc._vertical_state
     var cr := CellReservation.instance
@@ -185,14 +161,11 @@ func test_jumpjet_landing_waypoint_is_exact_sub_slot():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var dest: Vector3 = mc._waypoints[mc._waypoints.size() - 1]
-    var sub_pos: Vector3 = mc._sub_slot_position
+    var sub_pos: Vector3 = mc.get_sub_slot_position()
     var cr := CellReservation.instance
     if cr:
         cr.clear()
@@ -215,15 +188,12 @@ func test_jumpjet_landing_move_relocates_occupied_cell():
     SpatialHash.instance.rebuild()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var dest: Vector3 = mc._waypoints[mc._waypoints.size() - 1]
     var dest_cell: Vector2i = CellUtil.world_to_cell(dest)
-    var booked: bool = mc._has_sub_slot
+    var booked: bool = mc.has_sub_slot()
     root.remove_child(blocker)
     blocker.free()
     SpatialHash.instance.rebuild()
@@ -246,9 +216,6 @@ func test_jumpjet_airborne_hold_ignores_occupied_cell():
     var mc: MovementController = pair[1]
     root.add_child(entity)
     entity.global_position = Vector3.ZERO
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = false
     mc._state = MovementController.State.MOVING
@@ -271,19 +238,16 @@ func test_jumpjet_airborne_hold_ignores_occupied_cell():
         )
     )
     TestHelper.assert_eq(mc._vertical_state, MovementController.VerticalState.AIR, "hold stays air")
-    TestHelper.assert_eq(mc._has_sub_slot, false, "airborne hold books no sub-slot")
+    TestHelper.assert_eq(mc.has_sub_slot(), false, "airborne hold books no sub-slot")
 
 
 func test_jumpjet_attack_move_has_no_spread():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target, false, true)
+    mc.approach(target)
     var dest: Vector3 = mc._waypoints[mc._waypoints.size() - 1]
     var cr := CellReservation.instance
     if cr:
@@ -302,14 +266,11 @@ func test_jumpjet_cancel_move_retains_air():
     var entity: Node3D = pair[0]
     var mc: MovementController = pair[1]
     root.add_child(entity)
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._state = MovementController.State.MOVING
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = true
     mc.cancel_move_retain_vertical()
-    var state: int = mc._state
+    var state: int = mc.get_state()
     var zone: int = mc._vertical_state
     var land: bool = mc._land_on_arrival
     root.remove_child(entity)
@@ -324,13 +285,10 @@ func test_jumpjet_cancel_move_ignores_grounded():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._state = MovementController.State.MOVING
     mc._vertical_state = MovementController.VerticalState.GROUND
     mc.cancel_move_retain_vertical()
-    var state: int = mc._state
+    var state: int = mc.get_state()
     _reset_terrain()
     pair[0].queue_free()
     TestHelper.assert_eq(state, MovementController.State.MOVING, "grounded move left alone")
@@ -343,15 +301,12 @@ func test_jumpjet_attack_after_cancel_flies():
     var entity: Node3D = pair[0]
     var mc: MovementController = pair[1]
     root.add_child(entity)
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._state = MovementController.State.MOVING
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = true
     mc.cancel_move_retain_vertical()
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target, false, true)
+    mc.approach(target)
     var hybrid: bool = mc._hybrid_active
     var zone: int = mc._vertical_state
     var land: bool = mc._land_on_arrival
@@ -367,9 +322,6 @@ func test_jumpjet_wait_retarget_keeps_air_zone():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = false
     mc._state = MovementController.State.WAIT
@@ -378,7 +330,7 @@ func test_jumpjet_wait_retarget_keeps_air_zone():
     mc._waypoints = [Vector3.ZERO, CellUtil.cell_to_world(Vector2i(52, 50))]
     mc._handle_wait(0.01)
     var zone: int = mc._vertical_state
-    var booked: bool = mc._has_sub_slot
+    var booked: bool = mc.has_sub_slot()
     var land: bool = mc._land_on_arrival
     var cr := CellReservation.instance
     if cr:
@@ -394,9 +346,6 @@ func test_jumpjet_wait_retarget_landing_lands():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = true
     mc._state = MovementController.State.WAIT
@@ -404,7 +353,7 @@ func test_jumpjet_wait_retarget_landing_lands():
     mc._wait_time = 0.02
     mc._waypoints = [Vector3.ZERO, CellUtil.cell_to_world(Vector2i(52, 50))]
     mc._handle_wait(0.01)
-    var booked: bool = mc._has_sub_slot
+    var booked: bool = mc.has_sub_slot()
     var land: bool = mc._land_on_arrival
     var cr := CellReservation.instance
     if cr:
@@ -420,16 +369,13 @@ func test_jumpjet_blocked_arrival_retargets_immediately():
     SpatialHash.instance.register_building_cells([Vector2i(52, 50)])
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = true
     mc._state = MovementController.State.MOVING
     mc._waypoints = [Vector3.ZERO, CellUtil.cell_to_world(Vector2i(52, 50))]
     mc._spline_t = 1.0
     mc._handle_moving_movement(0.016)
-    var state: int = mc._state
+    var state: int = mc.get_state()
     var land: bool = mc._land_on_arrival
     SpatialHash.instance._building_cells.clear()
     _reset_terrain()
@@ -442,15 +388,12 @@ func test_jumpjet_blocked_arrival_retargets_immediately():
 
 func test_jumpjet_distant_flies():
     _reset_terrain()
-    var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
-    var mc: MovementController = pair[1]
     var jj := _jumpjet()
     jj.jumpjet_fly_distance = 1.0
-    mc._locomotor_data = jj
-    mc._is_jumpjet = true
-    _infantry_like(mc)
+    var pair: Array = _make_mc_with(jj, EntityData.EntityType.INFANTRY)
+    var mc: MovementController = pair[1]
     var target := CellUtil.cell_to_world(Vector2i(54, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var hybrid: bool = mc._hybrid_active
     var waypoints: int = mc._waypoints.size()
     var cr := CellReservation.instance
@@ -502,7 +445,6 @@ func test_jumpjet_ascending_reaches_air():
     var mc: MovementController = pair[1]
     root.add_child(entity)
     entity.global_position = Vector3.ZERO
-    mc._is_jumpjet = true
     mc.move_speed = 10.0
     mc._jumpjet_air_height = 4.075
     mc._vertical_state = MovementController.VerticalState.ASCENDING
@@ -528,7 +470,6 @@ func test_jumpjet_descending_reaches_ground():
     var mc: MovementController = pair[1]
     root.add_child(entity)
     entity.global_position = Vector3(0.0, 4.075, 0.0)
-    mc._is_jumpjet = true
     mc.move_speed = 10.0
     mc._vertical_state = MovementController.VerticalState.DESCENDING
     mc._update_vertical(0.1)
@@ -548,7 +489,6 @@ func test_jumpjet_split_speed_ascend_and_forward():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._is_jumpjet = true
     mc.move_speed = 10.0
     mc._state = MovementController.State.MOVING
     mc._vertical_state = MovementController.VerticalState.ASCENDING
@@ -574,7 +514,6 @@ func test_jumpjet_fly_order_arrival_hovers():
     var mc: MovementController = pair[1]
     root.add_child(entity)
     entity.global_position = Vector3(0.0, 4.075, 0.0)
-    mc._is_jumpjet = true
     mc._jumpjet_air_height = 4.075
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._snap_to_terrain(0.016)
@@ -593,7 +532,6 @@ func test_jumpjet_ground_snap_to_terrain():
     var mc: MovementController = pair[1]
     root.add_child(entity)
     entity.global_position = Vector3(0.0, 4.075, 0.0)
-    mc._is_jumpjet = true
     mc._jumpjet_air_height = 4.075
     mc._vertical_state = MovementController.VerticalState.GROUND
     mc._snap_to_terrain(0.016)
@@ -608,12 +546,9 @@ func test_jumpjet_new_order_while_descending_ascends():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.DESCENDING
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var state: int = mc._vertical_state
     var hybrid: bool = mc._hybrid_active
     var cr := CellReservation.instance
@@ -631,12 +566,9 @@ func test_jumpjet_keep_zone_airborne_flies():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target, false, true)
+    mc.approach(target)
     var hybrid: bool = mc._hybrid_active
     var state: int = mc._vertical_state
     var cr := CellReservation.instance
@@ -652,12 +584,9 @@ func test_jumpjet_keep_zone_grounded_walks():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.GROUND
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target, false, true)
+    mc.approach(target)
     var hybrid: bool = mc._hybrid_active
     var state: int = mc._vertical_state
     var cr := CellReservation.instance
@@ -673,12 +602,9 @@ func test_jumpjet_keep_zone_descending_ascends():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    mc._locomotor_data = _jumpjet()
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.DESCENDING
     var target := CellUtil.cell_to_world(Vector2i(52, 50))
-    mc.set_target_position(target, false, true)
+    mc.approach(target)
     var state: int = mc._vertical_state
     var hybrid: bool = mc._hybrid_active
     var cr := CellReservation.instance
@@ -699,9 +625,6 @@ func test_jumpjet_airborne_terrain_factor_is_one():
     _reset_terrain()
     var pair: Array = _make_mc(EntityData.EntityType.INFANTRY)
     var mc: MovementController = pair[1]
-    var jj := _jumpjet()
-    mc._locomotor_data = jj
-    mc._is_jumpjet = true
     mc._vertical_state = MovementController.VerticalState.AIR
     _ts.set_land_type(Vector2i(50, 50), "rough")
     var factor: float = mc._terrain_speed_factor()
@@ -720,8 +643,6 @@ func test_jumpjet_short_approach_no_overshoot():
     var start := Vector3(0.0, 4.075, 0.0)
     var final_pos := Vector3(4.0, 0.0, 0.0)
     entity.global_position = start
-    mc._is_jumpjet = true
-    _infantry_like(mc)
     mc._vertical_state = MovementController.VerticalState.AIR
     mc._land_on_arrival = false
     mc._state = MovementController.State.MOVING
@@ -740,7 +661,7 @@ func test_jumpjet_short_approach_no_overshoot():
         if dist > prev_dist + 0.05:
             overshot = true
         prev_dist = dist
-        if mc._state == MovementController.State.IDLE:
+        if mc.get_state() == MovementController.State.IDLE:
             arrived = true
             break
     root.remove_child(entity)

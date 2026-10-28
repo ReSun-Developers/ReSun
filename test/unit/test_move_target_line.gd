@@ -96,7 +96,7 @@ func test_movement_started_only_on_player_order():
     )
 
     # Internal re-path / scatter (internal = true): no signal.
-    mc.set_target_position(Vector3(5, 0, 5), false, false, true)
+    mc._retarget(Vector3(5, 0, 5))
     var suppressed: bool = count[0] == 0
 
     # Genuine player move order (internal defaults to false): signal fires once
@@ -104,7 +104,7 @@ func test_movement_started_only_on_player_order():
     # center), not the start position.
     var dest := Vector3(5, 0, 5)
     var dest_cell_center := CellUtil.cell_to_world(CellUtil.world_to_cell(dest))
-    mc.set_target_position(dest)
+    mc.move_to(dest)
     var emitted: bool = count[0] == 1
     var correct_target: bool = not seen_target.is_empty() and seen_target[0] == dest_cell_center
 

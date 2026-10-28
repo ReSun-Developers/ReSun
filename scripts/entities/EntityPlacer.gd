@@ -42,10 +42,7 @@ func place_entity(
     if lm and lm.shares_cell:
         var mc := entity.get_node_or_null("MovementController") as MovementController
         if mc:
-            var cell := CellUtil.world_to_cell(world_pos)
-            mc._assign_sub_slot_at_cell(cell)
-            if mc._has_sub_slot:
-                entity.global_position = mc._sub_slot_position
+            mc.place_at_sub_slot(CellUtil.world_to_cell(world_pos))
     entity_placed.emit(entity, entity_data)
     return entity
 

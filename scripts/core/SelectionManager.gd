@@ -252,7 +252,7 @@ func request_move(
             continue
         if is_instance_valid(parent):
             var own_mc := parent.get_node_or_null("MovementController") as MovementController
-            var own_level: int = own_mc._surface_level if own_mc else 0
+            var own_level: int = own_mc.get_surface_level() if own_mc else 0
             SpatialHash.instance.force_reserve(
                 CellUtil.world_to_cell(parent.global_position), own_level
             )
@@ -407,9 +407,7 @@ func _execute_move(select_comp: SelectComponent, position: Vector3, target_level
         return
     var mc := parent.get_node("MovementController") as MovementController
     if is_instance_valid(mc):
-        mc.set_target_position(
-            position, false, false, false, _cost_cache, _terrain, true, false, target_level
-        )
+        mc.player_move(position, _cost_cache, _terrain, target_level)
     var harvest := parent.get_node_or_null("HarvestComponent") as HarvestComponent
     if harvest:
         harvest.cancel_harvest(true)

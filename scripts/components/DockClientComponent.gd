@@ -157,13 +157,13 @@ func _move_to_dock(host: Node3D) -> void:
         dock_slot_failed.emit()
         return
     var target_pos: Vector3 = dock.get_dock_world_position()
-    _mc.set_target_position(target_pos)
+    _mc.move_to(target_pos)
 
 
 func _move_to_cell(cell: Vector2i) -> void:
     if not _mc:
         return
-    _mc.set_target_position(CellUtil.cell_to_world(cell))
+    _mc.move_to(CellUtil.cell_to_world(cell))
 
 
 func _on_arrived(_position: Vector3) -> void:
@@ -176,7 +176,7 @@ func _on_arrived(_position: Vector3) -> void:
             if dock and _mc:
                 var my_cell := CellUtil.world_to_cell(get_parent().global_position)
                 if my_cell != dock._dock_cell:
-                    _mc.set_target_position(CellUtil.cell_to_world(dock._dock_cell))
+                    _mc.move_to(CellUtil.cell_to_world(dock._dock_cell))
                     return
             # Arrived — restart the host's stale clock so the (variable-length)
             # approach doesn't eat the rotate+unload budget.
@@ -191,7 +191,7 @@ func _on_arrived(_position: Vector3) -> void:
                     var wait_cell := dock.find_wait_cell()
                     var my_cell := CellUtil.world_to_cell(get_parent().global_position)
                     if my_cell != wait_cell:
-                        _mc.set_target_position(CellUtil.cell_to_world(wait_cell))
+                        _mc.move_to(CellUtil.cell_to_world(wait_cell))
 
 
 func _on_pathfinding_failed() -> void:

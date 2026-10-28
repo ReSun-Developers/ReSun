@@ -737,7 +737,7 @@ func test_execute_deploy_blocked_leaves_move_intact():
 
     TestHelper.assert_true(not ok, "deploy fails when no free cell exists")
     TestHelper.assert_eq(
-        mc._state, MovementController.State.MOVING, "failed deploy leaves the move intact"
+        mc.get_state(), MovementController.State.MOVING, "failed deploy leaves the move intact"
     )
     TestHelper.assert_true(not mc._waypoints.is_empty(), "failed deploy keeps the move path")
 

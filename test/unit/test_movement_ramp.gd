@@ -57,7 +57,7 @@ func test_accelerate_ramp_up() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(true, false)
 
-    mc.set_target_position(Vector3(20.0, 0.0, 0.0))
+    mc.move_to(Vector3(20.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     for i in range(20):
@@ -81,7 +81,7 @@ func test_decelerate_ramp_down() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(true, true)
 
-    mc.set_target_position(Vector3(20.0, 0.0, 0.0))
+    mc.move_to(Vector3(20.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     for i in range(30):
@@ -96,12 +96,13 @@ func test_decelerate_ramp_down() -> void:
     var last_moving_speed: float = mid_speed
     for i in range(400):
         mc._handle_moving_movement(0.0167)
-        if mc._state != MovementController.State.MOVING:
+        if mc.get_state() != MovementController.State.MOVING:
             break
         last_moving_speed = mc._ramp_speed
 
     TestHelper.assert_true(
-        mc._state != MovementController.State.MOVING, "Unit should arrive within the tick budget"
+        mc.get_state() != MovementController.State.MOVING,
+        "Unit should arrive within the tick budget"
     )
     TestHelper.assert_true(
         last_moving_speed < mid_speed, "Speed should drop on final approach while still moving"
@@ -120,7 +121,7 @@ func test_default_off_no_regression() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(false, false)
 
-    mc.set_target_position(Vector3(10.0, 0.0, 0.0))
+    mc.move_to(Vector3(10.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     for i in range(60):
@@ -149,11 +150,11 @@ func test_short_move_no_overshoot() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(true, true)
 
-    mc.set_target_position(Vector3(2.0, 0.0, 0.0))
+    mc.move_to(Vector3(2.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     for i in range(120):
-        if mc._state != MovementController.State.MOVING:
+        if mc.get_state() != MovementController.State.MOVING:
             break
         mc._handle_moving_movement(0.0167)
 
@@ -177,7 +178,7 @@ func test_decel_only_first_move_starts_at_cruise() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(false, true)
 
-    mc.set_target_position(Vector3(20.0, 0.0, 0.0))
+    mc.move_to(Vector3(20.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     TestHelper.assert_eq(
@@ -228,7 +229,8 @@ func test_final_step_lands_on_target_not_past() -> void:
     mc._handle_moving_movement(0.0167)
 
     TestHelper.assert_true(
-        mc._state == MovementController.State.IDLE, "Arrival should fire the tick after landing"
+        mc.get_state() == MovementController.State.IDLE,
+        "Arrival should fire the tick after landing"
     )
     TestHelper.assert_true(
         arrived_at.size() == 1 and arrived_at[0].distance_to(final_pos) < 0.001,
@@ -263,7 +265,7 @@ func test_midpath_step_not_clamped() -> void:
         dist > 4.8 and dist < 5.0, "Mid-path step should move a full step (dist %f)" % dist
     )
     TestHelper.assert_true(
-        mc._state == MovementController.State.MOVING, "Mid-path unit must keep moving"
+        mc.get_state() == MovementController.State.MOVING, "Mid-path unit must keep moving"
     )
     _cleanup(pair)
 
@@ -279,7 +281,7 @@ func test_ramp_carries_on_retarget() -> void:
     var mc: MovementController = pair[1]
     mc._locomotor_data = _make_locomotor(true, false)
 
-    mc.set_target_position(Vector3(20.0, 0.0, 0.0))
+    mc.move_to(Vector3(20.0, 0.0, 0.0))
     mc._state = MovementController.State.MOVING
 
     for i in range(10):
@@ -287,7 +289,7 @@ func test_ramp_carries_on_retarget() -> void:
 
     var ramp_speed_before: float = mc._ramp_speed
 
-    mc.set_target_position(Vector3(30.0, 0.0, 0.0), false, false, true)
+    mc._retarget(Vector3(30.0, 0.0, 0.0))
 
     TestHelper.assert_true(
         abs(mc._ramp_speed - ramp_speed_before) < 0.1,

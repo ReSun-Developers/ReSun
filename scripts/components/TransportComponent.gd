@@ -255,9 +255,7 @@ func _readd_passenger_at_free_cell(passenger: Node3D) -> void:
     passenger.global_position = CellUtil.cell_to_world(target_cell)
     var mc := passenger.get_node_or_null("MovementController") as MovementController
     if mc:
-        mc._assign_sub_slot_at_cell(target_cell)
-        if mc._has_sub_slot:
-            passenger.global_position = mc._sub_slot_position
+        mc.place_at_sub_slot(target_cell)
 
 
 ## Ring search (r=1..3) for an in-bounds land cell without an entity on it;

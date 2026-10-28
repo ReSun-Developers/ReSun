@@ -273,7 +273,9 @@ func test_nudge_blocker_leaves_enemy_unit():
     )
     var exit := building.get_node("ExitComponent") as ExitComponent
     exit._nudge_blocker(_NUDGE_BLOCK_CELL)
-    var untouched: bool = mc._state == MovementController.State.IDLE and mc._waypoints.is_empty()
+    var untouched: bool = (
+        mc.get_state() == MovementController.State.IDLE and mc._waypoints.is_empty()
+    )
     _cleanup_nudge(building, blocker)
     TestHelper.assert_true(untouched, "exit nudge must not move an enemy blocker")
 

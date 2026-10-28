@@ -630,7 +630,7 @@ func test_approach_targets_apc_cell_exactly():
     TestHelper.assert_eq(
         mc.get_target_position(), apc.global_position, "destination stays on the APC's cell"
     )
-    TestHelper.assert_true(mc._exact_target, "exact-target mode active")
+    TestHelper.assert_true(mc.is_exact_move(), "exact-target mode active")
     _sh._grid.erase(CellUtil.cell_key(apc_cell))
     apc.queue_free()
     trooper.queue_free()
@@ -655,7 +655,7 @@ func test_exact_target_arrives_on_occupied_cell():
     mc.arrived.connect(func(_p: Vector3) -> void: arrived_count[0] += 1)
     mc._physics_process(0.016)
     TestHelper.assert_true(
-        mc._state == MovementController.State.IDLE, "settles onto the occupied cell"
+        mc.get_state() == MovementController.State.IDLE, "settles onto the occupied cell"
     )
     TestHelper.assert_true(arrived_count[0] == 1, "arrived fires for exact-target moves")
     _sh._grid.erase(CellUtil.cell_key(cell))
@@ -680,7 +680,7 @@ func test_normal_move_waits_on_occupied_cell():
     mc.arrived.connect(func(_p: Vector3) -> void: arrived_count[0] += 1)
     mc._physics_process(0.016)
     TestHelper.assert_true(
-        mc._state == MovementController.State.WAIT, "normal moves wait on occupied cells"
+        mc.get_state() == MovementController.State.WAIT, "normal moves wait on occupied cells"
     )
     TestHelper.assert_true(arrived_count[0] == 0, "no arrival while the cell stays occupied")
     _sh._grid.erase(CellUtil.cell_key(cell))
@@ -700,7 +700,7 @@ func test_approach_adjacent_walks_to_center_before_boarding():
     TestHelper.assert_eq(t.current_passengers, 0, "adjacent infantry does not board instantly")
     TestHelper.assert_true(pcomp._pending_transport == apc, "approach registers pending transport")
     TestHelper.assert_eq(mc.get_target_position(), apc.global_position, "walks to the APC center")
-    TestHelper.assert_true(mc._exact_target, "walk uses exact-target mode")
+    TestHelper.assert_true(mc.is_exact_move(), "walk uses exact-target mode")
     pcomp._on_arrived(apc.global_position)
     TestHelper.assert_eq(t.current_passengers, 1, "arrival at the APC center boards")
     apc.queue_free()
@@ -717,7 +717,7 @@ func test_redirect_move_clears_pending_board():
     pcomp._approach(apc)
     # Player redirects with a plain move order: the pending board must drop,
     # so arriving near the transport later never auto-boards.
-    mc.set_target_position(CellUtil.cell_to_world(TEST_CELL + Vector2i(5, 5)))
+    mc.move_to(CellUtil.cell_to_world(TEST_CELL + Vector2i(5, 5)))
     pcomp._on_arrived(trooper.global_position)
     TestHelper.assert_eq(t.current_passengers, 0, "redirected infantry does not board")
     TestHelper.assert_true(pcomp._pending_transport == null, "pending cleared on redirect")
@@ -739,7 +739,7 @@ func test_move_after_stop_does_not_board():
     mc.stop()
     TestHelper.assert_true(pcomp._pending_transport != null, "stop alone keeps the board order")
     # The next player move (stop then redirect) supersedes the stale board.
-    mc.set_target_position(CellUtil.cell_to_world(TEST_CELL + Vector2i(6, 6)))
+    mc.move_to(CellUtil.cell_to_world(TEST_CELL + Vector2i(6, 6)))
     pcomp._on_arrived(trooper.global_position)
     TestHelper.assert_eq(t.current_passengers, 0, "infantry does not board after redirect")
     TestHelper.assert_true(pcomp._pending_transport == null, "pending cleared on next move")
@@ -792,8 +792,8 @@ func test_board_failure_sidesteps():
     pcomp._on_arrived(trooper.global_position)
     TestHelper.assert_eq(t.current_passengers, 1, "full transport unchanged")
     TestHelper.assert_true(
-        mc._state != MovementController.State.IDLE, "failed board issues a sidestep move"
+        mc.get_state() != MovementController.State.IDLE, "failed board issues a sidestep move"
     )
-    TestHelper.assert_true(not mc._exact_target, "sidestep is a normal relocated move")
+    TestHelper.assert_true(not mc.is_exact_move(), "sidestep is a normal relocated move")
     apc.queue_free()
     trooper.queue_free()

@@ -149,7 +149,7 @@ func test_arrival_detach_skips_post_emit_tail():
     mc._physics_process(0.016)
     TestHelper.assert_true(detached[0], "arrival subscriber detached the mover")
     TestHelper.assert_true(not walker.is_inside_tree(), "walker left the tree mid-callback")
-    TestHelper.assert_true(mc._state == MovementController.State.IDLE, "arrival completed")
+    TestHelper.assert_true(mc.get_state() == MovementController.State.IDLE, "arrival completed")
     TestHelper.assert_eq(
         mc._last_position, target, "tail skipped: last position keeps the arrival value"
     )
@@ -191,7 +191,9 @@ func test_scatter_skipped_with_free_neighbor():
     TestHelper.assert_true(
         blocker_mc._waypoints.is_empty(), "single neighbor blocked: blocker not scattered"
     )
-    TestHelper.assert_true(blocker_mc._state == MovementController.State.IDLE, "blocker stays idle")
+    TestHelper.assert_true(
+        blocker_mc.get_state() == MovementController.State.IDLE, "blocker stays idle"
+    )
     sh._grid.erase(key)
     sh._blocked_cells.erase(key)
     mover.free()
@@ -236,7 +238,7 @@ func test_scatter_fires_when_fully_boxed_in():
         blocker_mc._waypoints.size() > 0, "fully boxed in: blocker gets scattered"
     )
     TestHelper.assert_true(
-        blocker_mc._state != MovementController.State.IDLE, "blocker moves off the ring"
+        blocker_mc.get_state() != MovementController.State.IDLE, "blocker moves off the ring"
     )
     sh._grid.clear()
     sh._blocked_cells.clear()
@@ -556,7 +558,7 @@ func test_non_infantry_sharer_books_sub_slot():
     mc._parent = entity
     mc._shares_cell = true
     _ts.add_child(entity)
-    mc.set_target_position(CellUtil.cell_to_world(cell))
+    mc.move_to(CellUtil.cell_to_world(cell))
     var claim: int = cr.get_claim_count(cell)
     cr.clear()
     _ts.remove_child(entity)
@@ -595,7 +597,7 @@ func test_resource_entity_does_not_block_idle_cell():
     var mc := MovementController.new()
     entity.add_child(mc)
     mc._parent = entity
-    var occupied: bool = mc._is_cell_occupied_by_idle(cell)
+    var occupied: bool = mc._is_cell_occupied(cell)
     sh._grid.erase(key)
     entity.queue_free()
     resource_node.queue_free()
@@ -628,7 +630,7 @@ func test_idle_unit_still_blocks_idle_cell():
     var mc := MovementController.new()
     entity.add_child(mc)
     mc._parent = entity
-    var occupied: bool = mc._is_cell_occupied_by_idle(cell)
+    var occupied: bool = mc._is_cell_occupied(cell)
     sh._grid.erase(key)
     entity.queue_free()
     idle_root.queue_free()
@@ -648,7 +650,7 @@ func test_building_still_blocks_idle_cell():
     var mc := MovementController.new()
     entity.add_child(mc)
     mc._parent = entity
-    var occupied: bool = mc._is_cell_occupied_by_idle(cell)
+    var occupied: bool = mc._is_cell_occupied(cell)
     sh._building_cells.erase(key)
     entity.queue_free()
     TestHelper.assert_eq(occupied, true, "building cell is occupied: expected true, got false")
@@ -667,7 +669,7 @@ func test_non_sharing_vehicle_does_not_book():
     entity.add_child(mc)
     mc._parent = entity
     _ts.add_child(entity)
-    mc.set_target_position(CellUtil.cell_to_world(cell))
+    mc.move_to(CellUtil.cell_to_world(cell))
     var claim: int = cr.get_claim_count(cell)
     cr.clear()
     _ts.remove_child(entity)
@@ -727,7 +729,7 @@ func _register_idle_blocker(entity: Node3D, mc: MovementController, cell: Vector
             "mc": mc,
             "entity_type": stats.entity_type if stats else -1,
             "player_id": stats.player_id if stats else -1,
-            "state": mc._state,
+            "state": mc.get_state(),
             "shares": false,
         },
     ]
@@ -767,7 +769,7 @@ func _trigger_wait_scatter(mc: MovementController) -> void:
 
 
 func _blocker_retargeted(mc: MovementController) -> bool:
-    return mc._waypoints.size() > 1 and mc._state != MovementController.State.IDLE
+    return mc._waypoints.size() > 1 and mc.get_state() != MovementController.State.IDLE
 
 
 func test_wait_scatter_moves_own_blocker():

@@ -373,7 +373,7 @@ func test_rally_point_outside_clamps_to_edge():
 
 
 func test_auto_harvester_move_outside_bounds_unaffected():
-    # The harvester auto-cycle calls MovementController.set_target_position
+    # The harvester auto-cycle calls MovementController.move_to
     # directly (never OrderSystem), so an out-of-bounds field is accepted and
     # the destination is NOT clamped to the visible edge.
     if not _sm:
@@ -389,7 +389,7 @@ func test_auto_harvester_move_outside_bounds_unaffected():
     parent.global_position = CellUtil.cell_to_world(Vector2i(25, 25))
     var mc := MovementController.new()
     mc._parent = parent
-    mc.set_target_position(outside_pos, false, false, true)
+    mc._retarget(outside_pos)
     var dest_cell := CellUtil.world_to_cell(mc.get_target_position())
     var dest_unclamped: bool = dest_cell == out
     parent.free()
@@ -407,7 +407,7 @@ func test_auto_harvester_move_outside_bounds_unaffected():
 func test_ai_start_and_end_outside_bounds_unclamped():
     # AI-contract regression: automatic movement with BOTH start and end
     # outside the visible diamond must land exactly where told. This freezes
-    # the bounded=false default on set_target_position — a refactor that flips
+    # the unbounded default on move_to — a refactor that flips
     # it would silently break harvester/dock/combat auto cycles in the void.
     if not _sm:
         TestHelper.fail("SelectionManager not injected")
@@ -444,7 +444,7 @@ func test_ai_start_and_end_outside_bounds_unclamped():
     parent.global_position = CellUtil.cell_to_world(out_a)
     var mc := MovementController.new()
     mc._parent = parent
-    mc.set_target_position(CellUtil.cell_to_world(out_b), false, false, true)
+    mc._retarget(CellUtil.cell_to_world(out_b))
     var dest_cell := CellUtil.world_to_cell(mc.get_target_position())
     parent.free()
     mc.free()

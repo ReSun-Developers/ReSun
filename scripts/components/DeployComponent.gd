@@ -247,7 +247,7 @@ func _scatter_single_cell(cell: Vector2i, source_entity: Node3D) -> bool:
         var mc := entity_node.get_node_or_null("MovementController") as MovementController
         if not mc:
             continue
-        if mc._state != MovementController.State.IDLE:
+        if not mc.is_idle():
             continue
         # Never scatter another unit that is itself mid-deploy.
         if is_entity_transitioning(entity_node):
@@ -255,7 +255,7 @@ func _scatter_single_cell(cell: Vector2i, source_entity: Node3D) -> bool:
         var push_cell := _find_adjacent_free_cell(cell)
         if push_cell == Vector2i(-1, -1):
             continue
-        mc.set_target_position(CellUtil.cell_to_world(push_cell))
+        mc.move_to(CellUtil.cell_to_world(push_cell))
         scattered = true
     return scattered
 
@@ -333,7 +333,7 @@ func _move_to_deploy_cell(source_entity: Node3D, deploy_cell: Vector2i) -> bool:
         # straight to the centre through the normal movement step.
         mc.move_to_point(centre)
     else:
-        mc.set_target_position(centre)
+        mc.move_to(centre)
     return _state == DeployState.SEEKING_DEPLOY
 
 
@@ -400,7 +400,7 @@ func _on_arrived(_position: Vector3) -> void:
     if CellUtil.world_to_cell(source_entity.global_position) != _target_cell:
         var mc := source_entity.get_node_or_null("MovementController") as MovementController
         if mc:
-            mc.set_target_position(CellUtil.cell_to_world(_target_cell))
+            mc.move_to(CellUtil.cell_to_world(_target_cell))
         return
     var target_data := EntityFactory.get_entity_data(deploys_into)
     if not target_data or not _is_deploy_cell_valid(_target_cell, target_data, source_entity):
@@ -597,7 +597,7 @@ func _do_undeploy(
     if _has_pending_move:
         var mc := target_entity.get_node_or_null("MovementController") as MovementController
         if mc:
-            mc.set_target_position(_pending_move_target)
+            mc.move_to(_pending_move_target)
         _has_pending_move = false
     source.queue_free()
     _state = DeployState.IDLE

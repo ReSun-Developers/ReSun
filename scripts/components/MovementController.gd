@@ -193,23 +193,40 @@ func _ready() -> void:
 func _resolve_locomotor() -> void:
     if not _rules or locomotor.is_empty():
         return
-    _locomotor_data = _rules.get_locomotor(locomotor)
-    if _locomotor_data == null:
+    var data: Locomotor = _rules.get_locomotor(locomotor)
+    if data == null:
         push_error("[MovementController] Unknown locomotor: %s" % locomotor)
         return
-    _is_hover = _locomotor_data.is_hover
-    _is_jumpjet = _locomotor_data.is_jumpjet
-    _is_subterranean = _locomotor_data.is_subterranean
-    if _locomotor_data.hover_height_override > 0.0:
-        _hover_height = _locomotor_data.hover_height_override
+    apply_locomotor(data, _rules)
+
+
+## Mirrors a Locomotor resource onto this controller. Public so tests can build a
+## controller from the same resource production uses instead of hand-setting the
+## mirrored flags. Resolves rules from the argument, then the cached rules, then
+## the active game.
+func apply_locomotor(data: Locomotor, rules: GlobalRules = null) -> void:
+    _locomotor_data = data
+    if data == null:
+        return
+    var resolved_rules: GlobalRules = rules if rules != null else _rules
+    if resolved_rules == null:
+        resolved_rules = GlobalRules.get_current()
+    _is_hover = data.is_hover
+    _is_jumpjet = data.is_jumpjet
+    _is_subterranean = data.is_subterranean
+    if data.hover_height_override > 0.0:
+        _hover_height = data.hover_height_override
+    elif resolved_rules:
+        _hover_height = float(resolved_rules.hover_height) * (CellUtil.CELL_SIZE / 256.0)
     else:
-        _hover_height = float(_rules.hover_height) * (CellUtil.CELL_SIZE / 256.0)
-    _jumpjet_air_height = _locomotor_data.jumpjet_target_height * TerrainSystem.HEIGHT_STEP
-    _ice_cracking_weight = _rules.ice_cracking_weight
-    _shares_cell = _locomotor_data.shares_cell
-    _stand_upright = _locomotor_data.stand_upright
-    _instant_turn = _locomotor_data.instant_turn
-    _organic_path = _locomotor_data.organic_path
+        _hover_height = 0.0
+    _jumpjet_air_height = data.jumpjet_target_height * TerrainSystem.HEIGHT_STEP
+    if resolved_rules:
+        _ice_cracking_weight = resolved_rules.ice_cracking_weight
+    _shares_cell = data.shares_cell
+    _stand_upright = data.stand_upright
+    _instant_turn = data.instant_turn
+    _organic_path = data.organic_path
 
 
 func shares_cell() -> bool:
@@ -438,12 +455,57 @@ func is_moving() -> bool:
     return _state != State.IDLE
 
 
+func is_idle() -> bool:
+    return _state == State.IDLE
+
+
+func get_state() -> State:
+    return _state
+
+
+func get_surface_level() -> int:
+    return _surface_level
+
+
+func is_exact_move() -> bool:
+    return _exact_target
+
+
+func has_sub_slot() -> bool:
+    return _has_sub_slot
+
+
+func get_sub_slot_position() -> Vector3:
+    return _sub_slot_position
+
+
 func is_waiting() -> bool:
     return _state == State.WAIT
 
 
 func get_assigned_slot() -> int:
     return _assigned_slot
+
+
+## Books a sub-slot for `cell` at `level` (default current surface) and moves the
+## parent onto it. Returns false when no slot is free.
+func place_at_sub_slot(cell: Vector2i, level: int = -1) -> bool:
+    _assign_sub_slot_at_cell(cell, level)
+    if not _has_sub_slot:
+        return false
+    _parent.global_position = _sub_slot_position
+    return true
+
+
+## Drops the current booking and every CellReservation claim held by the parent.
+func release_sub_slot() -> void:
+    _has_sub_slot = false
+    CellReservation.instance.release_all(_parent)
+
+
+## Test entry: advances the controller as a physics tick would.
+func tick(delta: float) -> void:
+    _physics_process(delta)
 
 
 func stop() -> void:
@@ -457,7 +519,7 @@ func stop() -> void:
         var dist := _parent.global_position.distance_to(final_pos)
         if dist < 0.1:
             var final_cell := CellUtil.world_to_cell(final_pos)
-            if _exact_target or not _is_cell_occupied_by_idle(final_cell):
+            if _exact_target or not _is_cell_occupied(final_cell):
                 _finish_stop()
                 return
     if _state == State.MOVING:
@@ -470,9 +532,7 @@ func stop() -> void:
             if _has_sub_slot:
                 next_waypoint = _sub_slot_position
             else:
-                var free_cell := CellUtil.spiral_first_free(
-                    current_cell, 3, _is_cell_occupied_by_idle
-                )
+                var free_cell := CellUtil.spiral_first_free(current_cell, 3, _is_cell_occupied)
                 _assign_sub_slot_at_cell(free_cell)
                 if _has_sub_slot:
                     next_waypoint = _sub_slot_position
@@ -498,18 +558,27 @@ func _finish_stop() -> void:
     _waypoint_levels = PackedInt32Array()
     _spline_t = 0.0
     _bake_spline()
+    _land_on_arrival = false
+    _end_move(CellUtil.world_to_cell(_parent.global_position), false)
+
+
+## Shared arrival tail for stop, moving arrival, and wait arrival. `announce`
+## distinguishes a completed move (trigger offer + arrived signal) from a stop.
+func _end_move(release_cell: Vector2i, announce: bool) -> void:
     _has_sub_slot = false
     _hybrid_active = false
-    _land_on_arrival = false
     _ramp_speed = 0.0
     _state = State.IDLE
     _idle_snapped = false
-    SpatialHash.instance.release_cell(
-        CellUtil.world_to_cell(_parent.global_position), _surface_level
-    )
+    SpatialHash.instance.release_cell(release_cell, _surface_level)
     CellReservation.instance.release_all(_parent)
     if debug_show_path:
         DebugVisualizer.clear_path(get_path())
+    if not announce:
+        return
+    if TriggerEngine.is_armed() and not is_flying_mover():
+        TriggerEngine.offer(1, {"cell": CellUtil.world_to_cell(_parent.global_position)})
+    arrived.emit(_parent.global_position)
 
 
 ## Cancels an airborne jumpjet's current move without losing its air zone, so a
@@ -521,10 +590,47 @@ func cancel_move_retain_vertical() -> void:
         _finish_stop()
 
 
+## Plain path move.
+func move_to(target: Vector3) -> void:
+    _set_target_position(target)
+
+
+## Bounded player order: relocations stay inside the visible order area and the
+## player's path-cost cache / terrain source / destination level are used.
+func player_move(
+    target: Vector3,
+    cost_cache: Pathfinder.PathCostCache,
+    terrain: Node,
+    end_level: int = 0,
+) -> void:
+    _set_target_position(target, false, false, false, cost_cache, terrain, true, false, end_level)
+
+
+## Production-exit move: building footprints may be unblocked for the exit path.
+func exit_move(target: Vector3) -> void:
+    _set_target_position(target, true)
+
+
+## Combat approach: a jumpjet keeps its current vertical zone.
+func approach(target: Vector3) -> void:
+    _set_target_position(target, false, true)
+
+
+## Boarding move: the occupied destination is kept and arrival fires on it.
+func board(target: Vector3) -> void:
+    _set_target_position(target, false, false, false, null, null, false, true)
+
+
+## Re-target issued by this controller itself (repair, blocked-arrival settle,
+## wait scatter, scatter, nudge). Does not emit `movement_started`.
+func _retarget(target: Vector3, keep_zone: bool = false, end_level: int = 0) -> void:
+    _set_target_position(target, false, keep_zone, true, null, null, false, false, end_level)
+
+
 ## `internal` marks re-targets issued by this controller itself (repair,
 ## blocked-arrival settle, wait scatter, nudges) rather than new player orders;
 ## those do not emit `movement_started`.
-func set_target_position(
+func _set_target_position(
     target: Vector3,
     unblock_buildings: bool = false,
     keep_zone: bool = false,
@@ -583,13 +689,13 @@ func set_target_position(
         if _shares_cell and not keep_zone:
             # Never fly into an occupied landing cell: relocate up front, like
             # the ground branch, before booking so arrival is clean.
-            if _is_cell_occupied_by_idle(target_cell):
-                var free := _find_nearest_free_idle_cell(target_cell, bounded)
+            if _is_cell_occupied(target_cell, end_level):
+                var free := _find_nearest_free_idle_cell(target_cell, bounded, end_level)
                 target = CellUtil.cell_to_world(free)
                 target_cell = free
             _assign_sub_slot_at_cell(target_cell, end_level)
             if not _has_sub_slot:
-                var free_cell := _find_nearest_free_sub_slot_cell(target_cell, bounded)
+                var free_cell := _find_nearest_free_sub_slot_cell(target_cell, bounded, end_level)
                 _assign_sub_slot_at_cell(free_cell, end_level)
                 if _has_sub_slot:
                     target = _sub_slot_position
@@ -603,14 +709,14 @@ func set_target_position(
         # Ground move: normal infantry booking, then walk pathfinding.
         # Exact-target moves (boarding) keep the occupied destination and walk
         # a straight final leg onto it instead of relocating.
-        if not exact_target and _is_cell_occupied_by_idle(target_cell):
-            var free := _find_nearest_free_idle_cell(target_cell, bounded)
+        if not exact_target and _is_cell_occupied(target_cell, end_level):
+            var free := _find_nearest_free_idle_cell(target_cell, bounded, end_level)
             target = CellUtil.cell_to_world(free)
             target_cell = free
         if _shares_cell:
             _assign_sub_slot_at_cell(target_cell, end_level)
             if not _has_sub_slot:
-                var free_cell := _find_nearest_free_sub_slot_cell(target_cell, bounded)
+                var free_cell := _find_nearest_free_sub_slot_cell(target_cell, bounded, end_level)
                 _assign_sub_slot_at_cell(free_cell, end_level)
                 target_cell = free_cell
                 if _has_sub_slot:
@@ -851,15 +957,6 @@ func move_to_point(target: Vector3, internal: bool = false) -> void:
         movement_started.emit()
 
 
-## Move onto an occupied destination (e.g. infantry boarding a transport): the
-## target is not relocated, the unit walks a straight final leg onto it, and
-## arrival fires even though the destination cell is occupied.
-func set_exact_target(target: Vector3) -> void:
-    # Positional tail: unblock=false, keep_zone=false, internal=false,
-    # caches=null, bounded=false, exact_target=true.
-    set_target_position(target, false, false, false, null, null, false, true)
-
-
 ## Greedy-first path resolution: walks bounded greedy descent (`try_greedy_step`)
 ## from the unit's current cell toward the destination cell. On open terrain the
 ## walk completes in O(distance) cheap steps, skipping the full A* search. When
@@ -1032,11 +1129,9 @@ func _handle_moving_movement(delta: float) -> void:
             var next_cell := CellUtil.world_to_cell(_waypoints[seg + 1])
             if (
                 not (_is_jumpjet and _vertical_state != VerticalState.GROUND)
-                and _is_cell_occupied_by_idle(next_cell)
+                and _is_cell_occupied(next_cell)
             ):
-                set_target_position(
-                    _waypoints[_waypoints.size() - 1], false, not _land_on_arrival, true
-                )
+                _retarget(_waypoints[_waypoints.size() - 1], not _land_on_arrival)
                 return
 
     var parent_pos := _parent.global_position
@@ -1076,7 +1171,7 @@ func _handle_moving_movement(delta: float) -> void:
                 var entity_parent := node_ref as Node3D
 
                 var mc := entry.mc as MovementController
-                if not mc or mc._state == State.IDLE:
+                if not mc or mc.is_idle():
                     continue
 
                 if _shares_cell and mc.shares_cell():
@@ -1142,19 +1237,24 @@ func _handle_moving_movement(delta: float) -> void:
         # the range circle and make it bounce back. Only landing moves (and ground
         # movers) re-target off a blocked cell.
         var airborne_hold := is_airborne_jumpjet() and not _land_on_arrival
-        if not airborne_hold and not _exact_target and _is_cell_occupied_by_idle(final_cell):
+        if not airborne_hold and not _exact_target and _is_cell_occupied(final_cell):
             if _is_jumpjet:
                 # A jumpjet can fly: don't freeze waiting for the cell to clear,
                 # glide to the nearest free cell instead (keeping its zone intent).
                 var free_cell := _find_nearest_free_idle_cell(final_cell)
-                set_target_position(
-                    CellUtil.cell_to_world(free_cell), false, not _land_on_arrival, true
-                )
+                _retarget(CellUtil.cell_to_world(free_cell), not _land_on_arrival)
             else:
                 _state = State.WAIT
             return
 
-        var approach_step := (final_pos - _parent.global_position).limit_length(
+        # A jumpjet's Y is owned by the vertical state machine, so its arrival
+        # step is measured on the XZ plane. Leaving the hover height in the
+        # vector lets the Y difference consume the step budget and strand the
+        # unit short of the stop.
+        var to_final := final_pos - _parent.global_position
+        if _is_jumpjet:
+            to_final.y = 0.0
+        var approach_step := to_final.limit_length(
             (
                 move_speed
                 * _vertical_split_factor()
@@ -1176,23 +1276,7 @@ func _handle_moving_movement(delta: float) -> void:
                 _parent.global_position.y = _memoized_smooth_height(_parent.global_position)
             if _is_jumpjet and _land_on_arrival and _vertical_state != VerticalState.GROUND:
                 _vertical_state = VerticalState.DESCENDING
-            _has_sub_slot = false
-            _hybrid_active = false
-            _ramp_speed = 0.0
-            _state = State.IDLE
-            _idle_snapped = false
-            # ponytail: no _claim_sub_slot() here — sub-slot is determined at
-            # movement start in set_target_position(). Snapping on arrival is
-            # visually broken.
-            SpatialHash.instance.release_cell(
-                CellUtil.world_to_cell(_parent.global_position), _surface_level
-            )
-            CellReservation.instance.release_all(_parent)
-            if debug_show_path:
-                DebugVisualizer.clear_path(get_path())
-            if TriggerEngine.is_armed() and not is_flying_mover():
-                TriggerEngine.offer(1, {"cell": CellUtil.world_to_cell(_parent.global_position)})
-            arrived.emit(_parent.global_position)
+            _end_move(CellUtil.world_to_cell(_parent.global_position), true)
             # A subscriber may have detached or freed the mover (boarding a
             # transport detaches the passenger mid-callback); the cell-tracking
             # tail below must not read the parent once it left the tree.
@@ -1248,13 +1332,11 @@ func _handle_wait(delta: float) -> void:
         var free_cell := _find_nearest_free_idle_cell(target_cell)
         # Keep the move's zone intent: an attack hold stays airborne, a landing
         # move still lands.
-        set_target_position(
-            CellUtil.cell_to_world(free_cell), false, _is_jumpjet and not _land_on_arrival, true
-        )
+        _retarget(CellUtil.cell_to_world(free_cell), _is_jumpjet and not _land_on_arrival)
         return
 
     var final_cell := CellUtil.world_to_cell(_waypoints[_waypoints.size() - 1])
-    if _exact_target or not _is_cell_occupied_by_idle(final_cell):
+    if _exact_target or not _is_cell_occupied(final_cell):
         var cell_center := CellUtil.cell_to_world(final_cell)
         var wait_target := _sub_slot_position if _has_sub_slot else cell_center
         if _is_jumpjet:
@@ -1278,21 +1360,7 @@ func _handle_wait(delta: float) -> void:
                 _parent.global_position = wait_target
             if _is_jumpjet and _land_on_arrival and _vertical_state != VerticalState.GROUND:
                 _vertical_state = VerticalState.DESCENDING
-            _has_sub_slot = false
-            _hybrid_active = false
-            _ramp_speed = 0.0
-            _state = State.IDLE
-            _idle_snapped = false
-            # ponytail: no _claim_sub_slot() here — sub-slot is determined at
-            # movement start in set_target_position(). Snapping on arrival is
-            # visually broken.
-            SpatialHash.instance.release_cell(final_cell, _surface_level)
-            CellReservation.instance.release_all(_parent)
-            if debug_show_path:
-                DebugVisualizer.clear_path(get_path())
-            if TriggerEngine.is_armed() and not is_flying_mover():
-                TriggerEngine.offer(1, {"cell": CellUtil.world_to_cell(_parent.global_position)})
-            arrived.emit(_parent.global_position)
+            _end_move(final_cell, true)
         return
 
 
@@ -1403,7 +1471,7 @@ func _cell_has_surface(cell: Vector2i, level: int) -> bool:
 
 
 ## Precomputes per-segment Catmull-Rom control points and 3D lengths from
-## `_waypoints` at path-build time. Called from `set_target_position`; guarded by
+## `_waypoints` at path-build time. Called from `_set_target_position`; guarded by
 ## `_path_generation` so any `_waypoints` rebuild invalidates stale baked data.
 func _bake_spline() -> void:
     _path_generation += 1
@@ -1470,24 +1538,18 @@ func _build_blocked_cells(unblock_buildings: bool = false) -> Dictionary:
     return result
 
 
-func _is_cell_occupied_by_idle(cell: Vector2i) -> bool:
-    if SpatialHash.instance.is_cell_blocked(cell, _surface_level):
+## True when the destination cell is occupied at `level` (default: the unit's
+## current surface). Buildings are permanent, ground-only facts (a deck above one
+## is walkable), and grid entries with no MovementController are not mobile
+## occupants. A sharing mover ignores other sharing units.
+func _is_cell_occupied(cell: Vector2i, level: int = -1) -> bool:
+    var query_level: int = _surface_level if level < 0 else level
+    var occ := SpatialHash.instance.get_cell_occupancy(cell, query_level, _parent)
+    if occ.building or occ.blocked or occ.moving:
         return true
-    var key: int = CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_building_cells().has(key):
-        return true
-    if SpatialHash.instance._grid.has(key):
-        for entry in SpatialHash.instance._grid[key]:
-            if entry.node != _parent:
-                if int(entry.get("level", 0)) != _surface_level:
-                    continue
-                var entry_mc := entry.mc as MovementController
-                if not entry_mc:
-                    continue
-                if _shares_cell and entry_mc.shares_cell():
-                    continue
-                return true
-    return false
+    if _shares_cell:
+        return false
+    return occ.shared_count > 0 or occ.shared_moving
 
 
 ## Nearest passable cell to `cell`: the cell itself when passable, otherwise a
@@ -1497,40 +1559,28 @@ func _is_cell_occupied_by_idle(cell: Vector2i) -> bool:
 ## back to the unit's own cell (always passable) when the radius is exhausted,
 ## so it never returns a blocked destination.
 func find_nearest_free_cell(cell: Vector2i) -> Vector2i:
-    if _is_destination_clear(cell):
+    if not _is_cell_occupied(cell):
         return cell
-    var free := CellUtil.spiral_first_free(
-        cell, 4, func(c: Vector2i) -> bool: return not _is_destination_clear(c)
-    )
-    if _is_destination_clear(free):
+    var free := CellUtil.spiral_first_free(cell, 4, _is_cell_occupied)
+    if not _is_cell_occupied(free):
         return free
     return CellUtil.world_to_cell(_parent.global_position)
 
 
-func _is_destination_clear(cell: Vector2i) -> bool:
-    var key: int = CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_blocked_cells(_surface_level).has(
-        CellUtil.cell_level_key(cell, _surface_level)
-    ):
-        return false
-    if SpatialHash.instance._grid.has(key):
-        for entry in SpatialHash.instance._grid[key]:
-            if entry.node != _parent:
-                if int(entry.get("level", 0)) != _surface_level:
-                    continue
-                var entry_mc := entry.mc as MovementController
-                if _shares_cell and entry_mc and entry_mc.shares_cell():
-                    continue
-                return false
-    return true
+func _find_nearest_free_idle_cell(
+    cell: Vector2i, bounded: bool = false, level: int = -1
+) -> Vector2i:
+    return _spiral_bounded(
+        cell, bounded, func(c: Vector2i) -> bool: return _is_cell_occupied(c, level)
+    )
 
 
-func _find_nearest_free_idle_cell(cell: Vector2i, bounded: bool = false) -> Vector2i:
-    return _spiral_bounded(cell, bounded, _is_cell_occupied_by_idle)
-
-
-func _find_nearest_free_sub_slot_cell(cell: Vector2i, bounded: bool = false) -> Vector2i:
-    return _spiral_bounded(cell, bounded, _is_cell_unavailable_for_sub_slot)
+func _find_nearest_free_sub_slot_cell(
+    cell: Vector2i, bounded: bool = false, level: int = -1
+) -> Vector2i:
+    return _spiral_bounded(
+        cell, bounded, func(c: Vector2i) -> bool: return _is_cell_unavailable_for_sub_slot(c, level)
+    )
 
 
 ## Spiral relocation that respects the player-order area when `bounded` is set:
@@ -1552,15 +1602,16 @@ func _spiral_bounded(cell: Vector2i, bounded: bool, is_occupied: Callable) -> Ve
     )
 
 
-func _is_cell_unavailable_for_sub_slot(cell: Vector2i) -> bool:
-    if SpatialHash.instance.is_cell_blocked(cell, _surface_level):
+func _is_cell_unavailable_for_sub_slot(cell: Vector2i, level: int = -1) -> bool:
+    var query_level: int = _surface_level if level < 0 else level
+    if SpatialHash.instance.is_cell_blocked(cell, query_level):
         return true
     var key := CellUtil.cell_key(cell)
-    if SpatialHash.instance.get_building_cells().has(key):
+    if query_level == 0 and SpatialHash.instance.get_building_cells().has(key):
         return true
     if SpatialHash.instance.is_bib_cell(cell):
         return true
-    return CellReservation.instance.is_cell_full(cell, _surface_level)
+    return CellReservation.instance.is_cell_full(cell, query_level)
 
 
 func _scatter_blockers() -> void:
@@ -1602,7 +1653,7 @@ func _scatter_blockers() -> void:
                     if (
                         mc
                         and mc != self
-                        and mc._state == State.IDLE
+                        and mc.is_idle()
                         and not DeployComponent.is_entity_transitioning(mc._parent)
                         and not _is_enemy_unit(mc)
                     ):
@@ -1616,15 +1667,9 @@ func _scatter_blockers() -> void:
                 for target in scatter_targets:
                     (
                         target
-                        . set_target_position(
+                        . _retarget(
                             CellUtil.cell_to_world(push_cell),
-                            false,
                             target.is_airborne_jumpjet(),
-                            true,
-                            null,
-                            null,
-                            false,
-                            false,
                             _surface_level,
                         )
                     )
@@ -1634,13 +1679,11 @@ func nudge_from_cell(blocking_cell: Vector2i) -> bool:
     var entries := SpatialHash.instance.get_entries(blocking_cell)
     for entry in entries:
         var mc := entry.mc as MovementController
-        if mc and mc._state == State.IDLE:
+        if mc and mc.is_idle():
             if _is_enemy_unit(mc) or DeployComponent.is_entity_transitioning(mc._parent):
                 continue
             var free := _find_nearest_free_idle_cell(blocking_cell)
-            mc.set_target_position(
-                CellUtil.cell_to_world(free), false, mc.is_airborne_jumpjet(), true
-            )
+            mc._retarget(CellUtil.cell_to_world(free), mc.is_airborne_jumpjet())
             return true
     return false
 
@@ -1777,7 +1820,7 @@ func get_order_for_target(
         null,
         target_pos,
         queued,
-        func(): set_target_position(target_pos),
+        func(): move_to(target_pos),
     )
 
 
@@ -1796,7 +1839,7 @@ func _get_ramp_factor() -> float:
 func _update_ramp_speed(delta: float) -> void:
     # Initialize ramp rates lazily (needed because configure is called after _ready).
     # ponytail: no _ramp_speed reset here — it would clobber the decel-only cruise
-    # start from set_target_position; field default and IDLE branch already zero it.
+    # start from the move intents; field default and IDLE branch already zero it.
     if _ramp_accel_rate == 0.0 and _rules:
         _ramp_accel_rate = move_speed / _rules.ramp_accel_time
         _ramp_decel_rate = move_speed / _rules.ramp_decel_time

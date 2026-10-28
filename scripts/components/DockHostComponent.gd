@@ -82,12 +82,8 @@ func get_dock_world_position() -> Vector3:
 func is_cell_available(cell: Vector2i) -> bool:
     if not SpatialHash.instance:
         return true
-    var key: int = CellUtil.cell_key(cell)
-    if SpatialHash.instance._building_cells.has(key):
-        return false
-    var blocked: bool = SpatialHash.instance._blocked_cells.has(key)
-    var reserved: bool = SpatialHash.instance._reserved.has(key)
-    return not blocked and not reserved
+    var occ := SpatialHash.instance.get_cell_occupancy(cell)
+    return not (occ.building or occ.blocked or occ.reserved)
 
 
 func find_wait_cell(max_radius: int = 3) -> Vector2i:

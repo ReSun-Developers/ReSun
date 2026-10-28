@@ -44,7 +44,7 @@ func test_first_segment_points_at_destination():
     var positions: Array[Vector3] = CellSubPositions.get_sub_positions(start_cell)
     mc._parent.global_position = CellUtil.cell_to_world(start_cell) + positions[0]
     var target := CellUtil.cell_to_world(Vector2i(58, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
 
     var cr := CellReservation.instance
     if cr:
@@ -74,7 +74,7 @@ func test_clear_path_collapses_to_straight_segment():
     var positions: Array[Vector3] = CellSubPositions.get_sub_positions(start_cell)
     mc._parent.global_position = CellUtil.cell_to_world(start_cell) + positions[0]
     var target := CellUtil.cell_to_world(Vector2i(58, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
 
     var cr := CellReservation.instance
     if cr:
@@ -117,7 +117,7 @@ func test_blocked_path_keeps_intermediate_waypoints():
     var positions: Array[Vector3] = CellSubPositions.get_sub_positions(start_cell)
     mc._parent.global_position = CellUtil.cell_to_world(start_cell) + positions[0]
     var target := CellUtil.cell_to_world(Vector2i(58, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
 
     var cr := CellReservation.instance
     if cr:
@@ -167,11 +167,11 @@ func test_blocked_path_intermediates_use_consistent_lane_offset():
     var positions: Array[Vector3] = CellSubPositions.get_sub_positions(start_cell)
     mc._parent.global_position = CellUtil.cell_to_world(start_cell) + positions[0]
     var target := CellUtil.cell_to_world(Vector2i(58, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
 
     var expected_lane: Vector3 = (
-        mc._sub_slot_position
-        - CellUtil.cell_to_world(CellUtil.world_to_cell(mc._sub_slot_position))
+        mc.get_sub_slot_position()
+        - CellUtil.cell_to_world(CellUtil.world_to_cell(mc.get_sub_slot_position()))
     )
     var cr := CellReservation.instance
     if cr:
@@ -208,10 +208,10 @@ func test_destination_sub_slot_still_applied():
     var positions: Array[Vector3] = CellSubPositions.get_sub_positions(start_cell)
     mc._parent.global_position = CellUtil.cell_to_world(start_cell) + positions[0]
     var target := CellUtil.cell_to_world(Vector2i(58, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
 
     var dest: Vector3 = mc._waypoints[mc._waypoints.size() - 1]
-    var sub_pos: Vector3 = mc._sub_slot_position
+    var sub_pos: Vector3 = mc.get_sub_slot_position()
     var cr := CellReservation.instance
     if cr:
         cr.clear()
@@ -260,7 +260,7 @@ func test_open_terrain_move_uses_greedy_without_find_path():
     entity.global_position = CellUtil.cell_to_world(Vector2i(50, 50))
     var before: int = Pathfinder.find_path_call_count
     var target := CellUtil.cell_to_world(Vector2i(60, 50))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var calls: int = Pathfinder.find_path_call_count - before
     var reached := mc._waypoints.size() > 1
     root.remove_child(entity)
@@ -290,7 +290,7 @@ func test_concave_pocket_falls_back_to_find_path():
     for offset in wall_offsets:
         SpatialHash.instance._blocked_cells[CellUtil.cell_key(start_cell + offset)] = true
     var target := CellUtil.cell_to_world(Vector2i(52, 53))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var reached: bool = mc._waypoints.size() > 1
     for offset in wall_offsets:
         SpatialHash.instance._blocked_cells.erase(CellUtil.cell_key(start_cell + offset))
@@ -319,7 +319,7 @@ func test_flyer_greedy_crosses_height_steps():
         _ts.set_vertex(52, z, 3)
     var before: int = Pathfinder.find_path_call_count
     var target := CellUtil.cell_to_world(Vector2i(50, 56))
-    mc.set_target_position(target)
+    mc.move_to(target)
     var calls: int = Pathfinder.find_path_call_count - before
     var reached := mc._waypoints.size() > 1
     root.remove_child(entity)
