@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Ship"
+zones = PackedStringArray("Subterannean", "Fly", "Destroyer", "AmphibiousCrusher", "AmphibiousDestroyer")
 terrain_speeds = {
 "water": 1.0
 }

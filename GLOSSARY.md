@@ -205,7 +205,7 @@ are 45°-rotated rectangles, i.e. diamonds.
 | Term | Meaning | Where |
 |------|---------|-------|
 | locomotor | Registered movement-behavior class (`GlobalRules.locomotors`); sole authority on passability via terrain speeds. | [locomotor](openspec/specs/locomotor/spec.md) |
-| movement zone | TS pathfinding domain-class metadata on EntityData; validated against the locomotor (`LOCOMOTOR_ZONES`) but doesn't gate passability. | [entity-data](openspec/specs/entity-data/spec.md) |
+| movement zone | TS pathfinding domain-class metadata on EntityData; validated against the locomotor's `Locomotor.zones` list but doesn't gate passability. | [entity-data](openspec/specs/entity-data/spec.md) |
 | climb tolerance | Max grade steps ascendable/descendable per cell transition. | [locomotor](openspec/specs/locomotor/spec.md) |
 | hybrid locomotion | Hover / Jumpjet / Subterranean flags with distance thresholds deciding walk↔fly/dig switching. | [locomotor](openspec/specs/locomotor/spec.md) · [jumpjet-vertical-transitions](openspec/specs/jumpjet-vertical-transitions/spec.md) |
 | speed ramp | Closed-form ramping of locomotor speed (accelerate/decelerate flags); targets move_speed directly with per-unit factors multiplying on top; crawl floor near arrival; resets at arrival/finish_stop. | [locomotor](openspec/specs/locomotor/spec.md) |

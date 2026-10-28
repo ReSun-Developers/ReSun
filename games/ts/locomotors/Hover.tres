@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Hover"
+zones = PackedStringArray("Normal", "Destroyer", "AmphibiousCrusher", "AmphibiousDestroyer", "InfantryDestroyer", "Crusher")
 terrain_speeds = {
 "clear": 1.0,
 "cliff": 1.0,

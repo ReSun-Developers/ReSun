@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Jumpjet"
+zones = PackedStringArray("Fly")
 terrain_speeds = {
 "clear": 1.0,
 "crystal": 1.0,
