@@ -947,7 +947,7 @@ func test_range_horizontal_distance_used():
     target.free()
 
 
-## A building target with a FoundationComponent (footprint != 1x1) and health.
+## A multi-cell building target with a FoundationComponent and health.
 func _make_building_target(foundation: Vector2i, pos: Vector3) -> Node3D:
     var entity := Node3D.new()
     entity.name = "BuildingTarget"
@@ -1081,7 +1081,8 @@ func test_building_facing_targets_nearest_footprint_corner():
 func test_multi_cell_non_structure_measures_to_origin():
     # Classifier parity with GuardComponent: a multi-cell entity that is not a
     # structure keeps point semantics, even though it carries a
-    # FoundationComponent (EntityFactory attaches one for any foundation != 1x1).
+    # FoundationComponent (EntityFactory attaches one for any non-building with
+    # foundation != 1x1, and for every solid BUILDING).
     var root: Node = Engine.get_main_loop().root
     var entity := _make_combat_entity(true, 0)
     root.add_child(entity)

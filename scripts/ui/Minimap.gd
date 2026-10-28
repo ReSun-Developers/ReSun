@@ -523,9 +523,9 @@ func _stamp_overlays(shroud_on: bool, fog_on: bool) -> void:
     _cell_targets = targets
 
 
-## Footprint of an overlay entity in cells: buildings carry a
-## `FoundationComponent` (created only when the footprint is larger than 1x1);
-## units and resource crystals are a single cell.
+## Footprint of an overlay entity in cells: solid buildings carry a
+## `FoundationComponent`; non-solid buildings, units, and resource crystals are a
+## single cell.
 func _overlay_footprint(node: Node3D) -> Vector2i:
     var foundation := node.get_node_or_null("FoundationComponent") as FoundationComponent
     if foundation:
