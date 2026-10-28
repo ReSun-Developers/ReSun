@@ -3,11 +3,6 @@ extends Node
 ## EntityFactory autoload — creates entities from EntityData resources
 ## and dynamically adds components based on data properties.
 
-## Emitted once per impact report actually played (a resolved warhead's FX/sound
-## at a point). Observability seam: a single detonation must emit it once, not
-## once per damaged cell victim.
-signal impact_played(damage_type: String, position: Vector3)
-
 ## Emitted once per non-detached spawn, after the entity is inserted into the
 ## world. Consumers use it to register buildings (registry, prerequisites, death
 ## wiring) uniformly regardless of the placement source.
@@ -126,50 +121,6 @@ func _on_entity_death(entity: Node3D, data: EntityData = null) -> void:
     entity.queue_free()
 
 
-## Plays the victim's warhead impact report and visual effect at the victim
-## position. The warhead is resolved from the damage type, so non-warhead damage
-## (crush, drowning) is silent. This is the single damage choke point, so it
-## covers both projectile and hitscan hits. A zero applied amount (e.g. veteran
-## armor rounding a hit to nothing) is skipped so no impact plays on a no-op hit.
-func _on_entity_damaged(entity: Node3D, damage_type: String, amount: int) -> void:
-    if damage_type.is_empty() or not is_instance_valid(entity) or amount <= 0:
-        return
-    # Cell overlays (bridge/ice/tiberium) take their damage through the
-    # warhead-gated cell pass, which plays the shot's impact report once at the
-    # impact point. Reporting per overlay victim here would double the effect
-    # whenever one detonation damages both an entity occupant and an overlay.
-    if SpatialHash.instance and SpatialHash.is_overlay_entity(entity):
-        return
-    var position := entity.global_position
-    var health := entity.get_node_or_null("HealthComponent") as HealthComponent
-    # Weapons report the exact impact point (nearest footprint point on a
-    # building, cell centre on a force-fire ground shot); everything else falls
-    # back to the entity origin.
-    if health and health.last_impact_pos.is_finite():
-        position = health.last_impact_pos
-    play_impact_effects_at(damage_type, position)
-
-
-## Plays a warhead's impact report and visual effect at a world point. Shared by
-## the damage choke point above and by shots that land on nothing — a force-fire
-## into empty ground still bangs. The warhead is resolved from the damage type,
-## so non-warhead damage (crush, drowning) is silent.
-func play_impact_effects_at(damage_type: String, position: Vector3) -> void:
-    if damage_type.is_empty():
-        return
-    var rules := GlobalRules.get_current()
-    if not rules:
-        return
-    var warhead := rules.get_warhead(damage_type)
-    if not warhead:
-        return
-    if warhead.impact_fx != null:
-        FxSystem.play(warhead.impact_fx, Transform3D(Basis(), position))
-    if not warhead.sound_impact.is_empty():
-        AudioManager.play_random(warhead.sound_impact.split(",", false), position)
-    impact_played.emit(damage_type, position)
-
-
 func register_data_set(path: String) -> void:
     if _data_sets.has(path):
         return
@@ -214,15 +165,11 @@ func create_entity(entity_id: String, overrides: Dictionary = {}) -> Node3D:
     _add_components(entity, data)
     _configure_components(entity, data)
 
-    # Death cleanup — free entity when health reaches zero. Damage and death
-    # audio hooks resolve warhead/entity data at play time.
+    # Death cleanup — free entity when health reaches zero. Death audio
+    # resolves entity data at play time.
     var health := entity.get_node_or_null("HealthComponent") as HealthComponent
     if health:
         health.health_zero.connect(func() -> void: _on_entity_death(entity, data))
-        health.damage_taken.connect(
-            func(amount: int, damage_type: String) -> void:
-                _on_entity_damaged(entity, damage_type, amount)
-        )
 
     # Cell occupancy — all except OVERLAY, and TERRAIN without foundation.
     var etype := data.entity_type

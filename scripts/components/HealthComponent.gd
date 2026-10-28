@@ -31,9 +31,9 @@ func configure(data: EntityData) -> void:
 
 func take_damage(
     damage: int, damage_type: String = "", source: Node3D = null, impact_pos: Vector3 = Vector3.INF
-) -> void:
+) -> int:
     if damage <= 0 or current_health <= 0:
-        return
+        return 0
     last_attacker = source
     last_impact_pos = impact_pos
     var applied := _apply_veteran_armor(damage)
@@ -42,6 +42,7 @@ func take_damage(
     if current_health <= 0:
         health_zero.emit()
         killed.emit(last_attacker)
+    return applied
 
 
 func _apply_veteran_armor(damage: int) -> int:

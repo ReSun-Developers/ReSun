@@ -196,9 +196,10 @@ are 45°-rotated rectangles, i.e. diamonds.
 | stagger | Fire discipline: sockets fire in order, each `fire_delay` seconds after the previous. | [turret-system change](openspec/specs/turrets/spec.md) |
 | turret | A `yaw_free` socket that yaws to the target while the body holds course; a fixed socket keeps the whole-body facing gate. | [turret-system change](openspec/specs/turrets/spec.md) · scripts/components/TurretComponent.gd |
 | flight model | Per-projectile behavior chosen by `ProjectileData` flags: teleport-detonate (`is_invisible`) vs real flight (straight + optional homing). One branch set inside ProjectileController — mirrors the locomotor pattern, not component nodes. | [projectile-system change](openspec/changes/archive/2026-08-27-projectile-system/specs/projectile-runtime/spec.md) · scripts/components/ProjectileController.gd |
-| teleport-detonate | Invisible projectiles skip flight: spawn at the muzzle, position at the target coordinate, detonate at dispatch (same tick as the legacy hitscan path) through the hitbox pipeline. Behavior-preserving against the legacy hitscan path. | [projectile-system change](openspec/changes/archive/2026-08-27-projectile-system/specs/projectile-runtime/spec.md) |
+| teleport-detonate | Invisible projectiles skip flight: spawn at the muzzle, position at the target coordinate, and detonate at dispatch (same tick as the legacy hitscan path) through `WeaponDetonation`. Behavior-preserving against the legacy hitscan path. | [projectile-runtime](openspec/specs/projectile-runtime/spec.md) |
 | detonation trigger | Ordered first-match causes a projectile detonates: contact, close proximity while armed, overshoot (target distance stops decreasing), max range. Close detonations snap onto the victim's center. | [projectile-system change](openspec/changes/archive/2026-08-27-projectile-system/specs/projectile-runtime/spec.md) |
 | arming | `ProjectileData.arm_delay` frames after spawn during which a projectile cannot detonate at all. Frame-based, not distance-based (original engine armed by distance). | scripts/data/ProjectileData.gd |
+| detonation module | One typed weapon-impact path (`WeaponDetonation.detonate`) shared by hitscan and projectile arrival: victim and impact-point resolution, warhead damage, cell-overlay damage, and one impact report. | [weapon-detonation](openspec/specs/weapon-detonation/spec.md) · scripts/combat/WeaponDetonation.gd |
 
 ## Movement
 
@@ -261,7 +262,7 @@ are 45°-rotated rectangles, i.e. diamonds.
 | `FxData` | One one-shot visual effect as a `.tres`: `kind` is `SPRITE` (animated billboard via `SpriteFrames`, PNG sequence or sprite sheet) or `PARTICLES` (embedded `ParticleProcessMaterial` + draw material). Purely visual — no audio field. | [fx-system](openspec/specs/fx-system/spec.md) · scripts/data/FxData.gd |
 | `FxSystem` | Autoload that plays one-shot effects (`play(fx, transform)`) with a deterministic duration timer, and gates them to fog: no spawn in shroud/fog, live effects freeze while hidden. | [fx-system](openspec/specs/fx-system/spec.md) · scripts/core/FxSystem.gd |
 | muzzle flash | One-shot effect played at a weapon's muzzle on each shot (`WeaponData.muzzle_fx`). | [combat-firing](openspec/specs/combat-firing/spec.md) |
-| impact FX | One-shot effect played at a victim on each damaging hit (`WarheadData.impact_fx`), fired from the shared damage choke point so it covers projectile and hitscan hits. | [entity-factory](openspec/specs/entity-factory/spec.md) |
+| impact FX | One-shot effect played at the resolved impact point on each weapon detonation (`WarheadData.impact_fx`), played by `FxSystem.play_impact` behind the detonation module so it covers both projectile arrival and hitscan. | [fx-system](openspec/specs/fx-system/spec.md) |
 
 ## Data Fields (high-drift picks)
 

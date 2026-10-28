@@ -61,7 +61,10 @@ func test_damaging_hit_plays_warhead_impact():
         TestHelper.assert_true(health != null, "entity has HealthComponent")
         if health:
             var before := _count_bus_players("SFX")
-            health.take_damage(1, "TEST_IMPACT_WH")
+            var weapon := WeaponData.new()
+            weapon.damage = 1
+            weapon.warhead = "TEST_IMPACT_WH"
+            WeaponDetonation.detonate(weapon, null, weapon.damage, entity)
             TestHelper.assert_eq(
                 _count_bus_players("SFX"), before + 1, "impact report plays on the SFX bus"
             )
@@ -78,7 +81,10 @@ func test_non_warhead_damage_is_silent():
         var health := entity.get_node_or_null("HealthComponent") as HealthComponent
         if health:
             var before := _count_bus_players("SFX")
-            health.take_damage(1, "crush")
+            var weapon := WeaponData.new()
+            weapon.damage = 1
+            weapon.warhead = "crush"
+            WeaponDetonation.detonate(weapon, null, weapon.damage, entity)
             TestHelper.assert_eq(
                 _count_bus_players("SFX"), before, "non-warhead damage plays no impact sound"
             )
@@ -174,7 +180,10 @@ func test_unknown_impact_and_death_ids_stay_silent():
         var health := entity.get_node_or_null("HealthComponent") as HealthComponent
         if health:
             var before := _count_bus_players("SFX")
-            health.take_damage(1, "TEST_MISSING_WH")
+            var weapon := WeaponData.new()
+            weapon.damage = 1
+            weapon.warhead = "TEST_MISSING_WH"
+            WeaponDetonation.detonate(weapon, null, weapon.damage, entity)
             TestHelper.assert_eq(
                 _count_bus_players("SFX"), before, "unknown impact id stays silent"
             )
@@ -202,7 +211,10 @@ func test_random_impact_plays_exactly_one_entry():
         var health := entity.get_node_or_null("HealthComponent") as HealthComponent
         if health:
             var before := _count_bus_players("SFX")
-            health.take_damage(1, "TEST_RAND_WH")
+            var weapon := WeaponData.new()
+            weapon.damage = 1
+            weapon.warhead = "TEST_RAND_WH"
+            WeaponDetonation.detonate(weapon, null, weapon.damage, entity)
             TestHelper.assert_eq(
                 _count_bus_players("SFX"), before + 1, "random impact plays exactly one entry"
             )

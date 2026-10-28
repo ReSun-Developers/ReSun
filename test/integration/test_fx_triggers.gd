@@ -1,7 +1,7 @@
 extends Node
 
 # FX trigger integration tests — CombatComponent plays the weapon muzzle effect,
-# and EntityFactory._on_entity_damaged plays the warhead impact effect, for both
+# and WeaponDetonation plays the warhead impact effect through FxSystem, for both
 # the hitscan and projectile damage paths. Synchronous: no awaited frames.
 
 var _ef: Node = null
@@ -115,14 +115,6 @@ func _make_weapon(projectile_id: String, muzzle_fx: FxData = null) -> WeaponData
     weapon.fire_offset = Vector3(1, 1, 0)
     weapon.muzzle_fx = muzzle_fx
     return weapon
-
-
-func _wire_damage_fx(victim: Node3D) -> void:
-    var health := victim.get_node("HealthComponent") as HealthComponent
-    health.damage_taken.connect(
-        func(amount: int, damage_type: String) -> void:
-            _ef._on_entity_damaged(victim, damage_type, amount)
-    )
 
 
 func _cleanup(nodes: Array) -> void:
@@ -240,7 +232,6 @@ func test_warhead_impact_fx_on_hitscan_damage():
     _reset_fx()
     var shooter := _make_shooter()
     var victim := _make_entity(1, Vector3(4, 0, 0))
-    _wire_damage_fx(victim)
     var combat := shooter.get_node("CombatComponent") as CombatComponent
     combat._fire_weapon(_make_weapon("", null), victim)
     var node := _last_fx_node()
@@ -263,10 +254,9 @@ func test_warhead_impact_fx_on_projectile_damage():
     _reset_fx()
     var shooter := _make_shooter()
     var victim := _make_entity(1, Vector3(4, 0, 0))
-    _wire_damage_fx(victim)
     var combat := shooter.get_node("CombatComponent") as CombatComponent
     # Invisible projectile teleport-detonates at dispatch through the same
-    # damage pipeline as a visible projectile's contact detonation.
+    # detonation module as a visible projectile's contact detonation.
     combat._fire_weapon(_make_weapon("Invisible", null), victim)
     var node := _last_fx_node()
     TestHelper.assert_true(node != null, "impact effect spawned on projectile hit")
@@ -290,7 +280,6 @@ func test_warhead_impact_fx_null_is_silent():
     _reset_fx()
     var shooter := _make_shooter()
     var victim := _make_entity(1, Vector3(4, 0, 0))
-    _wire_damage_fx(victim)
     var combat := shooter.get_node("CombatComponent") as CombatComponent
     combat._fire_weapon(_make_weapon("", null), victim)
     TestHelper.assert_eq(_fx().active_count(), 0, "no effect spawned when impact_fx is null")
@@ -303,11 +292,19 @@ func test_warhead_impact_fx_zero_amount_is_silent():
     # A positive hit can round to zero applied damage (veteran armor); it must
     # not play an impact on a hit that dealt nothing.
     _inject_rules(_sprite_fx("HitPuff"))
+    _rules.veteran_armor = 1.0
     _reset_fx()
     var shooter := _make_shooter()
     var victim := _make_entity(1, Vector3(4, 0, 0))
-    _wire_damage_fx(victim)
-    _ef._on_entity_damaged(victim, "SA", 0)
+    var stats := victim.get_node("StatsComponent") as StatsComponent
+    stats.veteran_level = 1
+    var reports: Array = []
+    var on_report := func(dtype: String, _position: Vector3) -> void: reports.append(dtype)
+    _fx().impact_played.connect(on_report)
+    var weapon := _make_weapon("", null)
+    WeaponDetonation.detonate(weapon, shooter, weapon.damage, victim)
+    _fx().impact_played.disconnect(on_report)
+    TestHelper.assert_eq(reports.size(), 0, "no impact report on a zero-damage hit")
     TestHelper.assert_eq(_fx().active_count(), 0, "no impact effect on a zero-damage hit")
     _cleanup([shooter, victim])
     _reset_fx()

@@ -626,7 +626,7 @@ func _spawn_projectile(
     var projectile := PROJECTILE_SCENE.instantiate() as ProjectileController
     if not projectile:
         return
-    projectile.setup(data, weapon, shooter, target, _engagement_pos())
+    projectile.setup(data, weapon, shooter, target, _engagement_pos(), get_effective_damage(weapon))
     projectile.set_spawn_origin(muzzle_origin)
     var container: Node = World.spawn_container(World.Bucket.EFFECTS, shooter.get_parent())
     if not container:
@@ -637,76 +637,9 @@ func _spawn_projectile(
 
 
 func _apply_hitscan_damage(weapon: WeaponData, target: Node3D) -> void:
-    # Impact point, not aim point: a building reads on the nearest footprint
-    # point (so effects land on the wall), a ground shot on the cell centre.
-    var impact_pos := _engagement_pos() if target == null else _victim_impact_pos(target)
-    var victim := target
-    if victim == null and SpatialHash.instance:
-        # Ground engagement: the shot lands on the cell's occupant instead.
-        victim = SpatialHash.instance.resolve_cell_victim(
-            CellUtil.world_to_cell(impact_pos), impact_pos, get_parent() as Node3D
-        )
-    var entity_hit := false
-    if victim != null and not SpatialHash.is_overlay_entity(victim):
-        var health := victim.get_node_or_null("HealthComponent") as HealthComponent
-        if health:
-            entity_hit = true
-            var target_stats := victim.get_node_or_null("StatsComponent") as StatsComponent
-            var target_armor := target_stats.armor if target_stats else "none"
-            var damage := GlobalRules.compute_warhead_damage(
-                get_effective_damage(weapon), weapon.warhead, target_armor
-            )
-            health.take_damage(damage, weapon.warhead, get_parent() as Node3D, impact_pos)
-    # An overlay (tiberium/bridge/ice) is left to the warhead-gated overlay pass:
-    # a warhead without the matching flag deals no damage but the impact effect
-    # still plays through the fallback below.
-    var overlay_hit := _damage_cell_overlays(weapon, impact_pos, victim if entity_hit else null)
-    if not entity_hit and not overlay_hit:
-        EntityFactory.play_impact_effects_at(weapon.warhead, impact_pos)
-
-
-## World point a direct hit on `entity` reads on: the nearest footprint point of
-## a structure facing the shooter, otherwise the entity origin.
-func _victim_impact_pos(entity: Node3D) -> Vector3:
-    var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-    if stats and stats.is_structure():
-        var fc := entity.get_node_or_null("FoundationComponent") as FoundationComponent
-        if fc:
-            return fc.nearest_world_point(global_position)
-    return entity.global_position
-
-
-## Applies the warhead's cell-overlay damage (bridge, ice, tiberium) at the
-## impact cell. Returns true when at least one overlay took the hit, so the
-## caller knows whether the warhead's own impact effects already played through
-## the damage choke point.
-func _damage_cell_overlays(weapon: WeaponData, impact_pos: Vector3, exclude: Node3D) -> bool:
-    if SpatialHash.instance == null:
-        return false
-    var rules := GlobalRules.get_current()
-    if rules == null:
-        return false
-    var warhead := rules.get_warhead(weapon.warhead)
-    if warhead == null:
-        return false
-    var shooter := get_parent() as Node3D
-    var applied := false
-    for overlay in SpatialHash.instance.find_cell_overlays(
-        CellUtil.world_to_cell(impact_pos), warhead, exclude
-    ):
-        var health := overlay.get_node_or_null("HealthComponent") as HealthComponent
-        if health == null:
-            continue
-        var overlay_stats := overlay.get_node_or_null("StatsComponent") as StatsComponent
-        var overlay_armor := overlay_stats.armor if overlay_stats else "none"
-        var damage := GlobalRules.compute_warhead_damage(
-            get_effective_damage(weapon), weapon.warhead, overlay_armor
-        )
-        if damage <= 0:
-            continue
-        health.take_damage(damage, weapon.warhead, shooter)
-        applied = true
-    return applied
+    WeaponDetonation.detonate(
+        weapon, get_parent() as Node3D, get_effective_damage(weapon), target, _engagement_pos()
+    )
 
 
 func _play_fire_sound(weapon: WeaponData) -> void:
