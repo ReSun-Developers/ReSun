@@ -529,6 +529,9 @@ func sell_building(building_node: Node3D) -> bool:
     )
     # Unregister from prerequisite system for the owner.
     PrerequisiteSystem.unregister_building(owner_id, entity_data)
+    TriggerEngine.notify_removed(
+        TriggerEngine.house_for_player(owner_id), String(entity_data.id), building_node
+    )
     # Occupancy cells are unregistered by FoundationComponent on world exit.
     # Remove from list
     _buildings.remove_at(idx)
@@ -590,6 +593,9 @@ func unregister_building_entity(building_node: Node3D) -> void:
     var owner_id := _building_owner(building_node, entry)
     if entity_data:
         PrerequisiteSystem.unregister_building(owner_id, entity_data)
+        TriggerEngine.notify_removed(
+            TriggerEngine.house_for_player(owner_id), String(entity_data.id), building_node
+        )
     _buildings.remove_at(idx)
 
 
