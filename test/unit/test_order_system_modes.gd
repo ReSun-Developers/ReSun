@@ -105,29 +105,30 @@ func test_set_generator_replaces_previous_generator() -> void:
     _reset_mode()
 
 
-## Minimal sellable/repairable building: FoundationComponent + BUILDING stats +
-## HealthComponent. Foundation size is irrelevant to the generator's gate.
+## Factory-built 1x1 structure, so the fixture matches real spawn output.
 func _make_building(damaged: bool = false, owner_id: int = -1) -> Node3D:
-    var building := Node3D.new()
-    building.name = "Building"
-    var foundation := FoundationComponent.new()
-    foundation.name = "FoundationComponent"
-    building.add_child(foundation)
-    var stats := StatsComponent.new()
-    stats.name = "StatsComponent"
-    stats.entity_type = EntityData.EntityType.BUILDING
-    stats.player_id = PlayerManager.get_local_player_id() if owner_id < 0 else owner_id
-    building.add_child(stats)
-    var health := HealthComponent.new()
-    health.name = "HealthComponent"
-    health.max_health = 100
-    health.current_health = 50 if damaged else 100
-    building.add_child(health)
+    var ef: Node = _ts.get_node_or_null("/root/EntityFactory") if _ts else null
+    if not ef:
+        TestHelper.fail("EntityFactory autoload not reachable")
+        return null
+    var building := ef.create_entity("GDI_SILO") as Node3D
+    if not building:
+        TestHelper.fail("EntityFactory could not create GDI_SILO")
+        return null
+    var stats := building.get_node_or_null("StatsComponent") as StatsComponent
+    if stats:
+        stats.player_id = PlayerManager.get_local_player_id() if owner_id < 0 else owner_id
+    var health := building.get_node_or_null("HealthComponent") as HealthComponent
+    if health:
+        health.max_health = 100
+        health.current_health = 50 if damaged else 100
     return building
 
 
 func test_sell_order_suppresses_voice_event() -> void:
     var building := _make_building(false)
+    if building == null:
+        return
     var orders := SellOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
     TestHelper.assert_eq(orders.size(), 1, "sellable building produces one order")
     if orders.size() == 1:
@@ -139,6 +140,8 @@ func test_sell_order_suppresses_voice_event() -> void:
 
 func test_enemy_building_not_sellable() -> void:
     var building := _make_building(false, PlayerManager.get_local_player_id() + 1)
+    if building == null:
+        return
     var orders := SellOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
     TestHelper.assert_eq(orders.size(), 0, "enemy-owned building produces no sell order")
     building.free()
@@ -146,6 +149,8 @@ func test_enemy_building_not_sellable() -> void:
 
 func test_repair_order_suppresses_voice_event() -> void:
     var building := _make_building(true)
+    if building == null:
+        return
     var orders := RepairOrderGenerator.new().get_orders(building, Vector2i.ZERO, Vector3.ZERO, {})
     TestHelper.assert_eq(orders.size(), 1, "damaged building produces one order")
     if orders.size() == 1:
