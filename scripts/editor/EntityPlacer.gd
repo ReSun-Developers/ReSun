@@ -177,6 +177,10 @@ func _place_entity_on_cell(cell: Vector2i) -> void:
 
 
 func _place_tree_on_cell(cell: Vector2i) -> void:
+    var tree_data := EntityFactory.get_primary_resource_tree_entity()
+    if not tree_data:
+        push_warning("EntityPlacer: no primary resource-tree entity for the active game")
+        return
     var key := str(cell.x) + "," + str(cell.y)
     if editor._painted_entities.has(key):
         var existing := editor._painted_entities[key].get("node") as Node3D
@@ -185,12 +189,12 @@ func _place_tree_on_cell(cell: Vector2i) -> void:
         editor._painted_entities.erase(key)
     var entity := (
         EntityFactory.spawn(
-            "TIBERIUM_TREE",
+            tree_data.id,
             {"world_pos": editor._cell_world_pos(cell), "detached": true, "parent": editor}
         )
         as Node3D
     )
     if not entity:
         return
-    var data: Dictionary = {"id": "TIBERIUM_TREE"}
+    var data: Dictionary = {"id": tree_data.id}
     editor._painted_entities[key] = {"node": entity, "data": data}
