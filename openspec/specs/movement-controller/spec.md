@@ -1,7 +1,10 @@
 # movement-controller Specification
 
 ## Purpose
-TBD - created by archiving change refactor-mc-interface. Update Purpose after archive.
+
+`MovementController` owns a unit's path following, arrival bookkeeping, and sub-slot booking.
+This capability defines the public surface callers use to query movement state and issue moves,
+so path-planning internals can move behind the interface.
 
 ## Requirements
 
