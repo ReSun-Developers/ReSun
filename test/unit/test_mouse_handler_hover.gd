@@ -244,3 +244,49 @@ func test_shroud_hover_detection_follows_rules() -> void:
     rules.fog_of_war = setup["saved_fog"]
     mouse.free()
     (setup["cc"] as Node).free()
+
+
+func test_hover_onto_non_selectable_unit_clears_previous_hover() -> void:
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    var setup := _setup_world()
+    var cam := setup["cam"] as Camera3D
+    var unit := _make_unit()
+    var sc := unit["select_comp"] as SelectComponent
+
+    var non := Node3D.new()
+    non.name = "NonSelectableUnit"
+    non.position = Vector3(0, 0.5, 3)
+    var non_sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
+    non_sc.name = "SelectComponent"
+    non_sc.is_selectable = false
+    non.add_child(non_sc)
+    _sm.add_child(non)
+
+    var mouse := MouseHandler.new()
+    mouse.selection_manager = _sm
+    mouse.camera_controller = setup["cc"]
+
+    mouse._handle_hover_preview(cam.unproject_position((unit["entity"] as Node3D).global_position))
+    TestHelper.assert_true(sc.is_hovering, "setup: selectable unit is hovered")
+
+    mouse._handle_hover_preview(cam.unproject_position(non.global_position))
+    (
+        TestHelper
+        . assert_true(
+            not sc.is_hovering,
+            "moving onto a non-selectable unit clears the previous hover immediately",
+        )
+    )
+    TestHelper.assert_true(_sm.hovered_entity == null, "no selectable hover target remains")
+    TestHelper.assert_true(mouse._hovered_entity == null, "MouseHandler forgets the unit")
+
+    _sm.clear_hover_preview()
+    _sm.deselect_all()
+    unit["entity"].free()
+    non.free()
+    (setup["cc"] as Node).free()
+    var rules := setup["rules"] as GlobalRules
+    rules.shroud_enabled = setup["saved_shroud"]
+    rules.fog_of_war = setup["saved_fog"]

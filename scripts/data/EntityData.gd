@@ -32,6 +32,8 @@ enum BridgeKind { NONE, LOW, HIGH, RAIL }
 @export var tech_level: int = -1
 ## Sight range in cells — how far this entity can see on the map.
 @export var sight: int = 1
+## Whether this entity can be selected by click, hover, or box selection.
+@export var is_selectable: bool = true
 ## Whether this entity can be selected by dragging a box over it.
 @export var is_drag_selectable: bool = true
 ## Player IDs that can own this entity (e.g., ["GDI", "Nod"]).

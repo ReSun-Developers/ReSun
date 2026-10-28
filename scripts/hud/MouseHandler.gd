@@ -452,11 +452,15 @@ func _handle_hover_preview(mouse_pos: Vector2) -> void:
     if not unit.is_empty():
         var select_comp: SelectComponent = unit["select_comp"]
         var entity: Node3D = unit["entity"]
-        if select_comp and entity and _is_fog_visible(entity):
+        if select_comp and select_comp.is_selectable and entity and _is_fog_visible(entity):
             _hover_miss_count = 0
             selection_manager.set_hover_preview(true, select_comp)
             _hovered_entity = entity
             return
+        if select_comp and not select_comp.is_selectable:
+            if selection_manager.is_hovering or is_instance_valid(_hovered_entity):
+                selection_manager.clear_hover_preview()
+            _hovered_entity = null
 
     var interact: Dictionary = probe["interact"]
     if not interact.is_empty():

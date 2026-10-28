@@ -55,13 +55,13 @@ func _ready():
     self._update_selection_shape()
     self._update_outline_shape()
 
-    if select_box_type != SelectBoxType.Structure:
-        var entity_root := get_parent()
-        if entity_root and not entity_root.get_meta("detached", false):
-            if not entity_root.is_in_group("selectable"):
-                entity_root.add_to_group("selectable")
-            if not entity_root.is_in_group("entities"):
-                entity_root.add_to_group("entities")
+    var entity_root := get_parent()
+    if entity_root and not entity_root.get_meta("detached", false):
+        if is_selectable and not entity_root.is_in_group("selectable"):
+            entity_root.add_to_group("selectable")
+        if not entity_root.is_in_group("entities"):
+            entity_root.add_to_group("entities")
+        if select_box_type != SelectBoxType.Structure and is_drag_selectable:
             if not entity_root.is_in_group("drag_selectable"):
                 entity_root.add_to_group("drag_selectable")
 

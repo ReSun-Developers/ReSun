@@ -37,11 +37,10 @@ func _ready():
 func select_entity(entity: SelectComponent, shift_pressed: bool = false):
     if not entity:
         return
-    if not _is_entity_selectable(entity):
-        return
-
     if shift_pressed and entity in selected_entities:
         remove_entity(entity)
+        return
+    if not _is_entity_selectable(entity):
         return
 
     if shift_pressed:
@@ -94,6 +93,8 @@ func deselect_all():
 
 func add_entity(entity: SelectComponent):
     if entity and is_instance_valid(entity) and not selected_entities.has(entity):
+        if not entity.selection_state_changed.is_connected(_on_selection_state_changed):
+            entity.selection_state_changed.connect(_on_selection_state_changed)
         selected_entities.append(entity)
 
         if entity.has_method("set_is_selected"):
@@ -182,6 +183,9 @@ func toggle_entity(entity: SelectComponent):
 
 
 func set_hover_preview(enabled: bool, entity: SelectComponent = null):
+    if entity and (not is_instance_valid(entity) or not entity.is_selectable):
+        enabled = false
+        entity = null
     if enabled and entity == hovered_entity:
         return
 
@@ -467,10 +471,12 @@ func is_entity_in_visible_bounds(entity: SelectComponent) -> bool:
     return BoundsSystem.is_in_play_area(CellUtil.world_to_cell(parent.global_position))
 
 
-## Selectability gate: an entity must both lie inside the visible play diamond
-## and be revealed through shroud/fog. Both gates apply; neither bypasses the
-## other.
+## Selectability gate: the entity must be data-selectable, lie inside the
+## visible play diamond, and be revealed through shroud/fog. All gates apply;
+## none bypasses another.
 func _is_entity_selectable(entity: SelectComponent) -> bool:
+    if not entity.is_selectable:
+        return false
     var parent := entity.get_parent() as Node3D
     if not is_instance_valid(parent):
         return true

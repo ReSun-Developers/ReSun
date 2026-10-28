@@ -233,10 +233,13 @@ func create_entity(entity_id: String, overrides: Dictionary = {}) -> Node3D:
     # Selection — selectable (single-click) and drag_selectable (box-select).
     var is_unit := StatsComponent.is_unit_type(etype)
     if is_unit:
-        entity.add_to_group("selectable")
-        entity.add_to_group("drag_selectable")
+        if data.is_selectable:
+            entity.add_to_group("selectable")
+        if data.is_drag_selectable:
+            entity.add_to_group("drag_selectable")
     elif etype == EntityData.EntityType.BUILDING:
-        entity.add_to_group("selectable")
+        if data.is_selectable:
+            entity.add_to_group("selectable")
 
     # Resource groups.
     if data.resource_category != "":
@@ -399,6 +402,7 @@ func _add_select_component(entity: Node3D, data: EntityData) -> void:
                 var d := data.foundation.y * cell_size
                 component.selection_size = Vector3(w, 0.01, d)
                 component.outline_size = Vector3(w, data.height, d)
+        component.is_selectable = data.is_selectable
         component.is_drag_selectable = data.is_drag_selectable
         var health := entity.get_node_or_null("HealthComponent")
         if health:

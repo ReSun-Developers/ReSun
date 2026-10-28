@@ -120,3 +120,147 @@ func test_ordering_player_and_origin_set_before_tree_entry() -> void:
         var derived := CellUtil.world_to_cell_origin(building.global_position, foundation)
         TestHelper.assert_eq(derived, origin, "origin cell derived from pre-entry position")
     _teardown()
+
+
+# ========================================
+# Selectability flags (#451)
+# ========================================
+
+
+func test_spawn_non_selectable_unit_joins_no_selection_group() -> void:
+    if _ef == null:
+        TestHelper.fail("EntityFactory not injected")
+        return
+    _setup()
+    var entity := (
+        (
+            _ef
+            . spawn(
+                "GDI_LIGHT_INFANTRY",
+                {
+                    "parent": _root,
+                    "overrides": {"is_selectable": false, "is_drag_selectable": false},
+                }
+            )
+        )
+        as Node3D
+    )
+    var result := (
+        entity != null
+        and entity.is_in_group("entities")
+        and not entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    _teardown()
+    TestHelper.assert_true(result, "non-selectable unit joins only the entities group")
+
+
+func test_spawn_drag_opt_out_keeps_selectable_group() -> void:
+    if _ef == null:
+        TestHelper.fail("EntityFactory not injected")
+        return
+    _setup()
+    var entity := (
+        _ef.spawn(
+            "GDI_LIGHT_INFANTRY", {"parent": _root, "overrides": {"is_drag_selectable": false}}
+        )
+        as Node3D
+    )
+    var result := (
+        entity != null
+        and entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    _teardown()
+    TestHelper.assert_true(result, "drag opt-out stays selectable but not drag_selectable")
+
+
+func test_spawn_non_selectable_building_joins_no_selection_group() -> void:
+    if _ef == null:
+        TestHelper.fail("EntityFactory not injected")
+        return
+    _setup()
+    var entity := (
+        (
+            _ef
+            . spawn(
+                "GDI_CONSTRUCTION_YARD",
+                {
+                    "parent": _root,
+                    "world_pos": CellUtil.cell_to_world(Vector2i(20, 20)),
+                    "overrides": {"is_selectable": false},
+                }
+            )
+        )
+        as Node3D
+    )
+    var result := (
+        entity != null
+        and not entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    _teardown()
+    TestHelper.assert_true(result, "non-selectable building joins no selection group")
+
+
+func test_preview_group_restoration_honors_drag_opt_out() -> void:
+    if _ef == null:
+        TestHelper.fail("EntityFactory not injected")
+        return
+    _setup()
+    var data := _ef.get_entity_data("GDI_LIGHT_INFANTRY") as EntityData
+    var entity := (
+        (
+            _ef
+            . spawn(
+                "GDI_LIGHT_INFANTRY",
+                {
+                    "detached": true,
+                    "parent": _root,
+                    "overrides": {"is_selectable": true, "is_drag_selectable": false},
+                }
+            )
+        )
+        as Node3D
+    )
+    if entity:
+        EntityPlacer._add_preview_groups(entity, data)
+    var result := (
+        entity != null
+        and entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    _teardown()
+    TestHelper.assert_true(result, "preview restoration keeps selectable but skips drag opt-out")
+
+
+func test_preview_group_restoration_honors_component_flags() -> void:
+    if _ef == null:
+        TestHelper.fail("EntityFactory not injected")
+        return
+    _setup()
+    var data := _ef.get_entity_data("GDI_LIGHT_INFANTRY") as EntityData
+    var entity := (
+        (
+            _ef
+            . spawn(
+                "GDI_LIGHT_INFANTRY",
+                {
+                    "detached": true,
+                    "parent": _root,
+                    "overrides": {"is_selectable": false, "is_drag_selectable": false},
+                }
+            )
+        )
+        as Node3D
+    )
+    if entity:
+        EntityPlacer._add_preview_groups(entity, data)
+    var result := (
+        entity != null
+        and entity.is_in_group("entities")
+        and not entity.is_in_group("selectable")
+        and not entity.is_in_group("drag_selectable")
+    )
+    _teardown()
+    TestHelper.assert_true(result, "preview restoration honors the component flags")

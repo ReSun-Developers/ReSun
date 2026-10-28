@@ -1258,3 +1258,241 @@ func test_has_rally_receiver_requires_rally_component():
     _sm.remove_child(without_rally)
     without_rally.free()
     _bounds_teardown()
+
+
+# ========================================
+# Selectability flags (#451)
+# ========================================
+
+
+func _make_flagged_entity(cell: Vector2i, selectable: bool, drag_selectable: bool) -> Node3D:
+    var entity := Node3D.new()
+    entity.name = "FlaggedEntity"
+    var sc := SELECT_COMPONENT_SCENE.instantiate() as SelectComponent
+    sc.name = "SelectComponent"
+    sc.is_selectable = selectable
+    sc.is_drag_selectable = drag_selectable
+    entity.add_child(sc)
+    _sm.add_child(entity)
+    entity.global_position = CellUtil.cell_to_world(cell)
+    return entity
+
+
+func _make_box_camera() -> CameraController:
+    var pivot := CameraController.new()
+    pivot.name = "CameraPivot"
+    var cam := Camera3D.new()
+    cam.name = "Camera3D"
+    cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+    cam.size = 120.0
+    pivot.add_child(cam)
+    _sm.add_child(pivot)
+    cam.look_at_from_position(Vector3(0, 80, 0), Vector3.ZERO, Vector3(0, 0, -1))
+    return pivot
+
+
+func _make_box_handler(pivot: CameraController) -> MouseHandler:
+    var mh := MOUSE_HANDLER_SCENE.instantiate() as MouseHandler
+    _sm.add_child(mh)
+    mh.camera_controller = pivot
+    return mh
+
+
+func _rect_over(cam: Camera3D, a: Node3D, b: Node3D) -> Rect2:
+    var pa := cam.unproject_position(a.global_position)
+    var pb := cam.unproject_position(b.global_position)
+    var lo := Vector2(minf(pa.x, pb.x), minf(pa.y, pb.y))
+    var hi := Vector2(maxf(pa.x, pb.x), maxf(pa.y, pb.y))
+    return Rect2(lo - Vector2(2.0, 2.0), hi - lo + Vector2(4.0, 4.0))
+
+
+func test_click_select_rejects_non_selectable_entity():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var entity := _make_flagged_entity(BOUNDS_IN_CELL, false, true)
+    var sc := _select_comp_of(entity)
+    var in_bounds: bool = BoundsSystem.is_in_play_area(BOUNDS_IN_CELL)
+    _sm.deselect_all()
+    _sm.select_entity(sc)
+    var selected: bool = _sm.is_entity_selected(sc)
+    _sm.deselect_all()
+    entity.free()
+    _bounds_teardown()
+    TestHelper.assert_true(in_bounds, "fixture: cell is inside the play area")
+    TestHelper.assert_true(not selected, "click-select rejects a non-selectable entity")
+
+
+func test_click_non_selectable_leaves_selection_unchanged():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var keep := _make_flagged_entity(BOUNDS_IN_CELL, true, true)
+    var rejected := _make_flagged_entity(BOUNDS_IN_CELL + Vector2i(1, 0), false, true)
+    var keep_sc := _select_comp_of(keep)
+    var rejected_sc := _select_comp_of(rejected)
+    _sm.deselect_all()
+    _sm.select_entity(keep_sc)
+    _sm.select_entity(rejected_sc)
+    var result: bool = _sm.is_entity_selected(keep_sc) and not _sm.is_entity_selected(rejected_sc)
+    _sm.deselect_all()
+    keep.free()
+    rejected.free()
+    _bounds_teardown()
+    TestHelper.assert_true(result, "non-selectable click leaves the current selection unchanged")
+
+
+func test_box_select_skips_non_selectable_entity():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var selectable := _make_flagged_entity(BOUNDS_IN_CELL, true, true)
+    var non_selectable := _make_flagged_entity(BOUNDS_IN_CELL + Vector2i(1, 0), false, true)
+    var selectable_sc := _select_comp_of(selectable)
+    var non_sc := _select_comp_of(non_selectable)
+    var fixture_ok: bool = (
+        BoundsSystem.is_in_play_area(BOUNDS_IN_CELL)
+        and BoundsSystem.is_in_play_area(BOUNDS_IN_CELL + Vector2i(1, 0))
+        and selectable.is_in_group("drag_selectable")
+        and non_selectable.is_in_group("drag_selectable")
+    )
+    var pivot := _make_box_camera()
+    var cam := pivot.get_node("Camera3D") as Camera3D
+    var rect := _rect_over(cam, selectable, non_selectable)
+    var mh := _make_box_handler(pivot)
+
+    _sm.deselect_all()
+    mh._select_entities_2d_projected(rect)
+    var selected_ok: bool = _sm.is_entity_selected(selectable_sc)
+    var non_selected: bool = _sm.is_entity_selected(non_sc)
+    _sm.deselect_all()
+    mh.free()
+    pivot.free()
+    selectable.free()
+    non_selectable.free()
+    _bounds_teardown()
+    TestHelper.assert_true(fixture_ok, "fixture: both entities are in-bounds drag candidates")
+    TestHelper.assert_true(selected_ok, "box-select keeps the selectable entity")
+    TestHelper.assert_true(not non_selected, "box-select skips the non-selectable entity")
+
+
+func test_box_select_skips_drag_opt_out_while_click_selects():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var clickable := _make_flagged_entity(BOUNDS_IN_CELL, true, false)
+    var control := _make_flagged_entity(BOUNDS_IN_CELL + Vector2i(1, 0), true, true)
+    var clickable_sc := _select_comp_of(clickable)
+    var control_sc := _select_comp_of(control)
+    var group_ok: bool = (
+        clickable.is_in_group("selectable")
+        and not clickable.is_in_group("drag_selectable")
+        and control.is_in_group("drag_selectable")
+    )
+
+    _sm.deselect_all()
+    _sm.select_entity(clickable_sc)
+    var click_selected: bool = _sm.is_entity_selected(clickable_sc)
+
+    var pivot := _make_box_camera()
+    var cam := pivot.get_node("Camera3D") as Camera3D
+    var rect := _rect_over(cam, clickable, control)
+    var mh := _make_box_handler(pivot)
+    _sm.deselect_all()
+    mh._select_entities_2d_projected(rect)
+    var control_selected: bool = _sm.is_entity_selected(control_sc)
+    var clickable_boxed: bool = _sm.is_entity_selected(clickable_sc)
+
+    _sm.deselect_all()
+    mh.free()
+    pivot.free()
+    clickable.free()
+    control.free()
+    _bounds_teardown()
+    TestHelper.assert_true(group_ok, "drag opt-out is selectable but not in drag_selectable")
+    TestHelper.assert_true(click_selected, "drag opt-out is still click-selectable")
+    TestHelper.assert_true(control_selected, "box-select keeps the drag-selectable control")
+    TestHelper.assert_true(not clickable_boxed, "box-select skips the drag opt-out entity")
+
+
+func test_hover_preview_ignores_non_selectable_entity():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var entity := _make_flagged_entity(BOUNDS_IN_CELL, false, true)
+    var sc := _select_comp_of(entity)
+    _sm.set_hover_preview(true, sc)
+    var result: bool = not sc.is_hovering and not _sm.is_hovering and _sm.hovered_entity == null
+    _sm.clear_hover_preview()
+    entity.free()
+    _bounds_teardown()
+    TestHelper.assert_true(result, "hover preview ignores a non-selectable entity")
+
+
+func test_hover_moves_off_selectable_entity_to_non_selectable():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var first := _make_flagged_entity(BOUNDS_IN_CELL, true, true)
+    var second := _make_flagged_entity(BOUNDS_IN_CELL + Vector2i(1, 0), false, true)
+    var first_sc := _select_comp_of(first)
+    var second_sc := _select_comp_of(second)
+    _sm.set_hover_preview(true, first_sc)
+    var setup_hovered: bool = first_sc.is_hovering and _sm.hovered_entity == first_sc
+    _sm.set_hover_preview(true, second_sc)
+    var result: bool = (
+        not first_sc.is_hovering
+        and not second_sc.is_hovering
+        and not _sm.is_hovering
+        and _sm.hovered_entity == null
+    )
+    _sm.clear_hover_preview()
+    first.free()
+    second.free()
+    _bounds_teardown()
+    TestHelper.assert_true(setup_hovered, "fixture: selectable entity was hovered")
+    TestHelper.assert_true(result, "moving hover onto a non-selectable entity clears the hover")
+
+
+func test_shift_click_removes_programmatically_selected_non_selectable():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var entity := _make_flagged_entity(BOUNDS_IN_CELL, false, true)
+    var sc := _select_comp_of(entity)
+    _sm.deselect_all()
+    _sm.add_entity(sc)
+    var added: bool = _sm.is_entity_selected(sc)
+    _sm.select_entity(sc, true)
+    var removed: bool = not _sm.is_entity_selected(sc)
+    _sm.deselect_all()
+    entity.free()
+    _bounds_teardown()
+    TestHelper.assert_true(added, "fixture: programmatic add selected the entity")
+    TestHelper.assert_true(removed, "shift-click still removes an already-selected entity")
+
+
+func test_programmatic_add_is_reconciled_on_visual_deselect():
+    if _sm == null:
+        TestHelper.fail("SelectionManager not injected")
+        return
+    _bounds_setup()
+    var entity := _make_flagged_entity(BOUNDS_IN_CELL, false, true)
+    var sc := _select_comp_of(entity)
+    _sm.deselect_all()
+    _sm.add_entity(sc)
+    var added: bool = _sm.is_entity_selected(sc)
+    sc.set_is_selected(false)
+    var removed: bool = not _sm.is_entity_selected(sc)
+    _sm.deselect_all()
+    entity.free()
+    _bounds_teardown()
+    TestHelper.assert_true(added, "add_entity is ungated for a non-selectable entity")
+    TestHelper.assert_true(removed, "visual deselect removes a programmatically added entity")
