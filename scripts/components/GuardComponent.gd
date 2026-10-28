@@ -17,6 +17,11 @@ const SCAN_INTERVAL: float = 0.3
 ## measured. Bump if content grows wider than 6 cells.
 const BUILDING_HOOD_MARGIN_CELLS: int = 4
 
+## Displacement from the guard-area anchor that triggers a return move. The
+## anchor is the unit's own assigned destination, so formation spread never
+## crosses this; only a genuine displacement does.
+const GUARD_AREA_LEASH_CELLS: float = 2.0
+
 var _parent: Node3D = null
 var _combat: CombatComponent = null
 var _mc: MovementController = null
@@ -24,6 +29,11 @@ var _power: PowerComponent = null
 var _stats: StatsComponent = null
 var _resolved: bool = false
 var _scan_timer: float = 0.0
+## Guard-area stance: the assigned destination to hold, set by the guard-area order.
+var _guard_area_active: bool = false
+var _guard_area_anchor: Vector3 = Vector3.ZERO
+## Surface level of the anchor (0 = ground, N = bridge deck).
+var _guard_area_level: int = 0
 ## Incremented each hood walk; tests assert throttle without peeking SpatialHash.
 var scan_count: int = 0
 
@@ -43,6 +53,23 @@ func _ready() -> void:
     _scan_timer = float(absi(hash(get_instance_id())) % 1000) / 1000.0 * SCAN_INTERVAL
 
 
+## Enter the guard-area stance at the unit's assigned destination. Acquisition is
+## unchanged; the stance only adds the anchor and the return move.
+func set_guard_area(anchor: Vector3, level: int = 0) -> void:
+    _resolve_siblings()
+    _guard_area_anchor = anchor
+    _guard_area_level = level
+    _guard_area_active = true
+
+
+func clear_guard_area() -> void:
+    _guard_area_active = false
+
+
+func has_guard_area() -> bool:
+    return _guard_area_active
+
+
 func _physics_process(delta: float) -> void:
     if Engine.is_editor_hint():
         return
@@ -51,6 +78,8 @@ func _physics_process(delta: float) -> void:
     if _parent and _parent.get_meta("detached", false):
         return
     if not _resolve_siblings():
+        return
+    if _update_guard_area():
         return
     if _is_blocked():
         return
@@ -76,8 +105,54 @@ func _resolve_siblings() -> bool:
     _mc = _parent.get_node_or_null("MovementController") as MovementController
     _power = _parent.get_node_or_null("PowerComponent") as PowerComponent
     _stats = _parent.get_node_or_null("StatsComponent") as StatsComponent
+    if _mc:
+        if not _mc.movement_started.is_connected(_on_movement_started):
+            _mc.movement_started.connect(_on_movement_started)
+        if not _mc.pathfinding_failed.is_connected(_on_pathfinding_failed):
+            _mc.pathfinding_failed.connect(_on_pathfinding_failed)
     _resolved = true
     return _combat != null
+
+
+## Return to the anchor when idle and displaced. Returns true when a return move
+## was requested, so the scan waits for it instead of acquiring mid-return.
+func _update_guard_area() -> bool:
+    if not _guard_area_active or _mc == null or not is_instance_valid(_parent):
+        return false
+    if _mc.is_moving():
+        return false
+    if _combat and _combat.is_engaged():
+        return false
+    if (
+        _parent.global_position.distance_to(_guard_area_anchor)
+        <= GUARD_AREA_LEASH_CELLS * CellUtil.CELL_SIZE
+    ):
+        return false
+    # Internal: a stance-issued move must not read back as a player move.
+    _mc.set_target_position(
+        _guard_area_anchor, false, false, true, null, null, false, false, _guard_area_level
+    )
+    return true
+
+
+## A player move away from the anchor ends the stance. The guard order's approach
+## starts before the stance exists, and the return move is internal (no signal),
+## so neither clears it.
+func _on_movement_started() -> void:
+    if not _guard_area_active or _mc == null:
+        return
+    if (
+        _mc.get_target_position().distance_to(_guard_area_anchor)
+        <= GUARD_AREA_LEASH_CELLS * CellUtil.CELL_SIZE
+    ):
+        return
+    clear_guard_area()
+
+
+## An unreachable anchor must not retry every tick.
+func _on_pathfinding_failed() -> void:
+    if _guard_area_active and (_mc == null or not _mc.is_moving()):
+        clear_guard_area()
 
 
 func _is_blocked() -> bool:
