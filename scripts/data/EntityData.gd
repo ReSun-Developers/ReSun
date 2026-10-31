@@ -102,6 +102,9 @@ enum BridgeKind { NONE, LOW, HIGH, RAIL }
 @export_group("Foundation")
 ## Footprint in cells (width × depth) — determines placement grid and collision.
 @export var foundation: Vector2i = Vector2i(1, 1)
+## Whether this building's foundation cells are solid (block placement and pathing).
+## False for walkable buildings such as pavement and invisible light emitters.
+@export var blocks_cells: bool = true
 ## Visual height in world units — affects bounding box and selection overlay.
 @export var height: float = 1.0
 ## Cells that form the building's bib (the raised foundation edge).

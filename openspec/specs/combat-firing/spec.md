@@ -1,7 +1,9 @@
 ## Purpose
 
 CombatComponent resolves enemy targets into attack orders, tracks the current target, enforces per-weapon cooldowns, measures engagement range, applies hitscan damage through warhead armor multipliers, and coordinates movement toward out-of-range targets.
+
 ## Requirements
+
 ### Requirement: CombatComponent tracks attack target
 CombatComponent SHALL maintain a `_target: Node3D` reference set via `set_target(entity, hold_ground := false)`. The optional `hold_ground` flag SHALL default to `false` so existing player-order and test call sites are unchanged. When `hold_ground` is true, CombatComponent SHALL treat the engagement as stand-and-shoot: it SHALL NOT issue chase/approach moves, and when the target's horizontal distance exceeds the longest weapon range on a `_physics_process` tick it SHALL clear the target and stop attacking. The target SHALL persist across `_physics_process` ticks until explicitly cleared via `clear_target()`, the target becomes invalid, or (hold-ground only) the target leaves weapon range.
 
@@ -60,8 +62,8 @@ CombatComponent SHALL check if the target is within firing range before firing. 
 - **THEN** CombatComponent SHALL treat the building as in range (its nearest footprint point is at least as close as the center)
 
 #### Scenario: Single-cell building measured as a point
-- **WHEN** the target is a 1x1 building (no `FoundationComponent`; footprint center equals the cell center)
-- **THEN** CombatComponent SHALL measure to the target's `global_position`, unchanged from before this change
+- **WHEN** the target is a 1x1 building (it carries a `FoundationComponent` whose footprint is one cell)
+- **THEN** CombatComponent SHALL treat that single cell as the point target and measure to its nearest edge, matching every other structure
 
 #### Scenario: Non-building target unchanged
 - **WHEN** the target is a unit without a `FoundationComponent`
@@ -430,4 +432,3 @@ Overlays failing their gate SHALL take no damage. An overlay that is itself the 
 #### Scenario: Overlay damaged exactly once when it is the target
 - **WHEN** an overlay entity is itself the shot's entity target and its warhead gate passes
 - **THEN** its health SHALL decrease by a single hit, not two
-
