@@ -771,9 +771,9 @@ func _on_height_changed(cell: Vector2i, new_height: int) -> void:
     var node := entry.get("node") as Node3D
     if is_instance_valid(node):
         node.position.y = float(new_height) * TerrainSystem.HEIGHT_STEP
-        var tib := node.get_node_or_null("ResourceComponent") as ResourceComponent
-        if tib:
-            tib.update_slope_positions()
+        var res_comp := node.get_node_or_null("ResourceComponent") as ResourceComponent
+        if res_comp:
+            res_comp.update_slope_positions()
     if _entity_selector.is_entity_selected(key):
         _entity_selector.refresh_slope_tilt()
 
@@ -785,9 +785,9 @@ func _on_terrain_cell_changed(key: String, data: Dictionary) -> void:
         return
     var h: int = data.get("max_height", data.get("height", 0))
     node.position.y = float(h) * TerrainSystem.HEIGHT_STEP
-    var tib := node.get_node_or_null("ResourceComponent") as ResourceComponent
-    if tib:
-        tib.update_slope_positions()
+    var res_comp := node.get_node_or_null("ResourceComponent") as ResourceComponent
+    if res_comp:
+        res_comp.update_slope_positions()
     if _entity_selector.is_entity_selected(key):
         _entity_selector.refresh_slope_tilt()
 

@@ -146,6 +146,7 @@ are 45°-rotated rectangles, i.e. diamonds.
 | Term | Meaning | Where |
 |------|---------|-------|
 | crystal | Harvestable resource entity (e.g. TIBERIUM_RIPARIUS); self-grows and spreads. | [resource-growth-system](openspec/specs/resource-growth-system/spec.md) |
+| primary resource entity | The harvestable crystal a game paints by default: the entity seeded by its first id-ordered resource-tree spawner, or the first id-ordered typed non-spawner crystal in `GlobalRules.primary_resource_category` when no spawner exists. | [entity-factory](openspec/specs/entity-factory/spec.md) · scripts/entities/EntityFactory.gd |
 | tree | `ResourceTree` spawner entity that creates crystals within `radius_cells` up to `node_count`. | [resource-tree](openspec/specs/resource-tree/spec.md) |
 | bale | Atomic raw-resource quantity carried/stored/spread (not credits; value applied at refinery). | [resource-harvesting](openspec/specs/resource-harvesting/spec.md) |
 | resource category | Group id aggregating resource types (e.g. "tiberium"); basis for storage capacity and HUD totals. | [resource-storage](openspec/specs/resource-storage/spec.md) |

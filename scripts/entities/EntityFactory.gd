@@ -593,6 +593,58 @@ func get_all_by_type(entity_type: EntityData.EntityType) -> Array[EntityData]:
     return result
 
 
+## Primary resource-tree spawner: the first id-ordered spawner whose spawned
+## entity is a typed non-spawner in the active game's primary resource category.
+func get_primary_resource_tree_entity() -> EntityData:
+    var category := _primary_resource_category()
+    if category.is_empty():
+        return null
+    for id in _sorted_entity_ids():
+        var data: EntityData = _entity_cache[id]
+        if data.id.is_empty() or not data.resource_spawner:
+            continue
+        var spawned: EntityData = _entity_cache.get(data.spawned_entity_id) as EntityData
+        if _is_primary_resource_entity(spawned, category):
+            return data
+    return null
+
+
+## Primary harvestable resource entity: the primary tree's spawned entity, else
+## the first id-ordered typed non-spawner in the primary resource category.
+func get_primary_resource_entity() -> EntityData:
+    var tree := get_primary_resource_tree_entity()
+    if tree:
+        return _entity_cache.get(tree.spawned_entity_id) as EntityData
+    var category := _primary_resource_category()
+    if category.is_empty():
+        return null
+    for id in _sorted_entity_ids():
+        var data: EntityData = _entity_cache[id]
+        if _is_primary_resource_entity(data, category):
+            return data
+    return null
+
+
+func _primary_resource_category() -> String:
+    return _global_rules.primary_resource_category if _global_rules else ""
+
+
+func _is_primary_resource_entity(data: EntityData, category: String) -> bool:
+    return (
+        data != null
+        and not data.id.is_empty()
+        and not data.resource_spawner
+        and data.resource_category == category
+        and not data.resource_type_id.is_empty()
+    )
+
+
+func _sorted_entity_ids() -> Array:
+    var ids: Array = _entity_cache.keys()
+    ids.sort()
+    return ids
+
+
 func get_global_rules() -> GlobalRules:
     return _global_rules
 
