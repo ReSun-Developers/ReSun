@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Track"
+zones = PackedStringArray("Normal", "Crusher", "Destroyer", "AmphibiousCrusher", "AmphibiousDestroyer", "InfantryDestroyer")
 uphill_factor = 0.5
 downhill_factor = 1.1
 ; ponytail: rail decks are traversable at road speed for now; rail-specific
