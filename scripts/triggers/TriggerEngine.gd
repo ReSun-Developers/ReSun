@@ -19,6 +19,7 @@ const PERSISTENT: int = 2
 const MAX_CASCADE_ITERATIONS: int = 8
 const MAX_ACTIONS_PER_TICK: int = 256
 const REVEAL_RADIUS: int = 9
+const COUNTED_META: String = "trigger_counted"
 
 var _defs: Dictionary = {}
 var _order: Array[String] = []
@@ -126,7 +127,9 @@ func arm(triggers_data: Array, overlay: Array = []) -> bool:
     _order.sort()
     _build_indices()
     _armed = true
+    _seed_credits()
     _schedule_time_events()
+    _mark_credits_dirty()
     _warn_unimplemented()
     return true
 
@@ -210,9 +213,11 @@ func offer(event_id: int, payload: Dictionary = {}) -> void:
 
 
 ## Records a built entity for standing build/building-exists events.
-func notify_built(owner: String, entity_id: String, _node: Node = null) -> void:
+func notify_built(owner: String, entity_id: String, node: Node = null) -> void:
     if not _armed or owner.is_empty():
         return
+    if node != null and is_instance_valid(node):
+        node.set_meta(COUNTED_META, true)
     _last_built[owner] = entity_id
     var per_owner: Dictionary = _built.get(owner, {})
     per_owner[entity_id] = int(per_owner.get(entity_id, 0)) + 1
@@ -221,18 +226,50 @@ func notify_built(owner: String, entity_id: String, _node: Node = null) -> void:
     _mark_owner_dirty(owner)
 
 
+## Drops a counted entity from the standing counts without offering the
+## temporal destroyed events. Used when an entity leaves the world for a reason
+## other than death (sold, transformed by undeploy). The node's counted marker is
+## cleared so a later death notification cannot decrement or offer again.
+func notify_removed(owner: String, entity_id: String, node: Node = null) -> void:
+    if not _armed or not _is_counted(node) or owner.is_empty():
+        return
+    var per_owner: Dictionary = _built.get(owner, {})
+    per_owner[entity_id] = maxi(int(per_owner.get(entity_id, 0)) - 1, 0)
+    _built[owner] = per_owner
+    _alive[owner] = maxi(int(_alive.get(owner, 0)) - 1, 0)
+    _mark_owner_dirty(owner)
+    node.set_meta(COUNTED_META, false)
+
+
 ## Records a destroyed entity and offers the destroyed events.
 func notify_destroyed(owner: String, entity_id: String, node: Node = null) -> void:
     if not _armed:
         return
-    if not owner.is_empty():
-        var per_owner: Dictionary = _built.get(owner, {})
-        per_owner[entity_id] = maxi(int(per_owner.get(entity_id, 0)) - 1, 0)
-        _built[owner] = per_owner
-        _alive[owner] = maxi(int(_alive.get(owner, 0)) - 1, 0)
-        _mark_owner_dirty(owner)
+    if _is_removed(node):
+        return
+    notify_removed(owner, entity_id, node)
     offer(7, {"object": node, "object_id": entity_id, "house": owner})
     offer(48, {"object": node, "object_id": entity_id, "house": owner})
+
+
+## True when the node was counted by `notify_built` and has not been removed.
+func _is_counted(node: Node) -> bool:
+    return (
+        node != null
+        and is_instance_valid(node)
+        and node.has_meta(COUNTED_META)
+        and bool(node.get_meta(COUNTED_META))
+    )
+
+
+## True when the node was counted and then removed by `notify_removed`.
+func _is_removed(node: Node) -> bool:
+    return (
+        node != null
+        and is_instance_valid(node)
+        and node.has_meta(COUNTED_META)
+        and not bool(node.get_meta(COUNTED_META))
+    )
 
 
 func notify_credits(player_id: int, balance: int) -> void:
@@ -244,6 +281,37 @@ func notify_credits(player_id: int, balance: int) -> void:
         return
     _credits[owner] = balance
     _mark_owner_dirty(owner)
+
+
+## Seeds the per-house credit mirror from the live player balances. Called on
+## arm, after mission start has written the starting credits without offering a
+## credit-change occurrence. The local player seeds last so a house shared with
+## another player reads the local balance.
+func _seed_credits() -> void:
+    var local_id := PlayerManager.get_local_player_id()
+    for data in PlayerManager.get_all_players():
+        if int(data.player_id) != local_id:
+            _seed_house_credits(data)
+    _seed_house_credits(PlayerManager.get_player_data(local_id))
+
+
+func _seed_house_credits(data: PlayerData) -> void:
+    var owner := String(data.faction_id)
+    if owner.is_empty():
+        return
+    _credits[owner] = EconomyManager.get_balance(int(data.player_id))
+
+
+## Schedules one evaluation for live triggers that watch the credits event, so
+## the seeded balance is checked on the first logic tick after arming.
+func _mark_credits_dirty() -> void:
+    for id in _order:
+        if not _is_live(id):
+            continue
+        for ev in _defs[id]["events"]:
+            if int(ev["id"]) == 12:
+                _dirty[id] = true
+                break
 
 
 # --- evaluation ---------------------------------------------------------------
