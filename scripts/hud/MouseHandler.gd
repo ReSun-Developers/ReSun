@@ -167,44 +167,49 @@ func _process(_delta):
     # Gameplay minimap consumes its own clicks; polling world input must not
     # also select/order there.
     var over_minimap := UIUtil.is_mouse_over_minimap()
+    var over_ui := over_sidebar or over_debug or over_build or over_minimap
 
     # Drop stale hover state when the cursor enters UI, so returning to the
     # same target re-emits hover_changed (the tooltip would otherwise stay
     # hidden forever — set_hover_preview dedupes on the still-set entity).
-    if (
-        (over_sidebar or over_debug or over_build or over_minimap)
-        and selection_manager
-        and selection_manager.is_hovering
-    ):
+    if over_ui and selection_manager and selection_manager.is_hovering:
         selection_manager.clear_hover_preview()
 
-    if not over_sidebar and not over_debug and not over_build and not over_minimap:
-        var shift_pressed: bool = Input.is_key_pressed(KEY_SHIFT)
+    # Left mouse button just pressed — start drag tracking. Handled before the
+    # release so a press and release inside one polled frame still resolves.
+    if not over_ui and Input.is_action_just_pressed("select_entity"):
+        mouse_dragging = true
+        drag_start_position = get_viewport().get_mouse_position()
+        active_rect = Rect2()
+        selection_rect.hide()
+        selection_rect.position = drag_start_position
+        selection_rect.size = Vector2.ZERO
 
-        # Left mouse button just pressed — start drag tracking.
-        if Input.is_action_just_pressed("select_entity"):
-            mouse_dragging = true
-            drag_start_position = get_viewport().get_mouse_position()
+    # Update the drag rectangle while the left button is held, wherever the
+    # cursor is: the box must keep tracking across the sidebar/minimap so a
+    # release over UI resolves the rectangle the player actually drew. Runs
+    # before the release so the final rectangle reflects the release position.
+    if mouse_dragging:
+        var m_end := get_viewport().get_mouse_position()
+        var diff: Vector2 = m_end - drag_start_position
+        active_rect = Rect2(drag_start_position, diff).abs()
+        var over_threshold := (
+            active_rect.size.x >= MOUSE_DRAG_THRESHOLD or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
+        )
+        if over_threshold:
+            selection_rect.show()
+            selection_rect.position = active_rect.position
+            selection_rect.size = active_rect.size
+        else:
             selection_rect.hide()
-            selection_rect.position = drag_start_position
-            selection_rect.size = Vector2.ZERO
 
-        # Left mouse button just released — resolve as box-select or single click.
-        if Input.is_action_just_released("select_entity"):
-            var threshold_exceeded: bool = selection_rect.size.x >= MOUSE_DRAG_THRESHOLD
+    # A release ends the marquee wherever the cursor is. Handling it inside the
+    # world-input guard below would latch the drag when the button comes up over
+    # the sidebar, minimap, or debug menu.
+    if Input.is_action_just_released("select_entity"):
+        _end_select_drag(over_ui, Input.is_key_pressed(KEY_SHIFT))
 
-            if mouse_dragging and threshold_exceeded:
-                if not shift_pressed and selection_manager:
-                    selection_manager.deselect_all()
-                if active_rect.has_area():
-                    _select_entities_2d_projected(active_rect)
-            elif selection_manager:
-                var mouse_pos := get_viewport().get_mouse_position()
-                _handle_single_click(mouse_pos, shift_pressed)
-
-            mouse_dragging = false
-            selection_rect.hide()
-
+    if not over_ui:
         # Right mouse button is RESERVED for deselect/cancel only — never issue commands.
         if Input.is_action_just_released("deselect_entity"):
             if OrderSystem.is_action_mode():
@@ -217,20 +222,6 @@ func _process(_delta):
             if OrderSystem.is_action_mode():
                 OrderSystem.cancel()
 
-        # Update drag rectangle while left mouse held and moving (polling).
-        if mouse_dragging:
-            var m_end := get_viewport().get_mouse_position()
-            var diff: Vector2 = m_end - drag_start_position
-            active_rect = Rect2(drag_start_position, diff).abs()
-            var over_threshold := (
-                active_rect.size.x >= MOUSE_DRAG_THRESHOLD
-                or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
-            )
-            if over_threshold:
-                selection_rect.show()
-                selection_rect.position = active_rect.position
-                selection_rect.size = active_rect.size
-
         # Hover preview during mouse motion (when not dragging).
         if not mouse_dragging:
             var mouse_pos := get_viewport().get_mouse_position()
@@ -240,6 +231,30 @@ func _process(_delta):
 
     # Update cursor every frame — runs even when over sidebar or middle-clicking.
     _update_cursor()
+
+
+## End a marquee drag on left-button release. `over_ui` suppresses world click
+## resolution (the release must not select or order through the sidebar,
+## minimap, or debug menu); a box that passed the threshold still resolves the
+## rectangle as drawn, including any part that covers UI.
+func _end_select_drag(over_ui: bool, shift_pressed: bool) -> void:
+    if not mouse_dragging:
+        return
+
+    var threshold_exceeded: bool = (
+        active_rect.size.x >= MOUSE_DRAG_THRESHOLD or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
+    )
+
+    if threshold_exceeded and active_rect.has_area():
+        if not shift_pressed and selection_manager:
+            selection_manager.deselect_all()
+        _select_entities_2d_projected(active_rect)
+    elif not threshold_exceeded and not over_ui and selection_manager:
+        _handle_single_click(get_viewport().get_mouse_position(), shift_pressed)
+
+    mouse_dragging = false
+    selection_rect.hide()
+    active_rect = Rect2()
 
 
 func _get_camera_3d() -> Camera3D:
@@ -523,8 +538,14 @@ func _update_cursor() -> void:
     # Minimap hover always shows system cursor
     elif UIUtil.is_mouse_over_minimap():
         cursor_type = CursorState.Type.DEFAULT
-    elif mouse_dragging and active_rect.size.x >= MOUSE_DRAG_THRESHOLD:
-        cursor_type = CursorState.Type.SELECT
+    elif (
+        mouse_dragging
+        and (
+            active_rect.size.x >= MOUSE_DRAG_THRESHOLD or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
+        )
+    ):
+        # The box is the affordance; the drag itself keeps the default pointer.
+        cursor_type = CursorState.Type.DEFAULT
     else:
         # Middle-click panning — joystick cursor
         var joystick := _resolve_joystick_cursor()
