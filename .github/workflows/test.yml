@@ -7,6 +7,31 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      gameplay: ${{ steps.filter.outputs.gameplay }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
+        id: filter
+        with:
+          filters: |
+            gameplay:
+              - '**/*.gd'
+              - '**/*.tscn'
+              - '**/*.tres'
+              - 'assets/**'
+              - 'games/**'
+              - 'shaders/**'
+              - 'test/**'
+              - 'project.godot'
+              - '.github/workflows/test.yml'
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -44,6 +69,8 @@ jobs:
           echo "OK: No open changes in openspec/changes/"
 
   test:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.gameplay != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
