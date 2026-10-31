@@ -185,6 +185,24 @@ func _process(_delta):
         selection_rect.position = drag_start_position
         selection_rect.size = Vector2.ZERO
 
+    # Update the drag rectangle while the left button is held, wherever the
+    # cursor is: the box must keep tracking across the sidebar/minimap so a
+    # release over UI resolves the rectangle the player actually drew. Runs
+    # before the release so the final rectangle reflects the release position.
+    if mouse_dragging:
+        var m_end := get_viewport().get_mouse_position()
+        var diff: Vector2 = m_end - drag_start_position
+        active_rect = Rect2(drag_start_position, diff).abs()
+        var over_threshold := (
+            active_rect.size.x >= MOUSE_DRAG_THRESHOLD or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
+        )
+        if over_threshold:
+            selection_rect.show()
+            selection_rect.position = active_rect.position
+            selection_rect.size = active_rect.size
+        else:
+            selection_rect.hide()
+
     # A release ends the marquee wherever the cursor is. Handling it inside the
     # world-input guard below would latch the drag when the button comes up over
     # the sidebar, minimap, or debug menu.
@@ -204,22 +222,6 @@ func _process(_delta):
             if OrderSystem.is_action_mode():
                 OrderSystem.cancel()
 
-        # Update drag rectangle while left mouse held and moving (polling).
-        if mouse_dragging:
-            var m_end := get_viewport().get_mouse_position()
-            var diff: Vector2 = m_end - drag_start_position
-            active_rect = Rect2(drag_start_position, diff).abs()
-            var over_threshold := (
-                active_rect.size.x >= MOUSE_DRAG_THRESHOLD
-                or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
-            )
-            if over_threshold:
-                selection_rect.show()
-                selection_rect.position = active_rect.position
-                selection_rect.size = active_rect.size
-            else:
-                selection_rect.hide()
-
         # Hover preview during mouse motion (when not dragging).
         if not mouse_dragging:
             var mouse_pos := get_viewport().get_mouse_position()
@@ -233,8 +235,8 @@ func _process(_delta):
 
 ## End a marquee drag on left-button release. `over_ui` suppresses world click
 ## resolution (the release must not select or order through the sidebar,
-## minimap, or debug menu); a box that passed the threshold still resolves from
-## the rectangle drawn in the gameplay view.
+## minimap, or debug menu); a box that passed the threshold still resolves the
+## rectangle as drawn, including any part that covers UI.
 func _end_select_drag(over_ui: bool, shift_pressed: bool) -> void:
     if not mouse_dragging:
         return
@@ -542,7 +544,8 @@ func _update_cursor() -> void:
             active_rect.size.x >= MOUSE_DRAG_THRESHOLD or active_rect.size.y >= MOUSE_DRAG_THRESHOLD
         )
     ):
-        cursor_type = CursorState.Type.SELECT
+        # The box is the affordance; the drag itself keeps the default pointer.
+        cursor_type = CursorState.Type.DEFAULT
     else:
         # Middle-click panning — joystick cursor
         var joystick := _resolve_joystick_cursor()
