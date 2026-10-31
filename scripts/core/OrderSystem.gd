@@ -154,11 +154,26 @@ func cancel() -> void:
 
 
 ## Shared click-modifier snapshot (Ctrl = force-attack, Alt = force-move,
-## Shift = queue); used by the world click path and the minimap.
+## Shift = queue); used by the world click path and the minimap. Ctrl+Alt is
+## guard area unless the selection owns a rally point, where Alt still sets it.
 static func build_modifiers(shift_pressed: bool) -> Dictionary:
+    return build_modifiers_for(
+        Input.is_key_pressed(KEY_CTRL),
+        Input.is_key_pressed(KEY_ALT),
+        shift_pressed,
+        SelectionManager.has_rally_receiver(),
+    )
+
+
+## Pure modifier policy, separated from Input so the guard-area/rally precedence
+## is testable headlessly.
+static func build_modifiers_for(
+    ctrl: bool, alt: bool, shift_pressed: bool, has_rally: bool
+) -> Dictionary:
     return {
-        OrderResult.MOD_FORCE_ATTACK: Input.is_key_pressed(KEY_CTRL),
-        OrderResult.MOD_FORCE_MOVE: Input.is_key_pressed(KEY_ALT),
+        OrderResult.MOD_FORCE_ATTACK: ctrl,
+        OrderResult.MOD_FORCE_MOVE: alt,
+        OrderResult.MOD_GUARD_AREA: ctrl and alt and not has_rally,
         OrderResult.MOD_QUEUED: shift_pressed,
     }
 

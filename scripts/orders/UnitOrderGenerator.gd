@@ -4,6 +4,9 @@ class_name UnitOrderGenerator extends OrderGenerator
 ## orders that outrank it, so a component's own MOVE cannot displace the
 ## request_move()-based one with its formation, queue and target-level handling.
 const GROUND_MOVE_PRIORITY: int = 5
+## Ctrl+Alt guard area outranks a plain move so the order is a command in its
+## own right rather than a move carrying extra state.
+const GUARD_AREA_PRIORITY: int = 6
 
 static var _singleton: UnitOrderGenerator = null
 
@@ -44,15 +47,22 @@ func resolve(
 
     # ALT force-move: reposition regardless of the target, deliberately bypassing
     # every component targeter (attack/harvest/enter/deploy) so nothing can
-    # outrank the move. Ctrl+Alt+Click is the original's Guard Area (unimplemented
-    # here), so while both modifiers are held it falls back to force-move.
+    # outrank the move. Ctrl+Alt is the original's Guard Area and resolves first
+    # when the selection can guard.
+    if modifiers.get(OrderResult.MOD_GUARD_AREA, false) and _has_guard_area(sm):
+        var guard_order := _synthesized_guard_area(sm, target, target_pos, modifiers, target_level)
+        return OrderResolution.new(CursorState.Type.GUARD, [guard_order])
+
     if modifiers.get(OrderResult.MOD_FORCE_MOVE, false):
+        var move_cursor := CursorState.Type.MOVE
+        var move_orders: Array[OrderResult] = []
         if _has_movable(sm):
-            var forced_move := _synthesized_move(
-                sm, null, target_pos, modifiers, target_level, false
+            move_orders.append(
+                _synthesized_move(sm, null, target_pos, modifiers, target_level, false)
             )
-            return OrderResolution.new(CursorState.Type.MOVE, [forced_move])
-        return OrderResolution.new(_fallback_cursor(target, sm), [])
+        else:
+            move_cursor = _fallback_cursor(target, sm)
+        return OrderResolution.new(move_cursor, move_orders)
 
     if not target:
         if modifiers.get(OrderResult.MOD_FORCE_ATTACK, false):
@@ -112,6 +122,32 @@ func _synthesized_move(
     )
     move_order.target_level = target_level
     return move_order
+
+
+## Guard Area: the same request_move()-based MOVE (formation, queue, level) plus
+## the guard-area batch marking that puts guard-capable units into the stance once
+## their assigned destination is known.
+func _synthesized_guard_area(
+    sm: SelectionManager,
+    target: Node3D,
+    target_pos: Vector3,
+    modifiers: Dictionary,
+    target_level: int,
+) -> OrderResult:
+    var queued: bool = modifiers.get(OrderResult.MOD_QUEUED, false)
+    var as_entity: bool = target != null
+    var guard_order := OrderResult.new(
+        CursorState.Type.GUARD,
+        GUARD_AREA_PRIORITY,
+        target,
+        target_pos,
+        queued,
+        func() -> void:
+            sm.request_move(target_pos, as_entity, target_level)
+            sm.request_guard_area(),
+    )
+    guard_order.target_level = target_level
+    return guard_order
 
 
 func _resolve_cursor(
@@ -199,6 +235,26 @@ func _has_movable(sm: SelectionManager) -> bool:
         if not is_instance_valid(entity):
             continue
         if not entity.get_node_or_null("MovementController"):
+            continue
+        if not _is_local_entity(entity):
+            continue
+        return true
+    return false
+
+
+## A local movable entity that can actually hold a guard-area stance.
+func _has_guard_area(sm: SelectionManager) -> bool:
+    for sc in sm.selected_entities:
+        if not is_instance_valid(sc):
+            continue
+        var entity := sc.get_parent() as Node3D
+        if not is_instance_valid(entity):
+            continue
+        if not entity.get_node_or_null("MovementController"):
+            continue
+        if not entity.get_node_or_null("GuardComponent"):
+            continue
+        if not entity.get_node_or_null("CombatComponent"):
             continue
         if not _is_local_entity(entity):
             continue

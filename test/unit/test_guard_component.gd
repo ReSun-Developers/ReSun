@@ -11,6 +11,41 @@ var _ts: Node = null
 const RANGE_CELLS: float = 5.0
 const RANGE_WORLD: float = RANGE_CELLS * CellUtil.CELL_SIZE
 
+
+## Deterministic movement stub for stance tests: records the requested anchor and
+## exposes the movement signals without touching terrain/pathfinding.
+class _FakeMovement:
+    extends MovementController
+    var moving := false
+    var requested := Vector3.ZERO
+    var requested_level := 0
+    var request_count := 0
+
+    func is_moving() -> bool:
+        return moving
+
+    func get_target_position() -> Vector3:
+        return requested
+
+    func set_target_position(
+        target: Vector3,
+        _unblock_buildings: bool = false,
+        _keep_zone: bool = false,
+        _internal: bool = false,
+        _cost_cache: Pathfinder.PathCostCache = null,
+        _terrain: Node = null,
+        _bounded: bool = false,
+        _exact_target: bool = false,
+        _end_level: int = 0,
+    ) -> void:
+        requested = target
+        requested_level = _end_level
+        moving = true
+        request_count += 1
+        if not _internal:
+            movement_started.emit()
+
+
 ## Vision fixture: GuardComponent only acquires what the scanning house can see
 ## (#446), so placed entities must sit in cells their house has explored. Cells
 ## are unexplored by default in these suites. Reset afterwards so later suites
@@ -78,6 +113,14 @@ func _make_unit(
     stats.player_id = player_id
     stats.sight = 20
     entity.add_child(stats)
+    return entity
+
+
+func _make_guard_with_fake_mc(player_id: int) -> Node3D:
+    var entity := _make_unit(player_id, true, false)
+    var mc := _FakeMovement.new()
+    mc.name = "MovementController"
+    entity.add_child(mc)
     return entity
 
 
@@ -747,3 +790,92 @@ func test_guard_visibility_uses_footprint_point():
         rules.shroud_enabled = saved_shroud
     TestHelper.assert_true(centre_dark, "fixture: the building centre cell stays unexplored")
     TestHelper.assert_true(acquired, "visible footprint edge acquires a shrouded-centre building")
+
+
+# --- guard-area stance ---
+
+
+func _spawn_stance_unit(player_id: int) -> Node3D:
+    var entity := _make_guard_with_fake_mc(player_id)
+    Engine.get_main_loop().root.add_child(entity)
+    return entity
+
+
+func test_guard_area_does_not_leash_while_moving():
+    var entity := _spawn_stance_unit(0)
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    var mc := entity.get_node("MovementController") as _FakeMovement
+    guard.set_guard_area(Vector3.ZERO)
+    entity.position = Vector3(RANGE_WORLD, 0.0, 0.0)
+    mc.moving = true
+    guard._physics_process(0.05)
+    TestHelper.assert_eq(mc.request_count, 0, "an in-progress move is never interrupted by a leash")
+    _cleanup([entity])
+
+
+func test_guard_area_leashes_to_anchor_when_displaced():
+    var entity := _spawn_stance_unit(0)
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    var mc := entity.get_node("MovementController") as _FakeMovement
+    guard.set_guard_area(Vector3.ZERO, 2)
+    entity.position = Vector3(4.0 * CellUtil.CELL_SIZE, 0.0, 0.0)
+    guard._physics_process(0.05)
+    TestHelper.assert_eq(mc.request_count, 1, "a displaced idle unit requests one return move")
+    TestHelper.assert_true(
+        mc.requested.is_equal_approx(Vector3.ZERO), "the return move targets the anchor"
+    )
+    TestHelper.assert_eq(mc.requested_level, 2, "the return move keeps the anchor surface level")
+    _cleanup([entity])
+
+
+func test_guard_area_player_move_clears_stance():
+    var entity := _spawn_stance_unit(0)
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    var mc := entity.get_node("MovementController") as _FakeMovement
+    guard.set_guard_area(Vector3.ZERO)
+    mc.requested = Vector3(6.0 * CellUtil.CELL_SIZE, 0.0, 0.0)
+    mc.movement_started.emit()
+    TestHelper.assert_true(not guard.has_guard_area(), "a player move away from the anchor clears")
+    _cleanup([entity])
+
+
+func test_guard_area_move_to_anchor_keeps_stance():
+    var entity := _spawn_stance_unit(0)
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    var mc := entity.get_node("MovementController") as _FakeMovement
+    guard.set_guard_area(Vector3.ZERO)
+    mc.requested = Vector3.ZERO
+    mc.movement_started.emit()
+    TestHelper.assert_true(guard.has_guard_area(), "a move onto the anchor keeps the stance")
+    _cleanup([entity])
+
+
+func test_guard_area_pathfinding_failure_clears_stance():
+    var entity := _spawn_stance_unit(0)
+    var guard := entity.get_node("GuardComponent") as GuardComponent
+    var mc := entity.get_node("MovementController") as _FakeMovement
+    guard.set_guard_area(Vector3.ZERO)
+    mc.moving = false
+    mc.pathfinding_failed.emit()
+    TestHelper.assert_true(not guard.has_guard_area(), "an unreachable anchor abandons the stance")
+    _cleanup([entity])
+
+
+func test_guard_area_still_acquires_enemies():
+    if _sh == null or _pm == null:
+        TestHelper.fail("SpatialHash/PlayerManager not injected")
+        return
+    _set_teams(0, 1)
+    var root: Node = Engine.get_main_loop().root
+    var unit := _make_guard_with_fake_mc(0)
+    var enemy := _make_enemy(1)
+    _place(root, unit, Vector3(-12, 0, 0))
+    _place(root, enemy, Vector3(-10, 0, 0))
+    _rebuild()
+    var guard := unit.get_node("GuardComponent") as GuardComponent
+    guard.set_guard_area(unit.global_position)
+    _tick_guard(unit)
+    var combat := unit.get_node("CombatComponent") as CombatComponent
+    var acquired: bool = combat.get_target() == enemy
+    _cleanup([unit, enemy])
+    TestHelper.assert_true(acquired, "guard area reuses the stand-and-shoot acquisition")

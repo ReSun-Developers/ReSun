@@ -3,6 +3,8 @@ class_name OrderResult
 const MOD_FORCE_ATTACK: String = "force_attack"
 const MOD_FORCE_MOVE: String = "force_move"
 const MOD_QUEUED: String = "queued"
+## Ctrl+Alt guard area: move to the target then guard the area around it.
+const MOD_GUARD_AREA: String = "guard_area"
 ## Surface level a ground move targets (0 = ground, N = bridge deck level). Set by
 ## the cursor pick and carried on the produced move order.
 const MOD_TARGET_LEVEL: String = "target_level"

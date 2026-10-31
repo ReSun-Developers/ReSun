@@ -101,6 +101,11 @@ func apply_selection_hotkey(is_stop: bool) -> void:
             if mc:
                 mc.stop()
                 acted = true
+            # Stop also ends a guard-area stance; otherwise the unit walks back to
+            # its old anchor after the stop.
+            var guard := entity.get_node_or_null("GuardComponent") as GuardComponent
+            if guard:
+                guard.clear_guard_area()
             # Stop ends the engagement outright: a unit firing at a fixed point
             # (or a ground position) is IDLE, so mc.stop() is a no-op and never
             # emits movement_started. clear_target() reverts it to idle while
