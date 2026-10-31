@@ -1,7 +1,9 @@
 ## Purpose
 
 CombatComponent resolves enemy targets into attack orders, tracks the current target, enforces per-weapon cooldowns, measures engagement range, applies hitscan damage through warhead armor multipliers, and coordinates movement toward out-of-range targets.
+
 ## Requirements
+
 ### Requirement: CombatComponent tracks attack target
 CombatComponent SHALL maintain a `_target: Node3D` reference set via `set_target(entity, hold_ground := false)`. The optional `hold_ground` flag SHALL default to `false` so existing player-order and test call sites are unchanged. When `hold_ground` is true, CombatComponent SHALL treat the engagement as stand-and-shoot: it SHALL NOT issue chase/approach moves, and when the target's horizontal distance exceeds the longest weapon range on a `_physics_process` tick it SHALL clear the target and stop attacking. The target SHALL persist across `_physics_process` ticks until explicitly cleared via `clear_target()`, the target becomes invalid, or (hold-ground only) the target leaves weapon range.
 
@@ -88,7 +90,7 @@ CombatComponent SHALL check if the target is within firing range before firing. 
 - **THEN** CombatComponent SHALL NOT fire that tick and the body yaws toward the target instead
 
 ### Requirement: Weapon dispatch and damage
-When firing, CombatComponent SHALL first resolve `weapon.projectile` through the GlobalRules projectile registry. If the id resolves to a `ProjectileData`, CombatComponent SHALL instantiate `Projectile.tscn`, configure it with the projectile data, weapon, shooter, and target, spawn it at the firing mount's muzzle transform, parent it to the match World root, and SHALL NOT apply direct damage. The muzzle transform SHALL be the firing socket's world transform composed with the socket yaw and extended by the socket `barrel_length` for turret-mounted weapons, or the entity transform offset by `WeaponData.fire_offset` for body-mounted weapons (see the `turrets` capability). If the id is empty or unresolvable, CombatComponent SHALL apply damage directly (legacy hitscan): the weapon's base damage multiplied by the warhead armor multiplier for the target's armor type, clamped to GlobalRules `[min_damage, max_damage]`, then call `target.get_node("HealthComponent").take_damage(final_damage, weapon.warhead)`.
+When firing, CombatComponent SHALL first resolve `weapon.projectile` through the GlobalRules projectile registry. If the id resolves to a `ProjectileData`, CombatComponent SHALL instantiate `Projectile.tscn`, configure it with the projectile data, weapon, shooter, target, the ordered ground point, and the shooter's veteran-boosted effective damage, spawn it at the firing mount's muzzle transform, parent it to the match World root, and SHALL NOT apply direct damage. The muzzle transform SHALL be the firing socket's world transform composed with the socket yaw and extended by the socket `barrel_length` for turret-mounted weapons, or the entity transform offset by `WeaponData.fire_offset` for body-mounted weapons (see the `turrets` capability). If the id is empty or unresolvable, CombatComponent SHALL apply the shot through the shared `WeaponDetonation` module with the weapon, shooter, the shooter's veteran-boosted effective damage, the entity target (or null), and the ordered ground point; it SHALL NOT call `HealthComponent.take_damage` itself. The module owns victim resolution, the impact point, warhead armor math and clamping, the cell-overlay pass, and the single impact report (see the `weapon-detonation` capability).
 
 #### Scenario: Resolvable projectile spawns instead of direct damage
 - **WHEN** a weapon with `projectile = "Invisible"` fires at an enemy in range
@@ -104,15 +106,15 @@ When firing, CombatComponent SHALL first resolve `weapon.projectile` through the
 
 #### Scenario: Unresolvable projectile falls back to hitscan
 - **WHEN** a weapon's projectile id does not resolve in the registry (or is empty)
-- **THEN** damage is applied directly with the full legacy math
+- **THEN** the shot is applied through `WeaponDetonation` with the same damage math as projectile arrival
 
 #### Scenario: Fallback damage applied with armor
 - **WHEN** a weapon with `damage = 100` and warhead "SA" fires via the fallback at a target with `armor = "heavy"` (SA multiplier 0.25)
-- **THEN** the target's HealthComponent receives `take_damage(25, "SA")`
+- **THEN** the target takes 25 damage of warhead type "SA"
 
 #### Scenario: Armor-piercing vs heavy
 - **WHEN** a weapon with `damage = 100` and warhead "AP" fires at a target with `armor = "heavy"` (AP multiplier 1.00)
-- **THEN** the target's HealthComponent SHALL receive `take_damage(100, "AP")`
+- **THEN** the target takes 100 damage of warhead type "AP"
 
 #### Scenario: Fallback minimum damage floor
 - **WHEN** the fallback-computed damage would be below `min_damage` (1)
@@ -124,7 +126,7 @@ When firing, CombatComponent SHALL first resolve `weapon.projectile` through the
 
 #### Scenario: Fallback zero-damage armor pairing
 - **WHEN** a warhead's multiplier for the target's armor is 0.0
-- **THEN** the target's HealthComponent receives `take_damage(0, warhead)` and takes no damage
+- **THEN** the target takes no damage
 
 #### Scenario: Fallback unknown warhead or armor
 - **WHEN** the weapon's warhead id or the target's armor id is not in the GlobalRules registries
@@ -132,7 +134,11 @@ When firing, CombatComponent SHALL first resolve `weapon.projectile` through the
 
 #### Scenario: Fallback target has no HealthComponent
 - **WHEN** the target entity has no HealthComponent child
-- **THEN** CombatComponent skips the damage call without error
+- **THEN** the detonation applies no entity damage without error and still resolves the cell overlays
+
+#### Scenario: Veteran boost is passed as typed damage
+- **WHEN** a veteran shooter fires a fallback shot
+- **THEN** the detonation uses the shooter's `get_effective_damage(weapon)` value, not the weapon's base damage
 
 ### Requirement: weapon_fired signal
 CombatComponent SHALL emit `weapon_fired(weapon: WeaponData, target: Node3D)` after each successful weapon dispatch, whether the weapon spawned a projectile or applied fallback hitscan damage. For an entity engagement `target` SHALL be that entity; for a ground engagement `target` SHALL be `null`. Listeners MUST tolerate a null target.
@@ -430,4 +436,3 @@ Overlays failing their gate SHALL take no damage. An overlay that is itself the 
 #### Scenario: Overlay damaged exactly once when it is the target
 - **WHEN** an overlay entity is itself the shot's entity target and its warhead gate passes
 - **THEN** its health SHALL decrease by a single hit, not two
-

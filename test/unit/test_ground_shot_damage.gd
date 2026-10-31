@@ -139,15 +139,8 @@ func _health_of(entity: Node3D) -> int:
     return hc.current_health if hc else -1
 
 
-## Reproduces EntityFactory.create_entity's damage choke-point wiring for a
-## hand-built test entity, so per-victim impact reports can be observed.
-func _wire_impact_reports(entity: Node3D) -> void:
-    var hc := entity.get_node_or_null("HealthComponent") as HealthComponent
-    if hc == null:
-        return
-    hc.damage_taken.connect(
-        func(amount: int, dtype: String) -> void: _ef._on_entity_damaged(entity, dtype, amount)
-    )
+func _fx() -> Node:
+    return Engine.get_main_loop().root.get_node_or_null("FxSystem")
 
 
 func _shooter_at(cell: Vector2i) -> Array:
@@ -489,17 +482,15 @@ func test_mixed_entity_and_overlay_hit_plays_one_impact_report():
     var pos := CellUtil.cell_to_world(SHOOTER_CELL)
     var occupant := _make_entity(1, pos + Vector3(0.3, 0.0, 0.3))
     var bridge := _make_bridge(EntityData.BridgeKind.LOW, false, pos)
-    _wire_impact_reports(occupant)
-    _wire_impact_reports(bridge)
     var setup := _shooter_at(SHOOTER_CELL + Vector2i(4, 0))
     var cc: CombatComponent = setup[1]
     _rebuild()
     var reports: Array[String] = []
     var on_report := func(dtype: String, _p: Vector3) -> void: reports.append(dtype)
-    _ef.impact_played.connect(on_report)
+    _fx().impact_played.connect(on_report)
     cc.set_ground_target(pos)
     cc._fire_weapon(_make_weapon("WALL"), null)
-    _ef.impact_played.disconnect(on_report)
+    _fx().impact_played.disconnect(on_report)
     _cleanup()
     _restore_rules()
     TestHelper.assert_eq(reports.size(), 1, "one detonation plays one impact report")

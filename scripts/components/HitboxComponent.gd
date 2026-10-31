@@ -1,46 +1,17 @@
 class_name HitboxComponent extends Area3D
 
-## Emitted when a damaging entity enters the hitbox.
-## Args: damage amount, damage type string, the node that dealt the damage.
-signal received_damage(damage: int, damage_type: String, source: Node3D)
-
 ## Collision layers — assign via EntityFactory based on entity type.
 const LAYER_HITBOX_GROUND: int = 1 << 1
 const LAYER_HITBOX_AIR: int = 1 << 2
 const LAYER_HITBOX_BUILDING: int = 1 << 3
 const LAYER_PROJECTILE: int = 1 << 4
 
+## Retained for entity wiring compatibility; damage no longer flows through the hitbox.
 @export var health_component: HealthComponent
 @export var size: Vector3 = Vector3(2.0, 2.0, 2.0):
     set(value):
         size = value
         _update_collision_shape()
-
-
-func _ready() -> void:
-    area_entered.connect(receive_damage_source)
-    body_entered.connect(receive_damage_source)
-
-
-## Checks if the entering node deals damage and forwards to HealthComponent.
-## Projectiles should implement get_damage_info() -> { "amount": int, "type": String }.
-## Public so projectile controllers can deliver damage directly from motion-segment
-## casts, which bypass area_entered detection by design.
-func receive_damage_source(node: Node3D) -> void:
-    if not health_component:
-        return
-    if not node.has_method("get_damage_info"):
-        return
-    var info: Variant = node.get_damage_info()
-    if not info is Dictionary:
-        return
-    var damage: int = info.get("amount", 0)
-    var damage_type: String = info.get("type", "")
-    var attacker: Node3D = info.get("source", node) as Node3D
-    var impact_pos: Vector3 = info.get("position", Vector3.INF) as Vector3
-    if damage > 0:
-        health_component.take_damage(damage, damage_type, attacker, impact_pos)
-        received_damage.emit(damage, damage_type, node)
 
 
 func _update_collision_shape() -> void:

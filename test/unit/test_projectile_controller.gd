@@ -1,12 +1,10 @@
 extends Node
 
-# ProjectileController unit tests — speed precedence, payload contract, damage
-# math parity, and friendly-fire victim classification. All synchronous: the
-# projectile is configured with setup() and detonated via _detonate_on()
-# directly, no physics frames required. Nodes live under the real tree root so
-# global transforms resolve; each test frees what it creates.
-
-const HITBOX_SCENE: PackedScene = preload("res://scenes/components/HitboxComponent.tscn")
+# ProjectileController unit tests — speed precedence, typed detonation handoff,
+# and friendly-fire victim classification. All synchronous: the projectile is
+# configured with setup() and detonated via _detonate_on() directly, no physics
+# frames required. Nodes live under the real tree root so global transforms
+# resolve; each test frees what it creates.
 
 var _real_rules: GlobalRules = null
 
@@ -76,21 +74,15 @@ func _make_entity(player_id: int, armor: String = "none") -> Node3D:
     return entity
 
 
-func _make_hitbox(victim: Node3D) -> HitboxComponent:
-    var hitbox := HITBOX_SCENE.instantiate() as HitboxComponent
-    hitbox.name = "HitboxComponent"
-    hitbox.health_component = victim.get_node("HealthComponent")
-    hitbox.size = Vector3(1, 1, 1)
-    hitbox.collision_layer = HitboxComponent.LAYER_HITBOX_GROUND
-    victim.add_child(hitbox)
-    return hitbox
-
-
 func _make_projectile(
-    data: ProjectileData, weapon: WeaponData, shooter: Node3D, target: Node3D
+    data: ProjectileData,
+    weapon: WeaponData,
+    shooter: Node3D,
+    target: Node3D,
+    effective_damage: int = -1
 ) -> ProjectileController:
     var p := ProjectileController.new()
-    p.setup(data, weapon, shooter, target)
+    p.setup(data, weapon, shooter, target, Vector3.INF, effective_damage)
     _tree().root.add_child(p)
     return p
 
@@ -163,33 +155,13 @@ func test_resolve_speed_no_rules_zero():
     )
 
 
-# --- Payload contract ---
+# --- Detonation handoff ---
 
 
-func test_payload_contract_keys_and_values():
-    _inject_test_rules()
-    var shooter := _make_entity(0)
-    var victim := _make_entity(1, "heavy")
-    var p := _make_projectile(_make_data(), _make_weapon(100), shooter, victim)
-    p._detonate_on(victim)
-    var info := p.get_damage_info()
-    TestHelper.assert_true(info.has("amount"), "payload has amount")
-    TestHelper.assert_true(info.has("type"), "payload has type")
-    TestHelper.assert_true(info.has("source"), "payload has source")
-    TestHelper.assert_true(info.has("position"), "payload has position")
-    TestHelper.assert_eq(info["amount"], 25, "SA vs heavy = 0.25x: 100 -> 25")
-    TestHelper.assert_eq(info["type"], "SA", "payload type is the warhead id")
-    TestHelper.assert_eq(info["source"], shooter, "payload source is the shooter")
-    TestHelper.assert_eq(info["position"], victim.global_position, "payload snaps to victim center")
-    _teardown([shooter, victim, p])
-    _restore_rules()
-
-
-func test_payload_damage_reaches_health_through_hitbox():
+func test_detonation_damage_reaches_health():
     _inject_test_rules()
     var shooter := _make_entity(0)
     var victim := _make_entity(1, "none")
-    _make_hitbox(victim)
     var p := _make_projectile(_make_data(), _make_weapon(100), shooter, victim)
     p._detonate_on(victim)
     var health := victim.get_node("HealthComponent") as HealthComponent
@@ -198,26 +170,16 @@ func test_payload_damage_reaches_health_through_hitbox():
     _restore_rules()
 
 
-func test_payload_zero_multiplier_deals_no_damage():
-    _inject_test_rules()
-    var shooter := _make_entity(0)
-    var victim := _make_entity(1, "concrete")
-    var p := _make_projectile(_make_data(), _make_weapon(100), shooter, victim)
-    p._detonate_on(victim)
-    TestHelper.assert_eq(p.get_damage_info()["amount"], 0, "SA vs concrete = 0.0x -> amount 0")
-    var health := victim.get_node("HealthComponent") as HealthComponent
-    TestHelper.assert_eq(health.current_health, 100, "victim takes no damage")
-    _teardown([shooter, victim, p])
-    _restore_rules()
-
-
-func test_payload_clamped_to_max_damage():
+func test_effective_damage_is_carried_to_detonation():
     _inject_test_rules()
     var shooter := _make_entity(0)
     var victim := _make_entity(1, "none")
-    var p := _make_projectile(_make_data(), _make_weapon(5000), shooter, victim)
+    var health := victim.get_node("HealthComponent") as HealthComponent
+    health.max_health = 200
+    health.current_health = 200
+    var p := _make_projectile(_make_data(), _make_weapon(100), shooter, victim, 125)
     p._detonate_on(victim)
-    TestHelper.assert_eq(p.get_damage_info()["amount"], 1000, "damage capped at max_damage")
+    TestHelper.assert_eq(health.current_health, 75, "typed effective damage 125 is used")
     _teardown([shooter, victim, p])
     _restore_rules()
 

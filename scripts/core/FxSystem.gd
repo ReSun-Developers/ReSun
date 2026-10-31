@@ -8,6 +8,9 @@ extends Node
 ## free on the engine's `finished` signal (accurate in-game; a no-op headless,
 ## where the accumulator remains the fallback).
 
+## Emitted once per resolved warhead impact report (FX/sound attempt) at a point.
+signal impact_played(damage_type: String, position: Vector3)
+
 ## Minimum resolved lifetime so a zero/empty effect still frees in bounded time.
 const MIN_DURATION: float = 0.05
 
@@ -82,6 +85,25 @@ func play(
         # before the engine can report it.
         node.emitting = true
     return node
+
+
+## Plays a warhead's impact FX and sound at `position` and reports it once.
+## A resolved warhead with no media still emits `impact_played` so callers can
+## observe report parity; non-warhead damage types are silent.
+func play_impact(damage_type: String, position: Vector3) -> void:
+    if damage_type.is_empty():
+        return
+    var rules := GlobalRules.get_current()
+    if rules == null:
+        return
+    var warhead := rules.get_warhead(damage_type)
+    if warhead == null:
+        return
+    if warhead.impact_fx != null:
+        play(warhead.impact_fx, Transform3D(Basis(), position))
+    if not warhead.sound_impact.is_empty():
+        AudioManager.play_random(warhead.sound_impact.split(",", false), position)
+    impact_played.emit(damage_type, position)
 
 
 func active_count() -> int:

@@ -2,7 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change add-veterancy-and-tech-gating. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Experience and rank
 `StatsComponent` SHALL carry a per-instance `experience: float` figure, initialised to `0` at creation. Rank SHALL be derived from `experience` using the engine-fixed thresholds: below rookie `< 0`, rookie `[0, 1)`, veteran `[1, 2)`, elite `>= 2`. `veteran_level` SHALL remain the stored integer rank (`0` rookie, `1` veteran, `2` elite) that existing consumers read, and SHALL be recomputed whenever `experience` changes. Experience SHALL NOT decay and SHALL NOT reset on ownership change.
 
@@ -23,7 +25,7 @@ TBD - created by archiving change add-veterancy-and-tech-gating. Update Purpose 
 - **THEN** its `experience` and `veteran_level` are unchanged
 
 ### Requirement: Killer recorded on lethal damage
-`HealthComponent.take_damage(damage, damage_type, source)` SHALL accept an optional attacking `Node3D`. Every damage path SHALL supply it where an attacker is known: hitscan fire, projectile impact, collision hitbox entry, and crush. On reaching zero health the component SHALL emit a `killed(killer)` signal carrying the last recorded attacker (or null when the fatal damage had no source). The existing no-argument `health_zero` signal SHALL remain and SHALL still fire on every death.
+`HealthComponent.take_damage(damage, damage_type, source)` SHALL accept an optional attacking `Node3D` and SHALL return the applied damage. Every damage path SHALL supply the attacker where one is known: hitscan fire, projectile detonation, and crush. The removed collision-hitbox damage path no longer applies damage; projectiles supply their shooter through the detonation module instead. On reaching zero health the component SHALL emit a `killed(killer)` signal carrying the last recorded attacker (or null when the fatal damage had no source). The existing no-argument `health_zero` signal SHALL remain and SHALL still fire on every death.
 
 #### Scenario: Fatal hit records its source
 - **WHEN** entity A deals the damage that brings entity B to zero health
@@ -120,4 +122,3 @@ Entities SHALL be created at a rank assigned by the active rules without accumul
 #### Scenario: Enemy rank hidden
 - **WHEN** the local player selects an enemy veteran unit (or views it)
 - **THEN** no rank insignia is drawn for it
-

@@ -1,7 +1,7 @@
 class_name ProjectileController extends Area3D
 
-## Runtime projectile: flies from the muzzle toward its target and detonates
-## through the HitboxComponent pipeline. Flight behavior is picked from
+## Runtime projectile: flies from the muzzle toward its target and hands its
+## typed damage to WeaponDetonation on arrival. Flight behavior is picked from
 ## ProjectileData flags (teleport-detonate for invisible, straight/homing
 ## flight otherwise) — one controller, data-driven branches, mirroring how
 ## MovementController resolves locomotors.
@@ -9,11 +9,8 @@ class_name ProjectileController extends Area3D
 ## Emitted at the detonation point after damage has been forwarded.
 signal impacted(position: Vector3)
 
-## Close-proximity detonations snap the blast onto the victim center.
+## Detonation trigger: within this distance of the target counts as contact.
 const SNAP_DISTANCE: float = 1.0
-
-## Detonations within this radius of the victim snap onto its center.
-const SNAP_RADIUS: float = SNAP_DISTANCE * 2.0
 
 ## Fallback degrees/second per unit of ProjectileData.homing_turn_rate when no
 ## rules are active.
@@ -23,6 +20,9 @@ var _data: ProjectileData
 var _weapon: WeaponData
 var _shooter: Node3D
 var _shooter_player_id: int = -1
+## Shooter's veteran-boosted damage, resolved at fire time. Negative means the
+## caller supplied none, so the weapon's base damage is used.
+var _effective_damage: int = -1
 var _target: Node3D
 ## Ordered impact point. Always valid: for an entity target it tracks the
 ## entity, for a ground (force-fire) shot it is the point the player picked.
@@ -38,7 +38,6 @@ var _age_frames: int = 0
 var _armed: bool = false
 var _detonated: bool = false
 var _prev_target_dist: float = -1.0
-var _payload: Dictionary = {}
 var _target_mask: int = 0
 var _spawn_origin: Vector3 = Vector3.ZERO
 var _has_spawn_origin: bool = false
@@ -57,11 +56,13 @@ func setup(
     shooter: Node3D,
     target: Node3D,
     target_pos: Vector3 = Vector3.INF,
+    effective_damage: int = -1,
 ) -> void:
     _data = data
     _weapon = weapon
     _shooter = shooter
     _target = target
+    _effective_damage = effective_damage if effective_damage >= 0 else weapon.damage
     _speed = resolve_speed(data, weapon, GlobalRules.get_current())
     _max_range = weapon.attack_range * CellUtil.CELL_SIZE
     if target:
@@ -105,10 +106,6 @@ static func resolve_speed(data: ProjectileData, weapon: WeaponData, rules: Globa
     if rules:
         return rules.default_projectile_speed
     return 0.0
-
-
-func get_damage_info() -> Dictionary:
-    return _payload
 
 
 func _ready() -> void:
@@ -269,120 +266,19 @@ func _is_valid_victim(entity: Node3D) -> bool:
     return true
 
 
-## Applies the payload to the victim through the HitboxComponent pipeline,
-## emits impacted, and frees the projectile. `victim` may be null: a ground shot
+## Hands the detonation to WeaponDetonation, emits impacted with the resolved
+## impact point, and frees the projectile. `victim` may be null: a ground shot
 ## then resolves the impact cell's occupant (the shooter excluded, allies
 ## included) and, failing that, hits nothing but the cell's overlays.
 func _detonate_on(victim: Node3D) -> void:
     if _detonated:
         return
     _detonated = true
-    # One blast, one point. A ground shot stays on the ordered cell centre even
-    # when an occupant is resolved there, so the impact never drifts onto the
-    # occupant. A building reads on the nearest footprint point facing the
-    # shooter rather than its centre, matching how range/approach measure.
-    var final_pos := global_position
-    if victim == null and _ground_shot:
-        final_pos = _last_known_target_pos
-        victim = _resolve_ground_victim(final_pos)
-    elif is_instance_valid(victim) and _is_structure(victim):
-        var fc := victim.get_node_or_null("FoundationComponent") as FoundationComponent
-        if fc and is_instance_valid(_shooter):
-            final_pos = fc.nearest_world_point(_shooter.global_position)
-    elif (
-        is_instance_valid(victim)
-        and global_position.distance_to(victim.global_position) <= SNAP_RADIUS
-    ):
-        final_pos = victim.global_position
-    var amount := 0
-    if is_instance_valid(victim):
-        amount = _compute_damage_for(victim)
-    _payload = {
-        "amount": amount,
-        "type": _weapon.warhead,
-        "source": _shooter,
-        "position": final_pos,
-    }
-    var entity_hit := false
-    if is_instance_valid(victim) and not SpatialHash.is_overlay_entity(victim):
-        var hitbox := victim.get_node_or_null("HitboxComponent") as HitboxComponent
-        if hitbox and hitbox.health_component:
-            hitbox.receive_damage_source(self)
-            entity_hit = true
-        else:
-            var health := victim.get_node_or_null("HealthComponent") as HealthComponent
-            if health:
-                health.take_damage(
-                    _payload["amount"], _payload["type"], _payload["source"], final_pos
-                )
-                entity_hit = true
-    # An overlay (tiberium/bridge/ice) is not an entity hit: the warhead-gated
-    # overlay pass owns it, so a warhead without the matching flag deals no
-    # damage while the impact effect still plays through the fallback below.
-    var overlay_hit := _damage_cell_overlays(final_pos, victim if entity_hit else null)
-    if not entity_hit and not overlay_hit:
-        EntityFactory.play_impact_effects_at(_weapon.warhead, final_pos)
-    impacted.emit(final_pos)
-    queue_free()
-
-
-## Whether `entity` is a structure, matching CombatComponent's foundation
-## classifier (only structures measure to a footprint).
-func _is_structure(entity: Node3D) -> bool:
-    var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
-    return stats != null and stats.is_structure()
-
-
-## Nearest combat entity standing in the blast cell, or null. Terrain and
-## overlay entities are never occupants — bridge, ice and tiberium are handled
-## by the cell-overlay pass instead.
-func _resolve_ground_victim(impact_pos: Vector3) -> Node3D:
-    if SpatialHash.instance == null:
-        return null
-    return SpatialHash.instance.resolve_cell_victim(
-        CellUtil.world_to_cell(impact_pos), impact_pos, _shooter
+    var impact := WeaponDetonation.detonate(
+        _weapon, _shooter, _effective_damage, victim, _last_known_target_pos, global_position
     )
-
-
-## Applies the warhead's cell-overlay damage (bridge, ice, tiberium) at the
-## impact cell. Returns true when at least one overlay took the hit, so impact
-## effects are not played twice through the damage choke point.
-func _damage_cell_overlays(impact_pos: Vector3, exclude: Node3D) -> bool:
-    if SpatialHash.instance == null:
-        return false
-    var rules := GlobalRules.get_current()
-    if rules == null:
-        return false
-    var warhead := rules.get_warhead(_weapon.warhead)
-    if warhead == null:
-        return false
-    var applied := false
-    for overlay in SpatialHash.instance.find_cell_overlays(
-        CellUtil.world_to_cell(impact_pos), warhead, exclude
-    ):
-        var health := overlay.get_node_or_null("HealthComponent") as HealthComponent
-        if health == null:
-            continue
-        var damage := _compute_damage_for(overlay)
-        if damage <= 0:
-            continue
-        health.take_damage(damage, _weapon.warhead, _shooter)
-        applied = true
-    return applied
-
-
-## Mirrors the legacy hitscan math: shooter veteran boost via the dispatcher's
-## CombatComponent (accessed untyped to avoid a circular class reference),
-## then the shared warhead armor multiplier and clamps in GlobalRules.
-func _compute_damage_for(victim: Node3D) -> int:
-    var damage := _weapon.damage
-    if _shooter:
-        var combat_node: Node = _shooter.get_node_or_null("CombatComponent")
-        if combat_node and combat_node.has_method("get_effective_damage"):
-            damage = combat_node.call("get_effective_damage", _weapon)
-    var victim_stats := victim.get_node_or_null("StatsComponent") as StatsComponent
-    var victim_armor := victim_stats.armor if victim_stats else "none"
-    return GlobalRules.compute_warhead_damage(damage, _weapon.warhead, victim_armor)
+    impacted.emit(impact.position)
+    queue_free()
 
 
 func _apply_tint() -> void:
