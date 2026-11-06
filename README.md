@@ -54,6 +54,9 @@ Full setup, tooling, and workflow details are in the
 
 ### CI
 
-GitHub Actions runs lint, format check, the OpenSpec archive check, and tests
-on every push and PR. See `.github/workflows/test.yml`.
+GitHub Actions runs lint, format check, the OpenSpec archive check, and the
+test suite. The test job only runs when gameplay inputs change (`*.gd`,
+`*.tscn`, `*.tres`, `assets/`, `games/`, `shaders/`, `test/`,
+`project.godot`, or the workflow itself); docs-only changes skip it. It also
+runs when change detection fails. See `.github/workflows/test.yml`.
 

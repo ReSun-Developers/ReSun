@@ -141,14 +141,17 @@ they differ.
 
 ## CI
 
-GitHub Actions runs three jobs on every push and PR
-(`.github/workflows/test.yml`):
+GitHub Actions runs four jobs (`.github/workflows/test.yml`):
 
-1. **lint**. Runs `gdlint` then `gdformat --check` on `scripts/` and `test/`.
-2. **check-openspec**. Fails if `openspec/changes/` has any non-archive
+1. **changes**. Classifies the diff and reports whether gameplay inputs changed.
+2. **lint**. Runs `gdlint` then `gdformat --check` on `scripts/` and `test/`.
+3. **check-openspec**. Fails if `openspec/changes/` has any non-archive
    directory.
-3. **test**. Downloads Redot 26.2 headless (cached), imports assets, runs the
-   full test suite.
+4. **test**. Downloads Redot 26.2 headless (cached), imports assets, runs the
+   full test suite. Runs only when `changes` reports a gameplay input
+   (scripts, scenes, resources, map data, assets, shaders, tests,
+   `project.godot`, or the workflow); docs-only PRs skip it. It also runs
+   when change detection fails.
 
 A formatting-only failure is the most common red build. Run `gdformat` on the
 files CI names and push again.
