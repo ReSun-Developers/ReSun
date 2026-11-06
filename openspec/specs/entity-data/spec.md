@@ -87,11 +87,11 @@ EntityData SHALL include `accepted_resource_categories: PackedStringArray` for b
 
 ### Requirement: EntityData movement_zone is a pathfinding domain class
 
-`EntityData.movement_zone: String` SHALL be interpreted as the TS-style pathfinding domain class (e.g. Normal, Infantry, Crusher, Destroyer, AmphibiousCrusher, InfantryDestroyer, Fly, Subterannean) and SHALL be metadata only. It SHALL NOT gate terrain passability — passability SHALL be driven by `locomotor`. Validation SHALL resolve the unit's Locomotor from the active GlobalRules registry and SHALL reject a `movement_zone` that is not listed in that locomotor's `zones` (e.g. `Track` with zone `Subterannean`). An empty `movement_zone` SHALL be accepted. A non-empty `movement_zone` with an empty `locomotor` SHALL be rejected. When GlobalRules is unavailable, or the unit's non-empty locomotor id cannot be resolved to a Locomotor resource, zone compatibility SHALL NOT be evaluated and validation SHALL NOT use a built-in fallback table; an unresolved non-empty id SHALL still be reported as an unknown locomotor.
+`EntityData.movement_zone: String` SHALL be interpreted as the TS-style pathfinding domain class (e.g. Normal, Infantry, Crusher, Destroyer, AmphibiousCrusher, InfantryDestroyer, Fly, Subterannean). In TS, the class selects the zone map that answers whether a destination is reachable and which terrain a route may cross; it does not drive the per-cell terrain test. ReSun does not yet build that zone map, so `movement_zone` SHALL currently be metadata only and SHALL NOT gate per-cell terrain passability — per-cell passability SHALL be driven by `locomotor`. Validation SHALL resolve the unit's Locomotor from the active GlobalRules registry and SHALL reject a `movement_zone` that is not listed in that locomotor's `zones` (e.g. `Track` with zone `Subterannean`). The `zones` list is a ReSun data convention: TS treats a type's movement zone and locomotor as independent settings, so the per-locomotor list is a local validation rule, not an engine rule. An empty `movement_zone` SHALL be accepted. A non-empty `movement_zone` with an empty `locomotor` SHALL be rejected. When GlobalRules is unavailable, or the unit's non-empty locomotor id cannot be resolved to a Locomotor resource, zone compatibility SHALL NOT be evaluated and validation SHALL NOT use a built-in fallback table; an unresolved non-empty id SHALL still be reported as an unknown locomotor.
 
-#### Scenario: Zone is informational for passability
+#### Scenario: Zone does not affect per-cell passability
 - **WHEN** two units share `locomotor = "Wheel"` but differ in `movement_zone`
-- **THEN** both units have identical terrain passability
+- **THEN** both units have identical per-cell terrain passability
 
 #### Scenario: Contradictory zone rejected
 - **WHEN** validation runs on an EntityData with `locomotor = "Track"` and `movement_zone = "Subterannean"`

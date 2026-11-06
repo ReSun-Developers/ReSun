@@ -10,6 +10,7 @@ class_name Locomotor extends Resource
 ## Crushable categories this locomotor can crush (documentation; actual crush is per-entity).
 @export var crushes: PackedStringArray = []
 ## Movement-zone domain classes this locomotor accepts (e.g. Normal, Infantry, Fly).
+## ReSun convention: TS treats movement zone and locomotor as independent settings.
 @export var zones: PackedStringArray = []
 
 @export_group("Behavior Flags")

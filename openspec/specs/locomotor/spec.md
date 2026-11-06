@@ -291,7 +291,7 @@ A locomotor SHALL cost a transition of two or more height levels (including a fo
 
 ### Requirement: Movement zone compatibility lives on the Locomotor resource
 
-`Locomotor.zones` SHALL list the movement-zone domain classes compatible with that locomotor. An empty `movement_zone` SHALL be compatible with every locomotor. Zone compatibility SHALL be evaluated from the resolved Locomotor resource, not from a static `EntityData` table. The nine TS locomotor resources SHALL declare these zones:
+`Locomotor.zones` SHALL list the movement-zone domain classes accepted by that locomotor's ReSun validation rule. This list is a ReSun data convention: in TS, a type's movement zone and locomotor are independent settings and the engine has no per-locomotor zone list. The list SHALL be consumed only by `EntityData.movement_zone` validation until a zone-map implementation exists. An empty `movement_zone` SHALL be compatible with every locomotor. Zone compatibility SHALL be evaluated from the resolved Locomotor resource, not from a static `EntityData` table. The nine TS locomotor resources SHALL declare these zones:
 
 - `Foot`: Infantry, InfantryDestroyer
 - `Track`: Normal, Crusher, Destroyer, AmphibiousCrusher, AmphibiousDestroyer, InfantryDestroyer

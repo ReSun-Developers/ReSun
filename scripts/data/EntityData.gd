@@ -58,7 +58,8 @@ enum BridgeKind { NONE, LOW, HIGH, RAIL }
 @export_group("Movement")
 ## Movement speed as the TS `Speed` value: leptons per game frame. 0 = immobile.
 @export var speed: float = 0.0
-## Movement zone — TS pathfinding domain class (e.g. Normal, Infantry, Fly); metadata only.
+## Movement zone — TS pathfinding domain class (e.g. Normal, Infantry, Fly). TS uses it for
+## zone-map reachability; ReSun does not build that map yet, so it is validated metadata only.
 @export var movement_zone: String = ""
 ## Locomotor type — determines movement behavior and animation (e.g., "Walk", "Drive", "Fly").
 @export var locomotor: String = ""
