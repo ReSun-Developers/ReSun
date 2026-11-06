@@ -55,6 +55,8 @@ func _has_error(errors: PackedStringArray, needle: String) -> bool:
     return false
 
 
+# Uses set("zones", ...) rather than lm.zones so the regression tests still
+# load and run on the base revision, where Locomotor has no zones property.
 func _make_locomotor(id: String, zones: PackedStringArray) -> Locomotor:
     var lm := Locomotor.new()
     lm.id = id
@@ -63,6 +65,8 @@ func _make_locomotor(id: String, zones: PackedStringArray) -> Locomotor:
 
 
 func _zones_of(lm: Locomotor) -> PackedStringArray:
+    if lm == null:
+        return PackedStringArray()
     var value: Variant = lm.get("zones")
     if value is PackedStringArray:
         return value
@@ -287,7 +291,8 @@ func test_entity_zone_without_locomotor():
     TestHelper.assert_true(_has_error(errors, "contradicts"), "zone without locomotor rejected")
 
 
-func test_locomotor_zones_default_empty():
+# Invariant test: passes on base too; it documents the data contract, not the refactor.
+func test_locomotor_zones_default_empty_is_invariant():
     var lm := Locomotor.new()
     lm.id = "Custom"
     TestHelper.assert_true(_zones_of(lm).is_empty(), "zones default empty")
