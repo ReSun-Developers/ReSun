@@ -6,4 +6,4 @@
 script = ExtResource("1_script")
 id = "GDI_SILO"
 is_remappable = true
-placeholder_size = Vector3(2.0, 1.5, 2.0)
+placeholder_size = Vector3(4.0, 1.5, 4.0)

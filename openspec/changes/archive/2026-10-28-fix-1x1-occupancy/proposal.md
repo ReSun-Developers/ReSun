@@ -2,7 +2,7 @@
 
 ## Why
 
-Structures with a 1×1 foundation are invisible to the cell-occupancy system. `EntityFactory` attaches `FoundationComponent` only when `data.foundation != Vector2i(1, 1)`, and that component is the only writer of `SpatialHash._building_cells`. A 1×1 silo, wall, or turret therefore reports `building == false`, can be built over, can be pathed through, can be exited onto, and is missed by the sell/repair cursor gate. The issue names 22 gdi/nod/neutral structures; the worktree has 65 1×1 `BUILDING` entities in total, most of them civilian decorations that should also block.
+Structures with a 1×1 foundation are invisible to the cell-occupancy system. `EntityFactory` attaches `FoundationComponent` only when `data.foundation != Vector2i(1, 1)`, and that component is the only writer of `SpatialHash._building_cells`. A 1×1 component tower, wall, or turret therefore reports `building == false`, can be built over, can be pathed through, can be exited onto, and is missed by the sell/repair cursor gate. The issue names 22 gdi/nod/neutral structures (the two Tiberium silos are actually 2×2 in vanilla and are corrected in this change); the worktree has 63 1×1 `BUILDING` entities in total, most of them civilian decorations that should also block.
 
 ## What Changes
 
@@ -11,6 +11,7 @@ Structures with a 1×1 foundation are invisible to the cell-occupancy system. `E
 - A 1×1 building now registers its single foundation cell through the existing `FoundationComponent._ready` path, so `get_cell_occupancy().building`, `is_cell_free_for_build`, `get_blocked_cells`/pathfinding, `is_cell_free_for_unit_exit`, and the `FoundationComponent`-based sell/repair gate all see it.
 - Resolve the `GDI_WALL`/`NOD_WALL` duplicate id: the structure (`entity_type = BUILDING`) and the map overlay (`entity_type = OVERLAY`) share an id, and the overlay currently wins the factory cache, so the issue's wall case is unreachable. Rename the overlay ids to `GDI_WALL_OVERLAY`/`NOD_WALL_OVERLAY`; no shipped map references either.
 - Add regression coverage that spawns real 1×1 structures through `EntityFactory.spawn` and asserts each consequence; migrate `test_order_system_modes._make_building` to a factory-built 1×1 structure.
+- Correct `GDI_SILO`/`NOD_SILO` to the vanilla 2×2 foundation (`ART.INI [GASILO] Foundation=2x2`) and update their art placeholders; the original fixture wrongly treated the silo as 1×1, so the 1×1 regression uses `GDI_COMPONENT_TOWER` (`GACTWR`).
 - Record the invariants in the `entity-factory`, `foundation-component`, and `combat-firing` specs.
 
 ## Capabilities
@@ -29,7 +30,7 @@ None.
 
 - `scripts/entities/EntityFactory.gd` (`_add_foundation_component`).
 - `scripts/data/EntityData.gd` (new `blocks_cells` flag), `scripts/components/FoundationComponent.gd` (configure + skip registration).
-- Data: `gdi_pavement.tres` and six `civ_invisible_*_light*.tres` set `blocks_cells = false`; `overlay/gdi_wall.tres` and `overlay/nod_wall.tres` ids renamed.
+- Data: `gdi_pavement.tres` and six `civ_invisible_*_light*.tres` set `blocks_cells = false`; `overlay/gdi_wall.tres` and `overlay/nod_wall.tres` ids renamed; `gdi_silo.tres`/`nod_silo.tres` foundations corrected from 1×1 to 2×2 and their art placeholders from 2×2 to 4×4 world units.
 - No change to `SpatialHash` registration, query, or pathfinding code.
 - Behavioural side effects, all intended: 1×1 buildings become sellable/repairable (#519 cursor gate), report a nearest-footprint impact point, and gain the existing half-diagonal projectile range allowance.
 - Tests: new `test/integration/test_one_by_one_structure_occupancy.gd`, `test/unit/test_order_system_modes.gd` fixture migration, comment updates in `test/unit/test_combat_component.gd`.

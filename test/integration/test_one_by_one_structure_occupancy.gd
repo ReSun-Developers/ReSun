@@ -77,15 +77,17 @@ func _path_avoids_cell() -> bool:
     return true
 
 
-func test_one_by_one_silo_registers_its_cell() -> void:
+func test_one_by_one_component_tower_registers_its_cell() -> void:
     if _ef == null or _sh == null:
         TestHelper.fail("EntityFactory/SpatialHash not injected")
         return
     _setup()
     var free_before: bool = _sh.is_cell_free_for_build(CELL)
     var building_before: bool = _sh.get_cell_occupancy(CELL).building
-    var silo := _spawn("GDI_SILO")
-    var has_component: bool = silo != null and silo.get_node_or_null("FoundationComponent") != null
+    var tower := _spawn("GDI_COMPONENT_TOWER")
+    var has_component: bool = (
+        tower != null and tower.get_node_or_null("FoundationComponent") != null
+    )
     var occ: SpatialHash.CellOccupancy = _sh.get_cell_occupancy(CELL)
     var build_blocked: bool = not _sh.is_cell_free_for_build(CELL)
     var exit_blocked: bool = not _sh.is_cell_free_for_unit_exit(CELL)
@@ -93,14 +95,14 @@ func test_one_by_one_silo_registers_its_cell() -> void:
     var avoids: bool = _path_avoids_cell()
     _teardown()
     TestHelper.assert_true(
-        free_before and not building_before, "1x1 cell is free before the silo spawns"
+        free_before and not building_before, "1x1 cell is free before the component tower spawns"
     )
-    TestHelper.assert_true(has_component, "1x1 silo carries a FoundationComponent")
-    TestHelper.assert_true(occ.building, "1x1 silo reports building occupancy")
-    TestHelper.assert_true(build_blocked, "1x1 silo blocks building placement")
-    TestHelper.assert_true(exit_blocked, "1x1 silo blocks unit exit")
-    TestHelper.assert_true(listed, "1x1 silo cell appears in blocked cells")
-    TestHelper.assert_true(avoids, "pathfinder routes around the 1x1 silo cell")
+    TestHelper.assert_true(has_component, "1x1 component tower carries a FoundationComponent")
+    TestHelper.assert_true(occ.building, "1x1 component tower reports building occupancy")
+    TestHelper.assert_true(build_blocked, "1x1 component tower blocks building placement")
+    TestHelper.assert_true(exit_blocked, "1x1 component tower blocks unit exit")
+    TestHelper.assert_true(listed, "1x1 component tower cell appears in blocked cells")
+    TestHelper.assert_true(avoids, "pathfinder routes around the 1x1 component tower cell")
 
 
 func test_one_by_one_wall_registers_its_cell() -> void:
@@ -126,13 +128,13 @@ func test_ground_shot_resolves_one_by_one_structure() -> void:
         TestHelper.fail("EntityFactory/SpatialHash not injected")
         return
     _setup()
-    var silo := _spawn("GDI_SILO")
-    var spawned: bool = silo != null
+    var tower := _spawn("GDI_COMPONENT_TOWER")
+    var spawned: bool = tower != null
     _sh.rebuild()
     var victim: Node3D = _sh.resolve_cell_victim(CELL, CellUtil.cell_to_world(CELL), null)
-    var resolved: bool = victim != null and victim == silo
+    var resolved: bool = victim != null and victim == tower
     _teardown()
-    TestHelper.assert_true(spawned, "silo spawns for the ground-shot case")
+    TestHelper.assert_true(spawned, "component tower spawns for the ground-shot case")
     TestHelper.assert_true(resolved, "ground shot at the 1x1 cell resolves the structure")
 
 

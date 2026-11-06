@@ -105,15 +105,15 @@ func test_set_generator_replaces_previous_generator() -> void:
     _reset_mode()
 
 
-## Factory-built 1x1 structure, so the fixture matches real spawn output.
+## Factory-built 1x1 structure (component tower), so the fixture matches real spawn output.
 func _make_building(damaged: bool = false, owner_id: int = -1) -> Node3D:
     var ef: Node = _ts.get_node_or_null("/root/EntityFactory") if _ts else null
     if not ef:
         TestHelper.fail("EntityFactory autoload not reachable")
         return null
-    var building := ef.create_entity("GDI_SILO") as Node3D
+    var building := ef.create_entity("GDI_COMPONENT_TOWER") as Node3D
     if not building:
-        TestHelper.fail("EntityFactory could not create GDI_SILO")
+        TestHelper.fail("EntityFactory could not create GDI_COMPONENT_TOWER")
         return null
     var stats := building.get_node_or_null("StatsComponent") as StatsComponent
     if stats:
