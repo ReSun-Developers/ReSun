@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Fly"
+zones = PackedStringArray("Fly")
 terrain_speeds = {}
 climb_tolerance = 99
 is_fly = true

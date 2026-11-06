@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_script")
 id = "Amphibious"
+zones = PackedStringArray("AmphibiousCrusher", "AmphibiousDestroyer", "Destroyer", "InfantryDestroyer", "Normal")
 ; ponytail: rail decks are traversable at road speed for now; rail-specific
 ; movement restrictions are a movement-system follow-up, not a locomotor row.
 terrain_speeds = {
