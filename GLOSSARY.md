@@ -57,6 +57,7 @@ Entry form: term → one-line meaning → anchor.
 | Term | Meaning | Where |
 |------|---------|-------|
 | `foundation` | Data property: building size in cells as `EntityData.foundation` (Vector2i width × depth). Not derived, not runtime state. | [entity-data](openspec/specs/entity-data/spec.md) · scripts/data/EntityData.gd |
+| `blocks_cells` | Data property: whether a building's foundation cells are solid (block placement and pathing). False for walkable buildings such as pavement and invisible light emitters. | [foundation-component](openspec/specs/foundation-component/spec.md) · scripts/data/EntityData.gd |
 | `adjacent` | Max empty-cell gap (Chebyshev) allowed between a new footprint and friendly footprints at placement; `<= 0` = no requirement — diverges from TS (0 = must-touch, negative = disabled). | [building-manager](openspec/specs/building-manager/spec.md) · scripts/data/EntityData.gd |
 | `footprint` | Runtime derived set of occupied cells computed from `foundation`: `FoundationComponent.footprint_cells()`. Never a data field. | [foundation-component](openspec/specs/foundation-component/spec.md) · scripts/components/FoundationComponent.gd |
 | `bib` | Part of the building foundation: blocks everything the building foundation does, but pathfinding may still pass through bib cells at a cost (`bib_cost_penalty`). | [bib-pathfinding-penalty](openspec/specs/bib-pathfinding-penalty/spec.md) |

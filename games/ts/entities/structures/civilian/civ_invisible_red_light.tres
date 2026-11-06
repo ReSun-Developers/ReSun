@@ -16,6 +16,7 @@ cost = 0
 tech_level = -1
 sight = 1
 foundation = Vector2i(1, 1)
+blocks_cells = false
 height = 1.0
 owner = PackedStringArray()
 buildable = false

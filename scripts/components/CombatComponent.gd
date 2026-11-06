@@ -427,8 +427,8 @@ func _engagement_pos() -> Vector3:
 
 ## Engagement point on the target: the nearest point of a building's foundation
 ## footprint so range/approach/facing stop at the wall instead of the footprint
-## center. Point targets (units, 1x1 buildings) and ground positions use the
-## entity origin / ordered position directly.
+## center. Point targets (units) and ground positions use the entity origin /
+## ordered position directly.
 func _effective_target_pos() -> Vector3:
     if _target_foundation and is_instance_valid(_target_foundation):
         return _target_foundation.nearest_world_point(global_position)

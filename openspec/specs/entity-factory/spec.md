@@ -3,7 +3,9 @@
 ## Purpose
 
 EntityFactory creates entities from EntityData resources and attaches components by data-driven rules.
+
 ## Requirements
+
 ### Requirement: EntityFactory creates entities from data
 The system SHALL provide an `EntityFactory.gd` autoload singleton that creates entities from EntityData resources. The factory SHALL instantiate a base `Entity.tscn` scene and add components dynamically based on data properties.
 
@@ -28,7 +30,7 @@ The factory SHALL add components based on these rules:
 - CombatComponent: if `weapons.size() > 0`
 - GuardComponent: if `weapons.size() > 0`
 - MovementController: if `speed > 0`
-- FoundationComponent: if `foundation != Vector2i(1,1)`
+- FoundationComponent: if `(entity_type == BUILDING and blocks_cells)` or `foundation != Vector2i(1,1)`. A non-solid multi-cell building still gets the component through the second branch but registers no cells
 - PowerComponent: if `power != 0` or `powered == true`
 - RadarComponent: if `radar == true`
 - FactoryComponent: if `buildable_queue != ""`
@@ -80,6 +82,18 @@ The factory SHALL add components based on these rules:
 #### Scenario: Vehicle entity gets no PassengerComponent
 - **WHEN** EntityData has `entity_type = VEHICLE`
 - **THEN** entity gets no PassengerComponent
+
+#### Scenario: 1×1 building gets a FoundationComponent
+- **WHEN** EntityData has `entity_type = BUILDING`, `foundation = Vector2i(1, 1)`, and `blocks_cells = true`
+- **THEN** the created entity has a FoundationComponent, so its single foundation cell is registered in SpatialHash
+
+#### Scenario: Non-solid 1×1 building registers no cell
+- **WHEN** EntityData has `entity_type = BUILDING`, `foundation = Vector2i(1, 1)`, and `blocks_cells = false`
+- **THEN** the created entity has no FoundationComponent and registers no building cell, so the cell stays free
+
+#### Scenario: 1×1 non-building gets no FoundationComponent
+- **WHEN** EntityData has `entity_type = VEHICLE`, `INFANTRY`, or `AIRCRAFT` and `foundation = Vector2i(1, 1)`
+- **THEN** the created entity has no FoundationComponent
 
 ### Requirement: Component wiring
 The factory SHALL wire component references programmatically after instantiation. HitboxComponent and SelectComponent SHALL receive a reference to HealthComponent.
@@ -245,4 +259,3 @@ On each damaging hit, `EntityFactory` SHALL resolve the hit's warhead from the `
 #### Scenario: Detached unit is excluded from gameplay and rendering systems
 - **WHEN** a detached unit is spawned
 - **THEN** guard acquisition, free-unit spawning, fog rendering, and the unit multimesh renderer treat it as absent, and occupancy is not registered
-
