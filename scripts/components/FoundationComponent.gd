@@ -3,6 +3,7 @@ class_name FoundationComponent extends Node
 @export var foundation: Vector2i = Vector2i(1, 1)
 @export var height: float = 1.0
 @export var bib_cells: Array[Vector2i] = []
+@export var blocks_cells: bool = true
 
 var _registered_cells: Array[Vector2i] = []
 var _registered_bib_cells: Array[Vector2i] = []
@@ -15,6 +16,8 @@ func _ready() -> void:
     if not entity:
         return
     if entity.has_meta("detached") or entity.process_mode == Node.PROCESS_MODE_DISABLED:
+        return
+    if not blocks_cells:
         return
     # Only buildings register building cells — vehicles/infantry should not.
     var stats := entity.get_node_or_null("StatsComponent") as StatsComponent
@@ -50,6 +53,7 @@ func configure(data: EntityData) -> void:
     foundation = data.foundation
     height = data.height
     bib_cells = data.bib_cells
+    blocks_cells = data.blocks_cells
 
 
 func validate(data: EntityData) -> PackedStringArray:

@@ -17,6 +17,7 @@ cost = 25
 tech_level = -1
 sight = 1
 foundation = Vector2i(1, 1)
+blocks_cells = false
 height = 0.5
 owner = PackedStringArray("GDI", "Nod")
 buildable = false

@@ -443,7 +443,8 @@ func _add_movement_controller(entity: Node3D, data: EntityData) -> void:
 
 
 func _add_foundation_component(entity: Node3D, data: EntityData) -> void:
-    if data.foundation != Vector2i(1, 1):
+    var solid_building := data.entity_type == EntityData.EntityType.BUILDING and data.blocks_cells
+    if solid_building or data.foundation != Vector2i(1, 1):
         var component := Node.new()
         component.name = "FoundationComponent"
         component.set_script(FOUNDATION_COMPONENT_SCRIPT)
