@@ -20,6 +20,7 @@ const MAX_CASCADE_ITERATIONS: int = 8
 const MAX_ACTIONS_PER_TICK: int = 256
 const REVEAL_RADIUS: int = 9
 const COUNTED_META: String = "trigger_counted"
+const COUNTED_TRACK_LIMIT: int = 512
 
 var _defs: Dictionary = {}
 var _order: Array[String] = []
@@ -43,6 +44,8 @@ var _built: Dictionary = {}
 var _alive: Dictionary = {}
 var _time_ready: Dictionary = {}
 var _allow_win: Dictionary = {}
+var _counted_nodes: Array[WeakRef] = []
+var _counted_appends: int = 0
 
 
 func _ready() -> void:
@@ -155,6 +158,7 @@ func reset() -> void:
     _alive.clear()
     _time_ready.clear()
     _allow_win.clear()
+    _clear_counted_markers()
 
 
 func is_armed() -> bool:
@@ -212,17 +216,21 @@ func offer(event_id: int, payload: Dictionary = {}) -> void:
         _dirty[id] = true
 
 
-## Records a built entity for standing build/building-exists events.
+## Records a built entity for standing build/building-exists events. Only a
+## valid node is counted: the per-instance marker is what a later removal needs
+## to decrement, so a node-less notification updates the build event but leaves
+## the counts untouched.
 func notify_built(owner: String, entity_id: String, node: Node = null) -> void:
     if not _armed or owner.is_empty():
         return
+    _last_built[owner] = entity_id
     if node != null and is_instance_valid(node):
         node.set_meta(COUNTED_META, true)
-    _last_built[owner] = entity_id
-    var per_owner: Dictionary = _built.get(owner, {})
-    per_owner[entity_id] = int(per_owner.get(entity_id, 0)) + 1
-    _built[owner] = per_owner
-    _alive[owner] = int(_alive.get(owner, 0)) + 1
+        _track_counted(node)
+        var per_owner: Dictionary = _built.get(owner, {})
+        per_owner[entity_id] = int(per_owner.get(entity_id, 0)) + 1
+        _built[owner] = per_owner
+        _alive[owner] = int(_alive.get(owner, 0)) + 1
     _mark_owner_dirty(owner)
 
 
@@ -270,6 +278,33 @@ func _is_removed(node: Node) -> bool:
         and node.has_meta(COUNTED_META)
         and not bool(node.get_meta(COUNTED_META))
     )
+
+
+## Appends a weak reference to a counted node, compacting dead references every
+## `COUNTED_TRACK_LIMIT` appends so a long mission does not accumulate
+## freed-node entries and each append stays amortized O(1).
+func _track_counted(node: Node) -> void:
+    _counted_nodes.append(weakref(node))
+    _counted_appends += 1
+    if _counted_appends < COUNTED_TRACK_LIMIT:
+        return
+    _counted_appends = 0
+    var live: Array[WeakRef] = []
+    for ref in _counted_nodes:
+        if ref.get_ref() != null:
+            live.append(ref)
+    _counted_nodes = live
+
+
+## Removes the counted marker from nodes tracked in a previous session so a
+## mid-game re-arm cannot let an old node decrement the new session's counts.
+func _clear_counted_markers() -> void:
+    for ref in _counted_nodes:
+        var node: Node = ref.get_ref() as Node
+        if node != null and is_instance_valid(node) and node.has_meta(COUNTED_META):
+            node.remove_meta(COUNTED_META)
+    _counted_nodes.clear()
+    _counted_appends = 0
 
 
 func notify_credits(player_id: int, balance: int) -> void:

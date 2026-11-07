@@ -80,9 +80,10 @@ already removed, and it offers no events.
   The marker gives the removal seam a per-entity "was counted / already removed" fact without
   building the #518 ledger. It also makes death bookkeeping consistent: an uncounted entity's death
   no longer decrements a counted sibling.
-- The marker is set only in `notify_built`; map-loaded structures are spawned before `arm()` (the
-  engine is disarmed, so `notify_built` no-ops) and deploy-created structures use `EntityFactory.spawn`
-  without a `notify_built` call, so both stay uncounted.
+- The marker is set only in `notify_built`; map-loaded structures are created through the entity spawn
+  seam (`EntityFactory.spawn`), which `TriggerEngine` does not observe, so they are never counted;
+  deploy-created structures use `EntityFactory.spawn` without a `notify_built` call, so both stay
+  uncounted.
 
 **TS behavior on sale:** Tiberian Sun removes a sold structure rather than killing it; the destroyed
 event family is attached to object death. No authoritative TS source for this exact trigger behavior

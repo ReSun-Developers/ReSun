@@ -62,6 +62,17 @@ func _destroyed_trigger() -> Dictionary:
     }
 
 
+func _build_event_trigger() -> Dictionary:
+    return {
+        "id": "build",
+        "owner": _house(),
+        "enabled": true,
+        "tags": [{"id": "tag_build", "persistence": 2, "attach": "general"}],
+        "events": [{"id": 19, "params": ["TEST_STRUCT"]}],
+        "actions": [{"id": 11, "params": ["built"]}],
+    }
+
+
 func _connect_texts(texts: Array) -> Callable:
     var callback := func(text: String) -> void: texts.append(text)
     TriggerEngine.text_requested.connect(callback)
@@ -119,7 +130,11 @@ func _count(house: String) -> int:
 
 
 func _built(house: String) -> int:
-    return int((TriggerEngine._built.get(house, {}) as Dictionary).get("TEST_STRUCT", 0))
+    return _built_for(house, "TEST_STRUCT")
+
+
+func _built_for(house: String, entity_id: String) -> int:
+    return int((TriggerEngine._built.get(house, {}) as Dictionary).get(entity_id, 0))
 
 
 func test_credits_trigger_reads_starting_balance_at_arm() -> void:
@@ -406,4 +421,118 @@ func test_sold_structure_clears_building_exists_condition() -> void:
     _restore_balance(player_id, saved_balance)
     TriggerEngine.text_requested.disconnect(callback)
     ScenarioState.reset()
+    TriggerEngine.reset()
+
+
+func test_node_less_build_updates_build_event_without_counting() -> void:
+    if not _guard():
+        return
+    var house := _house()
+    TestHelper.assert_true(not house.is_empty(), "test house resolves")
+    TriggerEngine.arm([_build_event_trigger()])
+    var texts: Array = []
+    var callback := _connect_texts(texts)
+    TriggerEngine.notify_built(house, "TEST_STRUCT", null)
+    TestHelper.assert_eq(_count(house), 0, "node-less build does not count alive")
+    TestHelper.assert_eq(_built(house), 0, "node-less build does not count built")
+    TriggerEngine._on_tick(1)
+    TestHelper.assert_eq(texts, ["built"], "node-less build still satisfies the build event")
+    TriggerEngine.text_requested.disconnect(callback)
+    TriggerEngine.reset()
+
+
+func test_uncounted_destroy_keeps_counted_sibling_and_fires_event() -> void:
+    if not _guard():
+        return
+    var house := _house()
+    TestHelper.assert_true(not house.is_empty(), "test house resolves")
+    TriggerEngine.arm([_destroyed_trigger()])
+    var texts: Array = []
+    var callback := _connect_texts(texts)
+    var counted := Node3D.new()
+    TriggerEngine.notify_built(house, "TEST_STRUCT", counted)
+    var uncounted := Node3D.new()
+    TestHelper.assert_eq(_count(house), 1, "counted sibling is alive")
+    TestHelper.assert_eq(_built(house), 1, "counted sibling is built")
+    TriggerEngine.notify_destroyed(house, "TEST_STRUCT", uncounted)
+    TestHelper.assert_eq(_count(house), 1, "uncounted death leaves the counted sibling alive")
+    TestHelper.assert_eq(_built(house), 1, "uncounted death leaves the counted sibling built")
+    TriggerEngine._on_tick(1)
+    TestHelper.assert_eq(texts, ["dead"], "uncounted death still offers the destroyed events")
+    counted.free()
+    uncounted.free()
+    TriggerEngine.text_requested.disconnect(callback)
+    TriggerEngine.reset()
+
+
+func test_damage_death_of_counted_structure_drops_counts_and_offers_events() -> void:
+    if not _guard():
+        return
+    var house := _house()
+    TestHelper.assert_true(not house.is_empty(), "test house resolves")
+    var data := EntityFactory.get_entity_data("GDI_POWER_PLANT")
+    if data == null:
+        TestHelper.fail("GDI_POWER_PLANT fixture missing")
+        return
+    # A real spawn registers into global singletons; snapshot and restore them.
+    var saved_buildings: Array = _bm._buildings.duplicate()
+    _bm._buildings.clear()
+    var saved_prereqs: Dictionary = PrerequisiteSystem._player_buildings.duplicate(true)
+    PrerequisiteSystem._player_buildings.clear()
+    var saved_cells: Dictionary = SpatialHash.instance._building_cells.duplicate()
+    SpatialHash.instance._building_cells.clear()
+    var saved_bib: Dictionary = SpatialHash.instance._bib_cells.duplicate()
+    SpatialHash.instance._bib_cells.clear()
+    var root := Node3D.new()
+    Engine.get_main_loop().root.add_child(root)
+
+    TriggerEngine.arm([_destroyed_trigger()])
+    var texts: Array = []
+    var callback := _connect_texts(texts)
+    var entity := EntityPlacer.place_entity(
+        data, CellUtil.cell_to_world(Vector2i(10, 10)), PlayerManager.get_local_player_id(), root
+    )
+    TestHelper.assert_true(entity != null, "structure spawned through the production seam")
+    if entity != null:
+        var entity_id := String(data.id)
+        TestHelper.assert_eq(_count(house), 1, "structure is counted alive before damage")
+        TestHelper.assert_eq(
+            _built_for(house, entity_id), 1, "structure is counted built before damage"
+        )
+        var health := entity.get_node_or_null("HealthComponent") as HealthComponent
+        TestHelper.assert_true(health != null, "structure has a health component")
+        if health:
+            health.take_damage(health.current_health + 1)
+        TestHelper.assert_eq(_count(house), 0, "damage death drops the alive count")
+        TestHelper.assert_eq(_built_for(house, entity_id), 0, "damage death drops the built count")
+        TriggerEngine._on_tick(1)
+        TestHelper.assert_eq(texts, ["dead"], "damage death offers the destroyed events")
+
+    root.free()
+    _bm._buildings.assign(saved_buildings)
+    PrerequisiteSystem._player_buildings = saved_prereqs
+    SpatialHash.instance._building_cells = saved_cells
+    SpatialHash.instance._bib_cells = saved_bib
+    TriggerEngine.text_requested.disconnect(callback)
+    TriggerEngine.reset()
+
+
+func test_rearm_clears_old_counted_markers() -> void:
+    if not _guard():
+        return
+    var house := _house()
+    TestHelper.assert_true(not house.is_empty(), "test house resolves")
+    var old_node := Node3D.new()
+    TriggerEngine.arm([_structure_trigger()])
+    TriggerEngine.notify_built(house, "TEST_STRUCT", old_node)
+    TestHelper.assert_eq(_count(house), 1, "the old session counts the structure")
+    TriggerEngine.arm([_structure_trigger()])
+    var new_node := Node3D.new()
+    TriggerEngine.notify_built(house, "TEST_STRUCT", new_node)
+    TestHelper.assert_eq(_count(house), 1, "the new session counts only its own structure")
+    TriggerEngine.notify_removed(house, "TEST_STRUCT", old_node)
+    TestHelper.assert_eq(_count(house), 1, "an old-session node cannot decrement the new session")
+    TestHelper.assert_eq(_built(house), 1, "an old-session node cannot drop the new built count")
+    old_node.free()
+    new_node.free()
     TriggerEngine.reset()
